@@ -1,0 +1,36 @@
+* text=auto
+
+# Files that must be LF ending
+Makefile                  text eol=lf
+tools/setup-dev-cluster   text eol=lf
+tools/riak-cluster-config text eol=lf
+tools/gen-*-conf          text eol=lf
+.travis.yml               text eol=lf
+.sh                       text eol=lf
+.pl                       text eol=lf
+
+# STANDARD TO MSYSGIT
+*.DOC	DIFF=ASTEXTPLAIN
+*.DOC	DIFF=ASTEXTPLAIN
+*.DOCX	DIFF=ASTEXTPLAIN
+*.DOCX	DIFF=ASTEXTPLAIN
+*.XLS	binary
+*.XLS	binary
+*.XLSX	binary
+*.XLSX	binary
+*.PPT   binary
+*.PPTX  binary
+*.DOT	DIFF=ASTEXTPLAIN
+*.DOT	DIFF=ASTEXTPLAIN
+*.PDF	DIFF=ASTEXTPLAIN
+*.PDF	DIFF=ASTEXTPLAIN
+*.RTF	DIFF=ASTEXTPLAIN
+*.RTF	DIFF=ASTEXTPLAIN
+
+*.JPG  BINARY
+*.PNG  BINARY
+*.GIF  BINARY
+*.ICO  BINARY
+*.BMP  BINARY
+*.MDF  BINARY
+*.LDF  BINARY
