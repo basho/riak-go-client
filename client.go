@@ -1,17 +1,13 @@
 package riak
 
-import (
-	"github.com/basho/riak-go-client/core"
-)
-
 type Client struct {
-	conn  *core.Connection
+	conn  *Connection
 	debug bool
 }
 
 func New(addrs []string, max int) (*Client, error) {
-	opts := &core.ConnectionOptions{RemoteAddress: "127.0.0.1:8098"}
-	conn, err := core.NewConnection(opts)
+	opts := &ConnectionOptions{RemoteAddress: "127.0.0.1:8098"}
+	conn, err := NewConnection(opts)
 	if err != nil {
 		return nil, err
 	}
