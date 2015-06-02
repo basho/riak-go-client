@@ -12,7 +12,7 @@ import (
 	"time"
 
 	// "github.com/golang/protobuf/proto"
-	// "github.com/basho/riak-go-client/rpb"
+	// "github.com/basho-labs/riak-go-client/rpb"
 )
 
 const defaultMaxBuffer = 2048 * 1024

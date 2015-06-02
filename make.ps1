@@ -69,6 +69,22 @@ function Do-ProtoGen {
         if ($? -ne $True) {
             throw "protoc.exe failed: $LastExitCode"
         }
+
+        $base_name = $_.BaseName
+        $rpb_file = Join-Path -Path $rpb_path_tmp -ChildPath "$base_name.pb.go"
+        Write-Verbose "post-processing $rpb_file"
+
+        (Get-Content $rpb_file) |
+            ForEach-Object {
+                $_ -Replace 'import proto "code.google.com/p/goprotobuf/proto"', 'import proto "github.com/golang/protobuf/proto"'
+            } | Set-Content $rpb_file
+
+        if ($_.Name -eq 'riak_search.proto' -or $_.Name -eq 'riak_kv.proto') {
+            (Get-Content $rpb_file) |
+                ForEach-Object {
+                    $_ -Replace 'import riak "riak.pb"', 'import riak "github.com/basho-labs/riak-go-client/rpb/riak"'
+                } | Set-Content $rpb_file
+        }
     }
 }
 
