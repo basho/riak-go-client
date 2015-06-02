@@ -1,7 +1,7 @@
 package riak
 
 import (
-	"bytes"
+	"net"
 	"testing"
 	"time"
 )
@@ -12,7 +12,6 @@ const (
 )
 
 func TestCreateConnection(t *testing.T) {
-	localhost := []byte{127, 0, 0, 1}
 	opts := &ConnectionOptions{
 		RemoteAddress: "127.0.0.1:8098",
 		ConnectionTimeout: thirtySeconds,
@@ -27,7 +26,8 @@ func TestCreateConnection(t *testing.T) {
 		if conn.addr.Zone != "" {
 			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
 		}
-		if !bytes.Equal(conn.addr.IP, localhost)  {
+		localhost := net.ParseIP("127.0.0.1")
+		if !conn.addr.IP.Equal(localhost)  {
 			t.Errorf("expected %v, got: %v", localhost, conn.addr.IP)
 		}
 	} else {
