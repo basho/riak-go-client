@@ -63,8 +63,9 @@ function Do-ProtoGen {
     $proto_path = Join-Path -Path $script_path -ChildPath (Join-Path -Path 'riak_pb' -ChildPath 'src')
     $proto_wild = Join-Path -Path $proto_path -ChildPath '*.proto'
     Get-ChildItem $proto_wild | ForEach-Object {
-        Write-Verbose "protoc: --go_out=$rpb_path --proto_path=$proto_path $_"
-        & { protoc --go_out=$rpb_path --proto_path=$proto_path $_ }
+        $rpb_path_tmp = Join-Path -Path $rpb_path -ChildPath $_.BaseName
+        Write-Verbose "protoc: --go_out=$rpb_path_tmp --proto_path=$proto_path $_"
+        & { protoc --go_out=$rpb_path_tmp --proto_path=$proto_path $_ }
         if ($? -ne $True) {
             throw "protoc.exe failed: $LastExitCode"
         }
@@ -78,4 +79,3 @@ if ($Target -eq 'ProtoGen') {
 }
 
 exit 0
-
