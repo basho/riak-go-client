@@ -74,8 +74,10 @@ function Do-ProtoGen {
 
 Write-Debug "Target: $Target"
 
-if ($Target -eq 'ProtoGen') {
-    Do-ProtoGen
+switch ($Target)
+{
+    'ProtoGen' { Do-ProtoGen }
+     default { throw "Unknown target: $Target" }
 }
 
 exit 0

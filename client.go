@@ -5,17 +5,18 @@ import (
 )
 
 type Client struct {
-	conn *core.Connection
+	conn  *core.Connection
 	debug bool
 }
 
 func New(addrs []string, max int) (*Client, error) {
-	conn, err := core.NewConnection("127.0.0.1:8098")
+	opts := &core.ConnectionOptions{RemoteAddress: "127.0.0.1:8098"}
+	conn, err := core.NewConnection(opts)
 	if err != nil {
 		return nil, err
 	}
 	client := &Client{
-		conn: conn,
+		conn:  conn,
 		debug: true,
 	}
 	return client, nil

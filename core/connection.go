@@ -9,15 +9,28 @@ import (
 	// "log"
 	"net"
 	// "syscall"
+	"time"
 
 	// "github.com/golang/protobuf/proto"
 	// "github.com/basho/riak-go-client/rpb"
 )
 
+const defaultMaxBuffer = 2048 * 1024
+const defaultInitBuffer = 2 * 1024
+const defaultConnectionTimeoutMSec = 30000
+
 // TODO package-level variable ErrCannotRead is of type "error"
 var ErrCannotRead error = errors.New("cannot read from a non-active or closed connection")
 var ErrCannotWrite error = errors.New("cannot write to a non-active or closed connection")
 
+type ConnectionOptions struct {
+	RemoteAddress string
+	ConnectionTimeout time.Time
+	MaxBufferSize uint
+	InitBufferSize uint
+}
+
+// TODO authentication
 type Connection struct {
 	addr    *net.TCPAddr       // address this node is associated with
 	conn    *net.TCPConn  // connection
@@ -26,8 +39,8 @@ type Connection struct {
 	debug   bool          // debugging info
 }
 
-func NewConnection(addr string) (*Connection, error) {
-	raddr, err := net.ResolveTCPAddr("tcp", addr)
+func NewConnection(options *ConnectionOptions) (*Connection, error) {
+	raddr, err := net.ResolveTCPAddr("tcp", options.RemoteAddress)
 	if err != nil {
 		return nil, err
 	}

@@ -2,16 +2,19 @@ package core
 
 import (
 	"testing"
-	// "github.com/basho/riak-go-client/core"
 )
 
 func TestCreateConnection(t *testing.T) {
-	// var (
-	// 	conn core.Connection
-	// 	err error
-	// )
-	if _, err := NewConnection("127.0.0.1:8098"); err != nil {
+	opts := &ConnectionOptions{RemoteAddress: "127.0.0.1:8098"}
+	if _, err := NewConnection(opts); err != nil {
 		t.Error(err.Error())
+	}
+}
+
+func TestCreateConnectionWithBadAddress(t *testing.T) {
+	opts := &ConnectionOptions{RemoteAddress: "123456.89.9813948.19328419348:80983r6"}
+	if _, err := NewConnection(opts); err == nil {
+		t.Error("expected err")
 	}
 }
 
