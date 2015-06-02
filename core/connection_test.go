@@ -2,11 +2,30 @@ package core
 
 import (
 	"testing"
+	"time"
+)
+
+const (
+	thirtySeconds = time.Second * 30
+	thirtyMinutes = time.Minute * 30
 )
 
 func TestCreateConnection(t *testing.T) {
-	opts := &ConnectionOptions{RemoteAddress: "127.0.0.1:8098"}
-	if _, err := NewConnection(opts); err != nil {
+	opts := &ConnectionOptions{
+		RemoteAddress: "127.0.0.1:8098",
+		ConnectionTimeout: thirtySeconds,
+		RequestTimeout: thirtyMinutes,
+		MaxBufferSize: 1024,
+		InitBufferSize: 1024,
+	}
+	if conn, err := NewConnection(opts); err == nil {
+		if conn.addr.Port != 8098 {
+			t.Errorf("expected port 8098, got: %s", string(conn.addr.Port))
+		}
+		if conn.addr.Zone != "" {
+			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
+		}
+	} else {
 		t.Error(err.Error())
 	}
 }
@@ -14,7 +33,7 @@ func TestCreateConnection(t *testing.T) {
 func TestCreateConnectionWithBadAddress(t *testing.T) {
 	opts := &ConnectionOptions{RemoteAddress: "123456.89.9813948.19328419348:80983r6"}
 	if _, err := NewConnection(opts); err == nil {
-		t.Error("expected err")
+		t.Error("expected error")
 	}
 }
 

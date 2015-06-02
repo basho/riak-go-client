@@ -24,29 +24,34 @@ var ErrCannotRead error = errors.New("cannot read from a non-active or closed co
 var ErrCannotWrite error = errors.New("cannot write to a non-active or closed connection")
 
 type ConnectionOptions struct {
-	RemoteAddress string
-	ConnectionTimeout time.Time
-	MaxBufferSize uint
-	InitBufferSize uint
+	RemoteAddress     string
+	ConnectionTimeout time.Duration
+	RequestTimeout    time.Duration
+	MaxBufferSize     uint
+	InitBufferSize    uint
 }
 
 // TODO authentication
 type Connection struct {
-	addr    *net.TCPAddr       // address this node is associated with
-	conn    *net.TCPConn  // connection
-	active  bool          // whether connection is active or not
-	// cluster chan *Session // access to the client's cluster channel
-	debug   bool          // debugging info
+	addr              *net.TCPAddr
+	conn              *net.TCPConn
+	connectionTimeout time.Duration
+	requestTimeout    time.Duration
+	maxBufferSize     uint
+	initBufferSize    uint
 }
 
 func NewConnection(options *ConnectionOptions) (*Connection, error) {
-	raddr, err := net.ResolveTCPAddr("tcp", options.RemoteAddress)
+	resolvedAddress, err := net.ResolveTCPAddr("tcp", options.RemoteAddress)
 	if err != nil {
 		return nil, err
 	}
 	return &Connection{
-		addr:    raddr,
-		// cluster: cluster,
+		addr: resolvedAddress,
+		connectionTimeout: options.ConnectionTimeout,
+		requestTimeout: options.RequestTimeout,
+		maxBufferSize: options.MaxBufferSize,
+		initBufferSize: options.InitBufferSize,
 	}, nil
 }
 
