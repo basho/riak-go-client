@@ -1,17 +1,14 @@
 package riak
 
 import (
-	// "bytes"
-	// "encoding/binary"
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
-	// "io"
-	// "log"
+	"io"
 	"net"
-	// "syscall"
+	"syscall"
 	"time"
-	// "github.com/golang/protobuf/proto"
-	// "github.com/basho-labs/riak-go-client/rpb"
 )
 
 const defaultMaxBuffer = 2048 * 1024
@@ -19,7 +16,6 @@ const defaultInitBuffer = 2 * 1024
 const defaultRequestTimeout = time.Second * 4
 const defaultConnectionTimeout = time.Second * 30
 
-// TODO package-level variable ErrCannotRead is of type "error"
 var (
 	ErrOptionsRequired error = errors.New("options are required")
 	ErrAddressRequired error = errors.New("RemoteAddress is required in options")
@@ -39,12 +35,13 @@ type connectionOptions struct {
 // TODO authentication
 type connection struct {
 	addr              *net.TCPAddr
-	conn              *net.TCPConn
+	connection        *net.TCPConn
 	connectionTimeout time.Duration
 	requestTimeout    time.Duration
 	maxBufferSize     uint
 	initBufferSize    uint
 	healthCheck       bool
+	active            bool
 }
 
 func newConnection(options *connectionOptions) (*connection, error) {
@@ -80,7 +77,90 @@ func newConnection(options *connectionOptions) (*connection, error) {
 	}, nil
 }
 
-/*
-func connect (conn *connection) error {
+func (c *connection) connect() (err error) {
+	c.connection, err = net.DialTCP("tcp", nil, c.addr)
+	if err != nil {
+		logError(err.Error())
+		c.close()
+	} else {
+		logDebug("connected to: %s", c.addr)
+		c.connection.SetKeepAlive(true)
+		c.active = true
+	}
+	return
 }
-*/
+
+func (c *connection) available() bool {
+	defer func() {
+		if err := recover(); err != nil {
+			logErrorln("available: connection panic!")
+		}
+	}()
+	return (c.connection != nil && c.active)
+}
+
+func (c *connection) close() error {
+	return c.connection.Close()
+}
+
+func (c *connection) execute(cmd Command) (err error) {
+	if err = c.write(cmd.rpbData()); err != nil {
+		return
+	}
+
+	data, err := c.read()
+	if err != nil {
+		return
+	}
+
+	cmd.rpbRead(data)
+	return
+}
+
+func (c *connection) read() ([]byte, error) {
+	if !c.available() {
+		return nil, ErrCannotRead
+	}
+	buf := make([]byte, 4)
+	var size int32
+	// first 4 bytes are always size of message
+	if count, err := io.ReadFull(c.connection, buf); err == nil && count == 4 {
+		sbuf := bytes.NewBuffer(buf)
+		binary.Read(sbuf, binary.BigEndian, &size)
+		data := make([]byte, size)
+		// read rest of message and return it if no errors
+		count, err := io.ReadFull(c.connection, data)
+		if err != nil {
+			if err == syscall.EPIPE {
+				c.close()
+			}
+			c.active = false
+			return nil, err
+		}
+		if count != int(size) {
+			c.active = false
+			return nil, errors.New(fmt.Sprintf("data length: %d, only read: %d", len(data), count))
+		}
+		return data, nil
+	}
+	return nil, nil
+}
+
+func (c *connection) write(data []byte) error {
+	if !c.available() {
+		return ErrCannotWrite
+	}
+	count, err := c.connection.Write(data)
+	if err != nil {
+		if err == syscall.EPIPE {
+			c.connection.Close()
+		}
+		c.active = false
+		return err
+	}
+	if count != len(data) {
+		c.active = false
+		return errors.New(fmt.Sprintf("data length: %d, only wrote: %d", len(data), count))
+	}
+	return nil
+}

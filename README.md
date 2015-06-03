@@ -52,7 +52,7 @@ TODO
 
 **The Riak Go** Client is Open Source software released under the Apache 2.0 License. Please see the [LICENSE](LICENSE) file for full license details.
 
-These excellent community projects inspired this client:
+These excellent community projects inspired this client and parts of their code are in riak-go-client as well:
 
 * [`goriakpbc`](https://github.com/tpjg/goriakpbc)
 * [`riaken-core`](https://github.com/riaken/riaken-core)
