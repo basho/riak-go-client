@@ -1,13 +1,13 @@
 package riak
 
 type Client struct {
-	conn  *Connection
+	conn  *connection
 	debug bool
 }
 
 func New(addrs []string, max int) (*Client, error) {
-	opts := &ConnectionOptions{RemoteAddress: "127.0.0.1:8098"}
-	conn, err := NewConnection(opts)
+	opts := &connectionOptions{remoteAddress: "127.0.0.1:8098"}
+	conn, err := newConnection(opts)
 	if err != nil {
 		return nil, err
 	}
