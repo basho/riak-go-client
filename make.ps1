@@ -6,6 +6,7 @@
 .PARAMETER Target
     Target to build. Can be one of the following:
         * ProtoGen - generate *.pb.go files from *.proto files. Requires Go protoc utility (https://github.com/golang/protobuf)
+        * Format   - run *.go files through 'go fmt'
 .PARAMETER Verbose
     Use to increase verbosity.
 .EXAMPLE
@@ -18,8 +19,8 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$False, Position=0)]
-    [ValidateSet('ProtoGen', IgnoreCase = $True)]
-    [string]$Target = 'ProtoGen'
+    [ValidateSet('ProtoGen', 'Format', IgnoreCase = $True)]
+    [string]$Target = 'Format'
 )
 
 Set-StrictMode -Version Latest
@@ -88,11 +89,18 @@ function Do-ProtoGen {
     }
 }
 
+function Do-Format {
+    $script_path = Get-ScriptPath
+    Write-Verbose "go fmt $script_path"
+    & { gofmt -s -w $script_path }
+}
+
 Write-Debug "Target: $Target"
 
 switch ($Target)
 {
     'ProtoGen' { Do-ProtoGen }
+    'Format' { Do-Format }
      default { throw "Unknown target: $Target" }
 }
 

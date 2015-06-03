@@ -4,24 +4,28 @@ import (
 	// "bytes"
 	// "encoding/binary"
 	"errors"
-	// "fmt"
+	"fmt"
 	// "io"
 	// "log"
 	"net"
 	// "syscall"
 	"time"
-
 	// "github.com/golang/protobuf/proto"
 	// "github.com/basho-labs/riak-go-client/rpb"
 )
 
 const defaultMaxBuffer = 2048 * 1024
 const defaultInitBuffer = 2 * 1024
-const defaultConnectionTimeoutMSec = 30000
+const defaultRequestTimeout = time.Second * 4
+const defaultConnectionTimeout = time.Second * 30
 
 // TODO package-level variable ErrCannotRead is of type "error"
-var ErrCannotRead error = errors.New("cannot read from a non-active or closed connection")
-var ErrCannotWrite error = errors.New("cannot write to a non-active or closed connection")
+var (
+	ErrOptionsRequired error = errors.New("options are required")
+	ErrAddressRequired error = errors.New("RemoteAddress is required in options")
+	ErrCannotRead      error = errors.New("cannot read from a non-active or closed connection")
+	ErrCannotWrite     error = errors.New("cannot write to a non-active or closed connection")
+)
 
 type ConnectionOptions struct {
 	RemoteAddress     string
@@ -29,6 +33,7 @@ type ConnectionOptions struct {
 	RequestTimeout    time.Duration
 	MaxBufferSize     uint
 	InitBufferSize    uint
+	HealthCheck       bool
 }
 
 // TODO authentication
@@ -39,19 +44,39 @@ type Connection struct {
 	requestTimeout    time.Duration
 	maxBufferSize     uint
 	initBufferSize    uint
+	healthCheck       bool
 }
 
 func NewConnection(options *ConnectionOptions) (*Connection, error) {
+	if options == nil {
+		return nil, ErrOptionsRequired
+	}
+	if options.RemoteAddress == "" {
+		return nil, ErrAddressRequired
+	}
 	resolvedAddress, err := net.ResolveTCPAddr("tcp", options.RemoteAddress)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse address %v|%v", options.RemoteAddress, err)
+	}
+	if options.ConnectionTimeout == 0 {
+		options.ConnectionTimeout = defaultConnectionTimeout
+	}
+	if options.RequestTimeout == 0 {
+		options.RequestTimeout = defaultRequestTimeout
+	}
+	if options.MaxBufferSize == 0 {
+		options.MaxBufferSize = defaultMaxBuffer
+	}
+	if options.InitBufferSize == 0 {
+		options.InitBufferSize = defaultInitBuffer
 	}
 	return &Connection{
-		addr: resolvedAddress,
+		addr:              resolvedAddress,
 		connectionTimeout: options.ConnectionTimeout,
-		requestTimeout: options.RequestTimeout,
-		maxBufferSize: options.MaxBufferSize,
-		initBufferSize: options.InitBufferSize,
+		requestTimeout:    options.RequestTimeout,
+		maxBufferSize:     options.MaxBufferSize,
+		initBufferSize:    options.InitBufferSize,
+		healthCheck:       options.HealthCheck,
 	}, nil
 }
 
