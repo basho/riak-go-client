@@ -16,8 +16,6 @@ func TestCreateConnection(t *testing.T) {
 		remoteAddress:     "127.0.0.1:8098",
 		connectionTimeout: thirtySeconds,
 		requestTimeout:    thirtyMinutes,
-		maxBufferSize:     1024,
-		initBufferSize:    1024,
 	}
 	if conn, err := newConnection(opts); err == nil {
 		if conn.addr.Port != 8098 {
@@ -35,12 +33,6 @@ func TestCreateConnection(t *testing.T) {
 		}
 		if conn.requestTimeout != thirtyMinutes {
 			t.Errorf("expected %v, got: %v", thirtyMinutes, conn.requestTimeout)
-		}
-		if conn.maxBufferSize != 1024 {
-			t.Errorf("expected 1024, got: %v", conn.maxBufferSize)
-		}
-		if conn.initBufferSize != 1024 {
-			t.Errorf("expected 1024, got: %v", conn.initBufferSize)
 		}
 	} else {
 		t.Error(err.Error())
@@ -77,12 +69,6 @@ func TestEnsureDefaultConnectionValues(t *testing.T) {
 		}
 		if conn.requestTimeout != defaultRequestTimeout {
 			t.Errorf("expected %v, got: %v", defaultRequestTimeout, conn.requestTimeout)
-		}
-		if conn.maxBufferSize != defaultMaxBuffer {
-			t.Errorf("expected %v, got: %v", defaultMaxBuffer, conn.maxBufferSize)
-		}
-		if conn.initBufferSize != defaultInitBuffer {
-			t.Errorf("expected %v, got: %v", defaultInitBuffer, conn.initBufferSize)
 		}
 	} else {
 		t.Error(err.Error())

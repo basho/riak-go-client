@@ -1,7 +1,6 @@
 package riak
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -11,8 +10,6 @@ import (
 	"time"
 )
 
-const defaultMaxBuffer = 2048 * 1024
-const defaultInitBuffer = 2 * 1024
 const defaultRequestTimeout = time.Second * 4
 const defaultConnectionTimeout = time.Second * 30
 
@@ -27,8 +24,6 @@ type connectionOptions struct {
 	remoteAddress     string
 	connectionTimeout time.Duration
 	requestTimeout    time.Duration
-	maxBufferSize     uint
-	initBufferSize    uint
 	healthCheck       bool
 }
 
@@ -38,8 +33,6 @@ type connection struct {
 	connection        *net.TCPConn
 	connectionTimeout time.Duration
 	requestTimeout    time.Duration
-	maxBufferSize     uint
-	initBufferSize    uint
 	healthCheck       bool
 	active            bool
 }
@@ -61,18 +54,10 @@ func newConnection(options *connectionOptions) (*connection, error) {
 	if options.requestTimeout == 0 {
 		options.requestTimeout = defaultRequestTimeout
 	}
-	if options.maxBufferSize == 0 {
-		options.maxBufferSize = defaultMaxBuffer
-	}
-	if options.initBufferSize == 0 {
-		options.initBufferSize = defaultInitBuffer
-	}
 	return &connection{
 		addr:              resolvedAddress,
 		connectionTimeout: options.connectionTimeout,
 		requestTimeout:    options.requestTimeout,
-		maxBufferSize:     options.maxBufferSize,
-		initBufferSize:    options.initBufferSize,
 		healthCheck:       options.healthCheck,
 	}, nil
 }
@@ -122,13 +107,9 @@ func (c *connection) read() ([]byte, error) {
 		return nil, ErrCannotRead
 	}
 	buf := make([]byte, 4)
-	var size int32
-	// first 4 bytes are always size of message
 	if count, err := io.ReadFull(c.connection, buf); err == nil && count == 4 {
-		sbuf := bytes.NewBuffer(buf)
-		binary.Read(sbuf, binary.BigEndian, &size)
+		size := binary.BigEndian.Uint32(buf)
 		data := make([]byte, size)
-		// read rest of message and return it if no errors
 		count, err := io.ReadFull(c.connection, data)
 		if err != nil {
 			if err == syscall.EPIPE {

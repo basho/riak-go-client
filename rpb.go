@@ -17,9 +17,9 @@ func rpbEnsureCode(expected byte, actual byte) (err error) {
 func rpbWrite(code byte, data []byte) []byte {
 	buf := new(bytes.Buffer)
 	// write total message length, including one byte for msg code
-	binary.Write(buf, binary.BigEndian, int32(len(data)+1))
+	binary.Write(buf, binary.BigEndian, uint32(len(data)+1))
 	// write the message code
-	binary.Write(buf, binary.BigEndian, int8(code))
+	binary.Write(buf, binary.BigEndian, byte(code))
 	// write the protobuf data
 	buf.Write(data)
 	return buf.Bytes()
