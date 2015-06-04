@@ -30,7 +30,7 @@ type connectionOptions struct {
 // TODO authentication
 type connection struct {
 	addr              *net.TCPAddr
-	connection        net.Conn
+	conn              net.Conn
 	connectionTimeout time.Duration
 	requestTimeout    time.Duration
 	healthCheck       bool
@@ -67,7 +67,7 @@ func (c *connection) connect() (err error) {
 		Timeout:   c.connectionTimeout,
 		KeepAlive: time.Second * 30,
 	}
-	c.connection, err = dialer.Dial("tcp", c.addr.String())
+	c.conn, err = dialer.Dial("tcp", c.addr.String())
 	if err != nil {
 		logError(err.Error())
 		c.close()
@@ -84,11 +84,11 @@ func (c *connection) available() bool {
 			logErrorln("available: connection panic!")
 		}
 	}()
-	return (c.connection != nil && c.active)
+	return (c.conn != nil && c.active)
 }
 
 func (c *connection) close() error {
-	return c.connection.Close()
+	return c.conn.Close()
 }
 
 func (c *connection) execute(cmd Command) (err error) {
@@ -105,15 +105,23 @@ func (c *connection) execute(cmd Command) (err error) {
 	return
 }
 
+// TODO: we should also take currently executing Command (Riak operation)
+// timeout into account
+func (c *connection) setReadDeadline() {
+	c.conn.SetReadDeadline(time.Now().Add(c.requestTimeout))
+}
+
 func (c *connection) read() ([]byte, error) {
 	if !c.available() {
 		return nil, ErrCannotRead
 	}
 	buf := make([]byte, 4)
-	if count, err := io.ReadFull(c.connection, buf); err == nil && count == 4 {
+	c.setReadDeadline()
+	if count, err := io.ReadFull(c.conn, buf); err == nil && count == 4 {
 		size := binary.BigEndian.Uint32(buf)
 		data := make([]byte, size)
-		count, err := io.ReadFull(c.connection, data)
+		c.setReadDeadline()
+		count, err := io.ReadFull(c.conn, data)
 		if err != nil {
 			if err == syscall.EPIPE {
 				c.close()
@@ -134,7 +142,10 @@ func (c *connection) write(data []byte) error {
 	if !c.available() {
 		return ErrCannotWrite
 	}
-	count, err := c.connection.Write(data)
+	// TODO: we should also take currently executing Command (Riak operation)
+	// timeout into account
+	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
+	count, err := c.conn.Write(data)
 	if err != nil {
 		if err == syscall.EPIPE {
 			c.close()
