@@ -1,10 +1,7 @@
 package riak
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
-	"fmt"
 )
 
 type Command interface {
@@ -30,9 +27,8 @@ func (cmd *PingCommand) rpbRead(data []byte) (err error) {
 	}
 
 	// PingResp: 2
-	code := data[0] // rpb code
-	if code != 2 {
-		err = errors.New(fmt.Sprintf("expected response code 2, got: %d", code))
+	if err = rpbEnsureCode(2, data[0]); err != nil {
+		return
 	}
 
 	if err == nil {
@@ -42,16 +38,4 @@ func (cmd *PingCommand) rpbRead(data []byte) (err error) {
 	}
 
 	return
-}
-
-// TODO: ensure this is the fastest way to write data to the buffer
-func rpbWrite(code byte, data []byte) []byte {
-	ml := new(bytes.Buffer)
-	binary.Write(ml, binary.BigEndian, int32(len(data)+1)) // +1 for msg code
-	mc := new(bytes.Buffer)
-	binary.Write(mc, binary.BigEndian, int8(code))
-	buf := []byte(ml.Bytes())
-	buf = append(buf, mc.Bytes()...)
-	buf = append(buf, data...)
-	return buf
 }
