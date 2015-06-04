@@ -30,7 +30,7 @@ type connectionOptions struct {
 // TODO authentication
 type connection struct {
 	addr              *net.TCPAddr
-	connection        *net.TCPConn
+	connection        net.Conn
 	connectionTimeout time.Duration
 	requestTimeout    time.Duration
 	healthCheck       bool
@@ -63,13 +63,16 @@ func newConnection(options *connectionOptions) (*connection, error) {
 }
 
 func (c *connection) connect() (err error) {
-	c.connection, err = net.DialTCP("tcp", nil, c.addr)
+	dialer := &net.Dialer{
+		Timeout:   c.connectionTimeout,
+		KeepAlive: time.Second * 30,
+	}
+	c.connection, err = dialer.Dial("tcp", c.addr.String())
 	if err != nil {
 		logError(err.Error())
 		c.close()
 	} else {
 		logDebug("connected to: %s", c.addr)
-		c.connection.SetKeepAlive(true)
 		c.active = true
 	}
 	return
@@ -134,7 +137,7 @@ func (c *connection) write(data []byte) error {
 	count, err := c.connection.Write(data)
 	if err != nil {
 		if err == syscall.EPIPE {
-			c.connection.Close()
+			c.close()
 		}
 		c.active = false
 		return err

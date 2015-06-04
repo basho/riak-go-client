@@ -21,8 +21,6 @@ func TestPing(t *testing.T) {
 		remoteAddress:     "riak-test:10017",
 		connectionTimeout: time.Second * 5,
 		requestTimeout:    time.Millisecond * 500,
-		maxBufferSize:     1024,
-		initBufferSize:    1024,
 	}
 	if conn, err = newConnection(opts); err == nil {
 		if err = conn.connect(); err == nil {
