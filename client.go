@@ -1,12 +1,20 @@
 package riak
 
+import (
+	"net"
+)
+
 type Client struct {
 	conn  *connection
 	debug bool
 }
 
 func New(addrs []string, max int) (*Client, error) {
-	opts := &connectionOptions{remoteAddress: "127.0.0.1:8098"}
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8098")
+	if err != nil {
+		return nil, err
+	}
+	opts := &connectionOptions{remoteAddress: addr}
 	conn, err := newConnection(opts)
 	if err != nil {
 		return nil, err

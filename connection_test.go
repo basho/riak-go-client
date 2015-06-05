@@ -3,18 +3,16 @@ package riak
 import (
 	"net"
 	"testing"
-	"time"
-)
-
-const (
-	thirtySeconds = time.Second * 30
-	thirtyMinutes = time.Minute * 30
 )
 
 func TestCreateConnection(t *testing.T) {
+	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:8098")
+	if err != nil {
+		t.Error(err.Error())
+	}
 	opts := &connectionOptions{
-		remoteAddress:     "127.0.0.1:8098",
-		connectionTimeout: thirtySeconds,
+		remoteAddress:     addr,
+		connectTimeout: thirtySeconds,
 		requestTimeout:    thirtyMinutes,
 	}
 	if conn, err := newConnection(opts); err == nil {
@@ -24,12 +22,11 @@ func TestCreateConnection(t *testing.T) {
 		if conn.addr.Zone != "" {
 			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
 		}
-		localhost := net.ParseIP("127.0.0.1")
 		if !conn.addr.IP.Equal(localhost) {
 			t.Errorf("expected %v, got: %v", localhost, conn.addr.IP)
 		}
-		if conn.connectionTimeout != thirtySeconds {
-			t.Errorf("expected %v, got: %v", thirtySeconds, conn.connectionTimeout)
+		if conn.connectTimeout != thirtySeconds {
+			t.Errorf("expected %v, got: %v", thirtySeconds, conn.connectTimeout)
 		}
 		if conn.requestTimeout != thirtyMinutes {
 			t.Errorf("expected %v, got: %v", thirtyMinutes, conn.requestTimeout)
@@ -40,11 +37,9 @@ func TestCreateConnection(t *testing.T) {
 }
 
 func TestCreateConnectionWithBadAddress(t *testing.T) {
-	opts := &connectionOptions{remoteAddress: "123456.89.9813948.19328419348:80983r6"}
-	if _, err := newConnection(opts); err == nil {
+	_, err := net.ResolveTCPAddr("tcp4", "123456.89.9813948.19328419348:80983r6")
+	if err == nil {
 		t.Error("expected error")
-	} else {
-		t.Log(err)
 	}
 }
 
@@ -54,18 +49,24 @@ func TestCreateConnectionRequiresOptions(t *testing.T) {
 	}
 }
 
-func TestCreateConnectionRequiresAddress(t *testing.T) {
-	opts := &connectionOptions{}
-	if _, err := newConnection(opts); err == nil {
-		t.Error("expected error when creating Connection without address")
-	}
-}
-
 func TestEnsureDefaultConnectionValues(t *testing.T) {
-	opts := &connectionOptions{remoteAddress: "127.0.0.1:8098"}
+	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:8087")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	opts := &connectionOptions{remoteAddress: addr}
 	if conn, err := newConnection(opts); err == nil {
-		if conn.connectionTimeout != defaultConnectionTimeout {
-			t.Errorf("expected %v, got: %v", defaultConnectionTimeout, conn.connectionTimeout)
+		if conn.addr.Port != 8087 {
+			t.Errorf("expected port 8087, got: %s", string(conn.addr.Port))
+		}
+		if conn.addr.Zone != "" {
+			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
+		}
+		if !conn.addr.IP.Equal(localhost) {
+			t.Errorf("expected %v, got: %v", localhost, conn.addr.IP)
+		}
+		if conn.connectTimeout != defaultConnectTimeout {
+			t.Errorf("expected %v, got: %v", defaultConnectTimeout, conn.connectTimeout)
 		}
 		if conn.requestTimeout != defaultRequestTimeout {
 			t.Errorf("expected %v, got: %v", defaultRequestTimeout, conn.requestTimeout)

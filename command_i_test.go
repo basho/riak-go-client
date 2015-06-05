@@ -3,6 +3,7 @@
 package riak
 
 import (
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -14,13 +15,19 @@ func init() {
 
 func TestPing(t *testing.T) {
 	var (
+		addr *net.TCPAddr
 		err  error
 		conn *connection
 	)
+	addr, err = net.ResolveTCPAddr("tcp4", "riak-test:10017")
+	if err != nil {
+		t.Error(err.Error())
+	}
 	opts := &connectionOptions{
-		remoteAddress:     "riak-test:10017",
+		remoteAddress:     addr,
 		connectionTimeout: time.Second * 5,
 		requestTimeout:    time.Millisecond * 500,
+		healthCheck:       &PingCommand{},
 	}
 	if conn, err = newConnection(opts); err == nil {
 		if err = conn.connect(); err == nil {

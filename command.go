@@ -5,6 +5,7 @@ import (
 )
 
 type Command interface {
+	Success() bool
 	rpbData() []byte
 	rpbRead(data []byte) error
 }
@@ -14,6 +15,10 @@ type PingCommand struct {
 }
 
 var ErrZeroLength error = errors.New("response was only 0 bytes long")
+
+func (cmd *PingCommand) Success() bool {
+	return cmd.Result == true
+}
 
 func (cmd *PingCommand) rpbData() []byte {
 	// PingReq: 1

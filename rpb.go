@@ -3,13 +3,12 @@ package riak
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 )
 
 func rpbEnsureCode(expected byte, actual byte) (err error) {
 	if expected != actual {
-		err = errors.New(fmt.Sprintf("expected response code %d, got: %d", expected, actual))
+		err = fmt.Errorf("expected response code %d, got: %d", expected, actual)
 	}
 	return
 }

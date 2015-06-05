@@ -2,7 +2,6 @@ package riak
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -10,61 +9,49 @@ import (
 	"time"
 )
 
-const defaultRequestTimeout = time.Second * 4
-const defaultConnectionTimeout = time.Second * 30
-
-var (
-	ErrOptionsRequired error = errors.New("options are required")
-	ErrAddressRequired error = errors.New("RemoteAddress is required in options")
-	ErrCannotRead      error = errors.New("cannot read from a non-active or closed connection")
-	ErrCannotWrite     error = errors.New("cannot write to a non-active or closed connection")
-)
-
 type connectionOptions struct {
-	remoteAddress     string
-	connectionTimeout time.Duration
+	remoteAddress     *net.TCPAddr
+	connectTimeout time.Duration
 	requestTimeout    time.Duration
-	healthCheck       bool
+	healthCheck       Command
 }
 
 // TODO authentication
 type connection struct {
 	addr              *net.TCPAddr
 	conn              net.Conn
-	connectionTimeout time.Duration
+	connectTimeout time.Duration
 	requestTimeout    time.Duration
-	healthCheck       bool
+	healthCheck       Command
 	active            bool
+	sizeBuf           []byte
 }
 
 func newConnection(options *connectionOptions) (*connection, error) {
 	if options == nil {
 		return nil, ErrOptionsRequired
 	}
-	if options.remoteAddress == "" {
+	if options.remoteAddress == nil {
 		return nil, ErrAddressRequired
 	}
-	resolvedAddress, err := net.ResolveTCPAddr("tcp", options.remoteAddress)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse address %v|%v", options.remoteAddress, err)
-	}
-	if options.connectionTimeout == 0 {
-		options.connectionTimeout = defaultConnectionTimeout
+	if options.connectTimeout == 0 {
+		options.connectTimeout = defaultConnectTimeout
 	}
 	if options.requestTimeout == 0 {
 		options.requestTimeout = defaultRequestTimeout
 	}
 	return &connection{
-		addr:              resolvedAddress,
-		connectionTimeout: options.connectionTimeout,
+		addr:              options.remoteAddress,
+		connectTimeout: options.connectTimeout,
 		requestTimeout:    options.requestTimeout,
 		healthCheck:       options.healthCheck,
+		sizeBuf:           make([]byte, 4),
 	}, nil
 }
 
 func (c *connection) connect() (err error) {
 	dialer := &net.Dialer{
-		Timeout:   c.connectionTimeout,
+		Timeout:   c.connectTimeout,
 		KeepAlive: time.Second * 30,
 	}
 	c.conn, err = dialer.Dial("tcp", c.addr.String())
@@ -74,6 +61,13 @@ func (c *connection) connect() (err error) {
 	} else {
 		logDebug("connected to: %s", c.addr)
 		c.active = true
+		if c.healthCheck != nil {
+			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Success() {
+				c.active = false
+				logError(err.Error())
+				c.close()
+			}
+		}
 	}
 	return
 }
@@ -115,10 +109,11 @@ func (c *connection) read() ([]byte, error) {
 	if !c.available() {
 		return nil, ErrCannotRead
 	}
-	buf := make([]byte, 4)
 	c.setReadDeadline()
-	if count, err := io.ReadFull(c.conn, buf); err == nil && count == 4 {
-		size := binary.BigEndian.Uint32(buf)
+	if count, err := io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
+		size := binary.BigEndian.Uint32(c.sizeBuf)
+		// TODO: investigate using a buffer on c instead of
+		// always making a new one
 		data := make([]byte, size)
 		c.setReadDeadline()
 		count, err := io.ReadFull(c.conn, data)
@@ -131,7 +126,7 @@ func (c *connection) read() ([]byte, error) {
 		}
 		if count != int(size) {
 			c.active = false
-			return nil, errors.New(fmt.Sprintf("data length: %d, only read: %d", len(data), count))
+			return nil, fmt.Errorf("data length: %d, only read: %d", len(data), count)
 		}
 		return data, nil
 	}
@@ -155,7 +150,7 @@ func (c *connection) write(data []byte) error {
 	}
 	if count != len(data) {
 		c.active = false
-		return errors.New(fmt.Sprintf("data length: %d, only wrote: %d", len(data), count))
+		return fmt.Errorf("data length: %d, only wrote: %d", len(data), count)
 	}
 	return nil
 }
