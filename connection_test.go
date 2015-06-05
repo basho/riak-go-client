@@ -11,9 +11,9 @@ func TestCreateConnection(t *testing.T) {
 		t.Error(err.Error())
 	}
 	opts := &connectionOptions{
-		remoteAddress:     addr,
+		remoteAddress:  addr,
 		connectTimeout: thirtySeconds,
-		requestTimeout:    thirtyMinutes,
+		requestTimeout: thirtyMinutes,
 	}
 	if conn, err := newConnection(opts); err == nil {
 		if conn.addr.Port != 8098 {

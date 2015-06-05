@@ -10,21 +10,21 @@ import (
 )
 
 type connectionOptions struct {
-	remoteAddress     *net.TCPAddr
+	remoteAddress  *net.TCPAddr
 	connectTimeout time.Duration
-	requestTimeout    time.Duration
-	healthCheck       Command
+	requestTimeout time.Duration
+	healthCheck    Command
 }
 
 // TODO authentication
 type connection struct {
-	addr              *net.TCPAddr
-	conn              net.Conn
+	addr           *net.TCPAddr
+	conn           net.Conn
 	connectTimeout time.Duration
-	requestTimeout    time.Duration
-	healthCheck       Command
-	active            bool
-	sizeBuf           []byte
+	requestTimeout time.Duration
+	healthCheck    Command
+	active         bool
+	sizeBuf        []byte
 }
 
 func newConnection(options *connectionOptions) (*connection, error) {
@@ -41,11 +41,11 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		options.requestTimeout = defaultRequestTimeout
 	}
 	return &connection{
-		addr:              options.remoteAddress,
+		addr:           options.remoteAddress,
 		connectTimeout: options.connectTimeout,
-		requestTimeout:    options.requestTimeout,
-		healthCheck:       options.healthCheck,
-		sizeBuf:           make([]byte, 4),
+		requestTimeout: options.requestTimeout,
+		healthCheck:    options.healthCheck,
+		sizeBuf:        make([]byte, 4),
 	}, nil
 }
 
