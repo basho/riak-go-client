@@ -24,10 +24,10 @@ func TestPing(t *testing.T) {
 		t.Error(err.Error())
 	}
 	opts := &connectionOptions{
-		remoteAddress:     addr,
-		connectionTimeout: time.Second * 5,
-		requestTimeout:    time.Millisecond * 500,
-		healthCheck:       &PingCommand{},
+		remoteAddress:  addr,
+		connectTimeout: time.Second * 5,
+		requestTimeout: time.Millisecond * 500,
+		healthCheck:    &PingCommand{},
 	}
 	if conn, err = newConnection(opts); err == nil {
 		if err = conn.connect(); err == nil {

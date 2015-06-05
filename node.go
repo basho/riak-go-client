@@ -21,9 +21,7 @@ type Node struct {
 	minConnections uint16
 	maxConnections uint16
 	idleTimeout    time.Duration
-	connectTimeout time.Duration
-	requestTimeout time.Duration
-	healthCheck    Command
+	available      []*connection
 }
 
 var defaultNodeOptions = &NodeOptions{
@@ -58,15 +56,31 @@ func NewNode(options *NodeOptions) (*Node, error) {
 	if options.RequestTimeout == 0 {
 		options.RequestTimeout = defaultRequestTimeout
 	}
+
 	if resolvedAddress, err := net.ResolveTCPAddr("tcp", options.RemoteAddress); err == nil {
-		return &Node{
-			addr:           resolvedAddress,
-			minConnections: options.MinConnections,
-			maxConnections: options.MaxConnections,
-			idleTimeout:    options.IdleTimeout,
+
+		minConnections := options.MinConnections
+
+		connectionOptions := &connectionOptions{
+			remoteAddress:  resolvedAddress,
 			connectTimeout: options.ConnectTimeout,
 			requestTimeout: options.RequestTimeout,
 			healthCheck:    options.HealthCheck,
+		}
+
+		available := make([]*connection, minConnections)
+		for i := 0; i < len(available); i++ {
+			if available[i], err = newConnection(connectionOptions); err != nil {
+				return nil, err
+			}
+		}
+
+		return &Node{
+			addr:           resolvedAddress,
+			minConnections: minConnections,
+			maxConnections: options.MaxConnections,
+			idleTimeout:    options.IdleTimeout,
+			available:      available,
 		}, nil
 	} else {
 		return nil, err
