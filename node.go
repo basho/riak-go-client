@@ -7,21 +7,25 @@ import (
 
 // TODO auth
 type NodeOptions struct {
-	RemoteAddress  string
-	MinConnections uint16
-	MaxConnections uint16
-	IdleTimeout    time.Duration
-	ConnectTimeout time.Duration
-	RequestTimeout time.Duration
-	HealthCheck    Command
+	RemoteAddress      string
+	MinConnections     uint16
+	MaxConnections     uint16
+	IdleTimeout        time.Duration
+	ConnectTimeout     time.Duration
+	RequestTimeout     time.Duration
+	HealthCheckBuilder CommandBuilder
 }
 
 type Node struct {
-	addr           *net.TCPAddr
-	minConnections uint16
-	maxConnections uint16
-	idleTimeout    time.Duration
-	available      []*connection
+	addr                  *net.TCPAddr
+	minConnections        uint16
+	maxConnections        uint16
+	idleTimeout           time.Duration
+	connectTimeout        time.Duration
+	requestTimeout        time.Duration
+	healthCheckBuilder    CommandBuilder
+	available             []*connection
+	currentNumConnections uint16
 }
 
 var defaultNodeOptions = &NodeOptions{
@@ -31,7 +35,6 @@ var defaultNodeOptions = &NodeOptions{
 	IdleTimeout:    defaultIdleTimeout,
 	ConnectTimeout: defaultConnectTimeout,
 	RequestTimeout: defaultRequestTimeout,
-	HealthCheck:    &PingCommand{},
 }
 
 func NewNode(options *NodeOptions) (*Node, error) {
@@ -58,31 +61,58 @@ func NewNode(options *NodeOptions) (*Node, error) {
 	}
 
 	if resolvedAddress, err := net.ResolveTCPAddr("tcp", options.RemoteAddress); err == nil {
-
-		minConnections := options.MinConnections
-
-		connectionOptions := &connectionOptions{
-			remoteAddress:  resolvedAddress,
-			connectTimeout: options.ConnectTimeout,
-			requestTimeout: options.RequestTimeout,
-			healthCheck:    options.HealthCheck,
-		}
-
-		available := make([]*connection, minConnections)
-		for i := 0; i < len(available); i++ {
-			if available[i], err = newConnection(connectionOptions); err != nil {
-				return nil, err
-			}
-		}
-
 		return &Node{
-			addr:           resolvedAddress,
-			minConnections: minConnections,
-			maxConnections: options.MaxConnections,
-			idleTimeout:    options.IdleTimeout,
-			available:      available,
+			addr:               resolvedAddress,
+			minConnections:     options.MinConnections,
+			maxConnections:     options.MaxConnections,
+			idleTimeout:        options.IdleTimeout,
+			connectTimeout:     options.ConnectTimeout,
+			requestTimeout:     options.RequestTimeout,
+			healthCheckBuilder: options.HealthCheckBuilder,
+			available:          make([]*connection, options.MinConnections),
 		}, nil
 	} else {
 		return nil, err
 	}
+}
+
+// exported funcs
+
+func (n *Node) Start() (err error) {
+	// TODO _stateCheck - needed?
+	var i uint16
+	for i = 0; i < n.minConnections; i++ {
+		if conn, err := n.createNewConnection(); err == nil {
+			n.available[i] = conn
+		}
+	}
+	// TODO _expireTimer
+	// TODO State.RUNNING
+	// TODO emit stateChange event
+	return
+}
+
+// non-exported funcs
+
+func (n *Node) createNewConnection() (conn *connection, err error) {
+	connectionOptions := &connectionOptions{
+		remoteAddress:  n.addr,
+		connectTimeout: n.connectTimeout,
+		requestTimeout: n.requestTimeout,
+	}
+
+	// This is necessary to have a unique Command struct as part of each
+	// connection so that concurrent calls to check health can all have
+	// unique results
+	if n.healthCheckBuilder != nil {
+		connectionOptions.healthCheck = n.healthCheckBuilder.Build()
+	}
+
+	if conn, err = newConnection(connectionOptions); err == nil {
+		if err = conn.connect(); err == nil {
+			n.currentNumConnections++
+			return
+		}
+	}
+	return
 }

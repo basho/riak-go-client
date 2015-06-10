@@ -4,6 +4,17 @@ import (
 	"errors"
 )
 
+type CommandBuilder interface {
+	Build() Command
+}
+
+type PingCommandBuilder struct {
+}
+
+func (builder *PingCommandBuilder) Build() Command {
+	return &PingCommand{}
+}
+
 type Command interface {
 	Success() bool
 	rpbData() []byte
