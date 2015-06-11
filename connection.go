@@ -95,7 +95,10 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
-	cmd.rpbRead(data)
+	if err = cmd.rpbRead(data); err != nil {
+		return
+	}
+
 	return
 }
 
