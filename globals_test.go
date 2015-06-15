@@ -4,12 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"net"
-	"time"
-)
-
-const (
-	thirtySeconds = time.Second * 30
-	thirtyMinutes = time.Minute * 30
 )
 
 var localhost = net.ParseIP("127.0.0.1")

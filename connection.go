@@ -23,9 +23,10 @@ type connection struct {
 	connectTimeout time.Duration
 	requestTimeout time.Duration
 	healthCheck    Command
+	sizeBuf        []byte
 	active         bool
 	inFlight       bool
-	sizeBuf        []byte
+	lastUsed       time.Time
 }
 
 func newConnection(options *connectionOptions) (*connection, error) {
@@ -47,6 +48,9 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		requestTimeout: options.requestTimeout,
 		healthCheck:    options.healthCheck,
 		sizeBuf:        make([]byte, 4),
+		active:         false,
+		inFlight:       false,
+		lastUsed:       time.Now(),
 	}, nil
 }
 
@@ -86,17 +90,16 @@ func (c *connection) close() error {
 	return c.conn.Close()
 }
 
-func (c *connection) notInFlight() {
-	c.inFlight = false
-	return
-}
-
-// TODO
-func (c *connection) resetBuffer() {
-	return
-}
-
 func (c *connection) execute(cmd Command) (err error) {
+    if c.inFlight == true {
+        err = fmt.Errorf("[Connection] attempted to run command on in-use connection");
+		return
+    }
+
+    logDebug("[Connection] execute command: %v", cmd.Name())
+    c.inFlight = true
+    c.lastUsed = time.Now()
+
 	if err = c.write(cmd.rpbData()); err != nil {
 		return
 	}
@@ -110,6 +113,8 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
+	// TODO streaming responses
+	// TODO translate RpbErrorResp into golang error
 	return
 }
 

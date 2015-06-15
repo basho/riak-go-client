@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+const (
+	thirtySeconds = time.Second * 30
+	thirtyMinutes = time.Minute * 30
+)
+
 const defaultRemoteAddress = "127.0.0.1:8087"
 const defaultMinConnections = 1
 const defaultMaxConnections = 8096
