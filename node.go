@@ -1,8 +1,10 @@
 package riak
 
 import (
+	"fmt"
 	"net"
 	"time"
+	"sync"
 )
 
 // TODO auth
@@ -17,6 +19,7 @@ type NodeOptions struct {
 }
 
 type Node struct {
+	sync.RWMutex
 	addr                  *net.TCPAddr
 	minConnections        uint16
 	maxConnections        uint16
@@ -26,6 +29,33 @@ type Node struct {
 	healthCheckBuilder    CommandBuilder
 	available             []*connection
 	currentNumConnections uint16
+	state                 state
+}
+
+type state byte
+
+const (
+	CREATED state = iota
+	RUNNING
+	HEALTH_CHECKING
+	SHUTTING_DOWN
+	SHUTDOWN
+)
+
+func (v state) String() (rv string) {
+	switch v {
+	case CREATED:
+		rv = "CREATED"
+	case RUNNING:
+		rv = "RUNNING"
+	case HEALTH_CHECKING:
+		rv = "HEALTH_CHECKING"
+	case SHUTTING_DOWN:
+		rv = "SHUTTING_DOWN"
+	case SHUTDOWN:
+		rv = "SHUTDOWN"
+	}
+	return
 }
 
 var defaultNodeOptions = &NodeOptions{
@@ -70,6 +100,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			requestTimeout:     options.RequestTimeout,
 			healthCheckBuilder: options.HealthCheckBuilder,
 			available:          make([]*connection, options.MinConnections),
+			state:              CREATED,
 		}, nil
 	} else {
 		return nil, err
@@ -79,7 +110,9 @@ func NewNode(options *NodeOptions) (*Node, error) {
 // exported funcs
 
 func (n *Node) Start() (err error) {
-	// TODO _stateCheck - needed?
+	if err = n.stateCheck(CREATED); err != nil {
+		return
+	}
 	var i uint16
 	for i = 0; i < n.minConnections; i++ {
 		if conn, err := n.createNewConnection(); err == nil {
@@ -87,12 +120,50 @@ func (n *Node) Start() (err error) {
 		}
 	}
 	// TODO _expireTimer
-	// TODO State.RUNNING
+	n.setState(RUNNING)
 	// TODO emit stateChange event
 	return
 }
 
+func (n *Node) Stop() (err error) {
+	if err = n.stateCheck(CREATED, HEALTH_CHECKING); err != nil {
+		return
+	}
+	// TODO stop expire timer
+	n.setState(SHUTTING_DOWN)
+    logDebug("[RiakNode] (%v) shutting down.", n.addr)
+	n.shutdown()
+	return
+}
+
 // non-exported funcs
+
+func (n *Node) shutdown() (err error) {
+	return
+}
+
+func (n *Node) setState(s state) {
+	n.Lock()
+	defer n.Unlock()
+	n.state = s
+	return
+}
+
+func (n *Node) stateCheck(allowed ...state) (err error) {
+	n.RLock()
+	defer n.RUnlock()
+	stateChecked := false
+	for _,s := range allowed {
+		if n.state == s {
+			stateChecked = true
+			break
+		}
+	}
+	if !stateChecked {
+		err = fmt.Errorf("[RiakNode]: Illegal State; required %s: current: %s", allowed, n.state)
+	}
+	return
+}
 
 func (n *Node) createNewConnection() (conn *connection, err error) {
 	connectionOptions := &connectionOptions{

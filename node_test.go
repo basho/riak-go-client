@@ -18,6 +18,9 @@ func TestCreateNodeWithOptions(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+	if expected, actual := CREATED, node.state; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
 	if node.addr.Port != 1234 {
 		t.Errorf("expected port 1234, got: %s", string(node.addr.Port))
 	}
