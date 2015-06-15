@@ -24,6 +24,7 @@ type connection struct {
 	requestTimeout time.Duration
 	healthCheck    Command
 	active         bool
+	inFlight       bool
 	sizeBuf        []byte
 }
 
@@ -75,7 +76,7 @@ func (c *connection) connect() (err error) {
 func (c *connection) available() bool {
 	defer func() {
 		if err := recover(); err != nil {
-			logErrorln("available: connection panic!")
+			logErrorln("[Connection] available: connection panic!")
 		}
 	}()
 	return (c.conn != nil && c.active)
@@ -83,6 +84,16 @@ func (c *connection) available() bool {
 
 func (c *connection) close() error {
 	return c.conn.Close()
+}
+
+func (c *connection) notInFlight() {
+	c.inFlight = false
+	return
+}
+
+// TODO
+func (c *connection) resetBuffer() {
+	return
 }
 
 func (c *connection) execute(cmd Command) (err error) {

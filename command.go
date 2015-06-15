@@ -16,6 +16,7 @@ func (builder *PingCommandBuilder) Build() Command {
 }
 
 type Command interface {
+	Name() string
 	Success() bool
 	rpbData() []byte
 	rpbRead(data []byte) error
@@ -26,6 +27,10 @@ type PingCommand struct {
 }
 
 var ErrZeroLength error = errors.New("response was only 0 bytes long")
+
+func (cmd *PingCommand) Name() string {
+	return "Ping"
+}
 
 func (cmd *PingCommand) Success() bool {
 	return cmd.Result == true
