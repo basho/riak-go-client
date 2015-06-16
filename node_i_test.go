@@ -35,14 +35,17 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
+	var lastAddr *Command
+	if err := node.Start(); err != nil {
+		t.Error(err)
+	}
 	if expected, actual := node.minConnections, uint16(len(node.available)); expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	var lastAddr *Command
-	node.Start()
 	for _, conn := range node.available {
 		if conn == nil {
 			t.Error("got unexpected nil value")
+			continue
 		}
 		if conn.addr.Port != 10017 {
 			t.Errorf("expected port 10017, got: %s", string(conn.addr.Port))

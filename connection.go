@@ -91,14 +91,14 @@ func (c *connection) close() error {
 }
 
 func (c *connection) execute(cmd Command) (err error) {
-    if c.inFlight == true {
-        err = fmt.Errorf("[Connection] attempted to run command on in-use connection");
+	if c.inFlight == true {
+		err = fmt.Errorf("[Connection] attempted to run command on in-use connection")
 		return
-    }
+	}
 
-    logDebug("[Connection] execute command: %v", cmd.Name())
-    c.inFlight = true
-    c.lastUsed = time.Now()
+	logDebug("[Connection] execute command: %v", cmd.Name())
+	c.inFlight = true
+	c.lastUsed = time.Now()
 
 	if err = c.write(cmd.rpbData()); err != nil {
 		return

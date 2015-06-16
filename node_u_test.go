@@ -6,6 +6,7 @@ import (
 )
 
 func TestCreateNodeWithOptions(t *testing.T) {
+	builder := &PingCommandBuilder{}
 	opts := &NodeOptions{
 		RemoteAddress:  "8.8.8.8:1234",
 		MinConnections: 2,
@@ -13,6 +14,7 @@ func TestCreateNodeWithOptions(t *testing.T) {
 		IdleTimeout:    thirtyMinutes,
 		ConnectTimeout: thirtySeconds,
 		RequestTimeout: thirtySeconds,
+		HealthCheckBuilder: builder,
 	}
 	node, err := NewNode(opts)
 	if err != nil {
@@ -43,7 +45,13 @@ func TestCreateNodeWithOptions(t *testing.T) {
 	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := node.minConnections, uint16(len(node.available)); expected != actual {
+	if expected, actual := 0, len(node.available); expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := builder, node.healthCheckBuilder; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := CREATED, node.state; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 }
@@ -71,7 +79,13 @@ func TestEnsureDefaultNodeValues(t *testing.T) {
 	if node.idleTimeout != defaultIdleTimeout {
 		t.Errorf("expected %v, got: %v", defaultIdleTimeout, node.idleTimeout)
 	}
-	if expected, actual := node.minConnections, uint16(len(node.available)); expected != actual {
+	if expected, actual := 0, len(node.available); expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if node.healthCheckBuilder != nil {
+		t.Errorf("expected nil, got: %v", node.healthCheckBuilder)
+	}
+	if expected, actual := CREATED, node.state; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 }

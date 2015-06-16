@@ -19,20 +19,26 @@ type NodeOptions struct {
 }
 
 type Node struct {
-	stateMtx              sync.RWMutex
+	addr               *net.TCPAddr
+	minConnections     uint16
+	maxConnections     uint16
+	idleTimeout        time.Duration
+	connectTimeout     time.Duration
+	requestTimeout     time.Duration
+	healthCheckBuilder CommandBuilder
+
+	// Health Check stop channel / timer
+	stop         chan bool
+	expireTicker *time.Ticker
+
+	// Connection Pool
 	connMtx               sync.Mutex
-	stop                  chan bool
-	addr                  *net.TCPAddr
-	minConnections        uint16
-	maxConnections        uint16
-	idleTimeout           time.Duration
-	connectTimeout        time.Duration
-	requestTimeout        time.Duration
-	healthCheckBuilder    CommandBuilder
 	available             []*connection
 	currentNumConnections uint16
-	state                 state
-	expireTicker          *time.Ticker
+
+	// Node State
+	stateMtx sync.RWMutex
+	state    state
 }
 
 type state byte
@@ -104,7 +110,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			connectTimeout:     options.ConnectTimeout,
 			requestTimeout:     options.RequestTimeout,
 			healthCheckBuilder: options.HealthCheckBuilder,
-			available:          make([]*connection, options.MinConnections),
+			available:          make([]*connection, 0, options.MinConnections),
 			state:              CREATED,
 		}, nil
 	} else {
@@ -126,13 +132,24 @@ func (n *Node) Start() (err error) {
 	logDebug("[Node] (%v) starting", n)
 
 	n.connMtx.Lock()
+	defer n.connMtx.Unlock()
 	var i uint16
 	for i = 0; i < n.minConnections; i++ {
 		if conn, err := n.createNewConnection(); err == nil {
-			n.returnConnectionToPool(conn, false)
+			if conn == nil {
+				// Should never happen
+				panic(fmt.Sprintf("[Node] (%v) could not create connection in Start", n))
+			} else {
+				n.returnConnectionToPool(conn, false)
+			}
+		} else {
+			break
 		}
 	}
-	n.connMtx.Unlock()
+
+	if err != nil {
+		return
+	}
 
 	n.expireTicker = time.NewTicker(thirtySeconds)
 	go n.expireIdleConnections()
@@ -167,19 +184,36 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 	n.stateMtx.RLock()
 	defer n.stateMtx.RUnlock()
 	if n.state == RUNNING {
-		if conn := n.getAvailableConnection(); conn == nil {
+		var conn *connection
+		if conn = n.getAvailableConnection(); conn == nil {
 			// TODO new conn and execute, maybe retry
-		} else {
-			logDebug("[Node] (%v) - executing command '%v'", n, cmd.Name())
-			if err = conn.execute(cmd); err == nil {
-				executed = true
-				n.returnConnectionToPool(conn, true)
+			n.connMtx.Lock()
+			defer n.connMtx.Unlock()
+			if n.currentNumConnections < n.maxConnections {
+				if conn, err = n.createNewConnection(); conn == nil || err != nil {
+					// TODO if conn == nil or err, immediately health check
+					executed = false
+					return
+				}
 			} else {
+				logDebug("[Node] node (%v): all connections in use and at max", n)
 				executed = false
-				n.returnConnectionToPool(conn, true)
-				// TODO retry command if retries remain by calling n.Execute
-				// after decrementing # of tries.
+				return
 			}
+			n.connMtx.Unlock()
+		}
+
+		// TODO handle errors like connection closed / timeout
+		// with regard to re-execution of command
+		logDebug("[Node] (%v) - executing command '%v'", n, cmd.Name())
+		if err = conn.execute(cmd); err == nil {
+			executed = true
+			n.returnConnectionToPool(conn, true)
+		} else {
+			executed = false
+			n.returnConnectionToPool(conn, true)
+			// TODO retry command if retries remain by calling n.Execute
+			// after decrementing # of tries.
 		}
 	}
 
@@ -231,6 +265,7 @@ func (n *Node) shutdown() (err error) {
 	}
 
 	if n.currentNumConnections == 0 {
+		n.available = nil
 		n.setState(SHUTDOWN)
 		logDebug("[Node] (%v) shut down.", n)
 	} else {
