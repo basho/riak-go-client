@@ -186,13 +186,9 @@ func TestHealthCheckFail(t *testing.T) {
 
 	if conn, err := newConnection(opts); err == nil {
 		if err := conn.connect(); err == nil {
-			t.Error("expected to see timeout error")
+			t.Error("expected to see error")
 		} else {
-			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
-				t.Log("timeout error", neterr)
-			} else {
-				t.Error("expected to see timeout error")
-			}
+			t.Log("[Connection] error", err)
 		}
 	} else {
 		t.Error(err)
