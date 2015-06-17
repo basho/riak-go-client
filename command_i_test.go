@@ -32,6 +32,9 @@ func TestPing(t *testing.T) {
 	if conn, err = newConnection(opts); err == nil {
 		if err = conn.connect(); err == nil {
 			cmd := &PingCommand{}
+			if expected, actual := false, conn.inFlight; expected != actual {
+				t.Errorf("expected %v, got: %v", expected, actual)
+			}
 			if err = conn.execute(cmd); err == nil {
 				if cmd.Result != true {
 					t.Error("ping did not return true")

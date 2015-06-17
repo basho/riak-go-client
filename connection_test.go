@@ -31,6 +31,9 @@ func TestCreateConnection(t *testing.T) {
 		if conn.requestTimeout != thirtyMinutes {
 			t.Errorf("expected %v, got: %v", thirtyMinutes, conn.requestTimeout)
 		}
+		if expected, actual := false, conn.inFlight; expected != actual {
+			t.Errorf("expected %v, got: %v", expected, actual)
+		}
 	} else {
 		t.Error(err.Error())
 	}
@@ -70,6 +73,9 @@ func TestEnsureDefaultConnectionValues(t *testing.T) {
 		}
 		if conn.requestTimeout != defaultRequestTimeout {
 			t.Errorf("expected %v, got: %v", defaultRequestTimeout, conn.requestTimeout)
+		}
+		if expected, actual := false, conn.inFlight; expected != actual {
+			t.Errorf("expected %v, got: %v", expected, actual)
 		}
 	} else {
 		t.Error(err.Error())

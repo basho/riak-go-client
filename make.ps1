@@ -65,6 +65,9 @@ function Do-ProtoGen {
     $proto_wild = Join-Path -Path $proto_path -ChildPath '*.proto'
     Get-ChildItem $proto_wild | ForEach-Object {
         $rpb_path_tmp = Join-Path -Path $rpb_path -ChildPath $_.BaseName
+        If (!(Test-Path $rpb_path_tmp)) {
+            New-Item $rpb_path_tmp -Type Directory -Force
+        }
         Write-Verbose "protoc: --go_out=$rpb_path_tmp --proto_path=$proto_path $_"
         & { protoc --go_out=$rpb_path_tmp --proto_path=$proto_path $_ }
         if ($? -ne $True) {

@@ -49,8 +49,9 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		healthCheck:    options.healthCheck,
 		sizeBuf:        make([]byte, 4),
 		active:         false,
-		inFlight:       false,
-		lastUsed:       time.Now(),
+		// TODO may not be a necessary check
+		inFlight: false,
+		lastUsed: time.Now(),
 	}, nil
 }
 
@@ -71,6 +72,8 @@ func (c *connection) connect() (err error) {
 				c.active = false
 				logError(err.Error())
 				c.close()
+			} else {
+				c.inFlight = false
 			}
 		}
 	}
@@ -127,52 +130,53 @@ func (c *connection) setReadDeadline() {
 	c.conn.SetReadDeadline(time.Now().Add(c.requestTimeout))
 }
 
-func (c *connection) read() ([]byte, error) {
+func (c *connection) read() (data []byte, err error) {
 	if !c.available() {
-		return nil, ErrCannotRead
+		err = ErrCannotRead
+		return
 	}
 	c.setReadDeadline()
-	if count, err := io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
+	var count int
+	if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
 		size := binary.BigEndian.Uint32(c.sizeBuf)
 		// TODO: investigate using a buffer on c instead of
 		// always making a new one
-		data := make([]byte, size)
+		data = make([]byte, size)
 		c.setReadDeadline()
-		count, err := io.ReadFull(c.conn, data)
-		if err != nil {
-			if err == syscall.EPIPE {
-				c.close()
-			}
-			c.active = false
-			return nil, err
+		count, err = io.ReadFull(c.conn, data)
+		if err != nil && err == syscall.EPIPE {
+			c.close()
+		} else if uint32(count) != size {
+			err = fmt.Errorf("[Connection] data length: %d, only read: %d", len(data), count)
 		}
-		if count != int(size) {
-			c.active = false
-			return nil, fmt.Errorf("data length: %d, only read: %d", len(data), count)
-		}
-		return data, nil
 	}
-	return nil, nil
+	if err != nil {
+		// TODO why not close() ?
+		c.active = false
+		data = nil
+	}
+	return
 }
 
-func (c *connection) write(data []byte) error {
+func (c *connection) write(data []byte) (err error) {
 	if !c.available() {
 		return ErrCannotWrite
 	}
 	// TODO: we should also take currently executing Command (Riak operation)
 	// timeout into account
 	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
-	count, err := c.conn.Write(data)
+	var count int
+	count, err = c.conn.Write(data)
 	if err != nil {
 		if err == syscall.EPIPE {
 			c.close()
 		}
 		c.active = false
-		return err
+		return
 	}
 	if count != len(data) {
 		c.active = false
-		return fmt.Errorf("data length: %d, only wrote: %d", len(data), count)
+		err = fmt.Errorf("[Connection] data length: %d, only wrote: %d", len(data), count)
 	}
-	return nil
+	return
 }

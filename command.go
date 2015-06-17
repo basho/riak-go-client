@@ -26,7 +26,7 @@ type PingCommand struct {
 	Result bool
 }
 
-var ErrZeroLength error = errors.New("response was only 0 bytes long")
+var ErrZeroLength error = errors.New("[Command] 0 byte data response")
 
 func (cmd *PingCommand) Name() string {
 	return "Ping"
