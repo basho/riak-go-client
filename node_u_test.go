@@ -8,12 +8,12 @@ import (
 func TestCreateNodeWithOptions(t *testing.T) {
 	builder := &PingCommandBuilder{}
 	opts := &NodeOptions{
-		RemoteAddress:  "8.8.8.8:1234",
-		MinConnections: 2,
-		MaxConnections: 2048,
-		IdleTimeout:    thirtyMinutes,
-		ConnectTimeout: thirtySeconds,
-		RequestTimeout: thirtySeconds,
+		RemoteAddress:      "8.8.8.8:1234",
+		MinConnections:     2,
+		MaxConnections:     2048,
+		IdleTimeout:        thirtyMinutes,
+		ConnectTimeout:     thirtySeconds,
+		RequestTimeout:     thirtySeconds,
 		HealthCheckBuilder: builder,
 	}
 	node, err := NewNode(opts)

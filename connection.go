@@ -86,8 +86,11 @@ func (c *connection) available() bool {
 	return (c.conn != nil && c.active)
 }
 
-func (c *connection) close() error {
-	return c.conn.Close()
+func (c *connection) close() (err error) {
+	if c.conn != nil {
+		err = c.conn.Close()
+	}
+	return
 }
 
 func (c *connection) execute(cmd Command) (err error) {
