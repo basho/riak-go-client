@@ -47,8 +47,7 @@ func (cmd *PingCommand) rpbRead(data []byte) (err error) {
 		return
 	}
 
-	// PingResp: 2
-	if err = rpbEnsureCode(2, data[0]); err != nil {
+	if err = rpbEnsureCode(rpbCode_RpbPingResp, data[0]); err != nil {
 		return
 	}
 

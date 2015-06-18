@@ -4,13 +4,12 @@ package riak
 
 import (
 	"bytes"
+	rpb_riak "github.com/basho-labs/riak-go-client/rpb/riak"
+	"github.com/golang/protobuf/proto"
 	"net"
 	"testing"
 	"time"
-    "github.com/golang/protobuf/proto"
 )
-
-import rpb_riak "github.com/basho-labs/riak-go-client/rpb/riak"
 
 func TestSuccessfulConnection(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:1337")
@@ -60,7 +59,7 @@ func TestSuccessfulConnection(t *testing.T) {
 }
 
 func TestConnectionClosed(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:1337")
+	ln, err := net.Listen("tcp", "127.0.0.1:1338")
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,7 +75,7 @@ func TestConnectionClosed(t *testing.T) {
 		}
 	}()
 
-	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1337")
+	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1338")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -134,7 +133,7 @@ func TestConnectionTimeout(t *testing.T) {
 }
 
 func TestHealthCheckFail(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:1337")
+	ln, err := net.Listen("tcp", "127.0.0.1:1339")
 	if err != nil {
 		t.Error(err)
 	}
@@ -173,7 +172,7 @@ func TestHealthCheckFail(t *testing.T) {
 		}
 	}()
 
-	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1337")
+	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1339")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -188,7 +187,13 @@ func TestHealthCheckFail(t *testing.T) {
 		if err := conn.connect(); err == nil {
 			t.Error("expected to see error")
 		} else {
-			t.Log("[Connection] error", err)
+			if riakError, ok := err.(Error); ok == true {
+				if expected, actual := "1:this is an error", riakError.Error(); expected != actual {
+					t.Errorf("expected %v, got %v", expected, actual)
+				}
+			} else {
+				t.Error("expected to see Riak error, got:", err)
+			}
 		}
 	} else {
 		t.Error(err)

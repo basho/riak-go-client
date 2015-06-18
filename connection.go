@@ -115,7 +115,8 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
-	if err = rpbMaybeError(data); err != nil {
+	// Maybe translate RpbErrorResp into golang error
+	if err = maybeRiakError(data); err != nil {
 		return
 	}
 
@@ -124,7 +125,6 @@ func (c *connection) execute(cmd Command) (err error) {
 	}
 
 	// TODO streaming responses
-	// TODO translate RpbErrorResp into golang error
 	return
 }
 
@@ -143,8 +143,8 @@ func (c *connection) read() (data []byte, err error) {
 	var count int
 	if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
 		size := binary.BigEndian.Uint32(c.sizeBuf)
-		// TODO: investigate using a buffer on c instead of
-		// always making a new one
+		// TODO: investigate using a bytes.Buffer on c instead of
+		// always making a new byte slice
 		data = make([]byte, size)
 		c.setReadDeadline()
 		count, err = io.ReadFull(c.conn, data)

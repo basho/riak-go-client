@@ -23,8 +23,3 @@ func rpbWrite(code byte, data []byte) []byte {
 	buf.Write(data)
 	return buf.Bytes()
 }
-
-func rpbMaybeError(data []byte) (err error) {
-	// TODO check for riak error and turn into golang error
-	return
-}
