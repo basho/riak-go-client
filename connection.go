@@ -65,7 +65,7 @@ func (c *connection) connect() (err error) {
 		logError(err.Error())
 		c.close()
 	} else {
-		logDebug("connected to: %s", c.addr)
+		logDebug("[Connection] connected to: %s", c.addr)
 		c.active = true
 		if c.healthCheck != nil {
 			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Success() {

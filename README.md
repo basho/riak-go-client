@@ -17,20 +17,21 @@ TODO
 
 ## Documentation
 
-* Master: [![Build Status](https://travis-ci.org/basho/riak-go-client.svg?branch=master)](https://travis-ci.org/basho/riak-go-client)
+* Master: [![Build Status](https://travis-ci.org/basho-labs/riak-go-client.svg?branch=master)](https://travis-ci.org/basho-labs/riak-go-client)
 
-Most documentation is living in the [wiki](https://github.com/basho/riak-go-client/wiki). For specifics on our progress here, see the [release notes](https://github.com/basho/riak-go-client/blob/master/RELNOTES.md). 
+Most documentation is living in the
+[wiki](https://github.com/basho-labs/riak-go-client/wiki). For specifics on our progress here, see the [release notes](https://github.com/basho-labs/riak-go-client/blob/master/RELNOTES.md). 
 
 ## Contributing
 
 *Note:* Please clone this repository in such a manner that submodules are also cloned:
 
 ```
-git clone --recursive https://github.com/basho/riak-go-client
+git clone --recursive https://github.com/basho-labs/riak-go-client
 
 # OR:
 
-git clone https://github.com/basho/riak-go-client
+git clone https://github.com/basho-labs/riak-go-client
 git submodule init --update
 ```
 

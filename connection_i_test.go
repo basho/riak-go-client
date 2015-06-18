@@ -160,7 +160,7 @@ func TestHealthCheckFail(t *testing.T) {
 				break
 			}
 
-			data := rpbWrite(0, encoded)
+			data := rpbWrite(rpbCode_RpbErrorResp, encoded)
 			count, err := c.Write(data)
 			if err != nil {
 				t.Error(err)
@@ -197,5 +197,51 @@ func TestHealthCheckFail(t *testing.T) {
 		}
 	} else {
 		t.Error(err)
+	}
+}
+
+func TestHealthCheckSuccess(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:1340")
+	if err != nil {
+		t.Error(err)
+	}
+	defer ln.Close()
+
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				t.Error(err)
+				break
+			}
+			data := rpbWrite(rpbCode_RpbPingResp, nil)
+			count, err := c.Write(data)
+			if err != nil {
+				t.Error(err)
+				break
+			}
+			if count != len(data) {
+				t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
+			}
+		}
+	}()
+
+	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1340")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	opts := &connectionOptions{
+		remoteAddress:  addr,
+		connectTimeout: thirtySeconds,
+		healthCheck:    &PingCommand{},
+	}
+
+	if conn, err := newConnection(opts); err == nil {
+		if err := conn.connect(); err != nil {
+			t.Error("unexpected error:", err)
+		}
+	} else {
+		t.Error("unexpected error:", err)
 	}
 }
