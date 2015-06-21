@@ -44,25 +44,25 @@ type Node struct {
 type state byte
 
 const (
-	ERROR state = iota
-	CREATED
-	RUNNING
-	HEALTH_CHECKING
-	SHUTTING_DOWN
-	SHUTDOWN
+	NODE_ERROR state = iota
+	NODE_CREATED
+	NODE_RUNNING
+	NODE_HEALTH_CHECKING
+	NODE_SHUTTING_DOWN
+	NODE_SHUTDOWN
 )
 
 func (v state) String() (rv string) {
 	switch v {
-	case CREATED:
+	case NODE_CREATED:
 		rv = "CREATED"
-	case RUNNING:
+	case NODE_RUNNING:
 		rv = "RUNNING"
-	case HEALTH_CHECKING:
+	case NODE_HEALTH_CHECKING:
 		rv = "HEALTH_CHECKING"
-	case SHUTTING_DOWN:
+	case NODE_SHUTTING_DOWN:
 		rv = "SHUTTING_DOWN"
-	case SHUTDOWN:
+	case NODE_SHUTDOWN:
 		rv = "SHUTDOWN"
 	}
 	return
@@ -111,7 +111,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			requestTimeout:     options.RequestTimeout,
 			healthCheckBuilder: options.HealthCheckBuilder,
 			available:          make([]*connection, 0, options.MinConnections),
-			state:              CREATED,
+			state:              NODE_CREATED,
 		}, nil
 	} else {
 		return nil, err
@@ -125,7 +125,7 @@ func (n *Node) String() string {
 }
 
 func (n *Node) Start() (err error) {
-	if err = n.stateCheck(CREATED); err != nil {
+	if err = n.stateCheck(NODE_CREATED); err != nil {
 		return
 	}
 
@@ -133,9 +133,10 @@ func (n *Node) Start() (err error) {
 
 	n.connMtx.Lock()
 	defer n.connMtx.Unlock()
+
 	var i uint16
 	for i = 0; i < n.minConnections; i++ {
-		if conn, err := n.createNewConnection(); err == nil {
+		if conn, err := n.createNewConnection(nil); err == nil {
 			if conn == nil {
 				// Should never happen
 				panic(fmt.Sprintf("[Node] (%v) could not create connection in Start", n))
@@ -154,7 +155,7 @@ func (n *Node) Start() (err error) {
 	n.expireTicker = time.NewTicker(thirtySeconds)
 	go n.expireIdleConnections()
 
-	n.setState(RUNNING)
+	n.setState(NODE_RUNNING)
 
 	logDebug("[Node] (%v) started", n)
 
@@ -163,12 +164,12 @@ func (n *Node) Start() (err error) {
 }
 
 func (n *Node) Stop() (err error) {
-	if err = n.stateCheck(CREATED, HEALTH_CHECKING); err != nil {
+	if err = n.stateCheck(NODE_CREATED, NODE_HEALTH_CHECKING); err != nil {
 		return
 	}
 	n.stop <- true
 	n.expireTicker.Stop()
-	n.setState(SHUTTING_DOWN)
+	n.setState(NODE_SHUTTING_DOWN)
 	logDebug("[Node] (%v) shutting down.", n)
 	n.shutdown()
 	return
@@ -177,22 +178,23 @@ func (n *Node) Stop() (err error) {
 func (n *Node) Execute(cmd Command) (executed bool, err error) {
 	executed = false
 
-	if err = n.stateCheck(RUNNING, HEALTH_CHECKING); err != nil {
+	if err = n.stateCheck(NODE_RUNNING, NODE_HEALTH_CHECKING); err != nil {
 		return
 	}
 
 	n.stateMtx.RLock()
 	defer n.stateMtx.RUnlock()
-	if n.state == RUNNING {
+	if n.state == NODE_RUNNING {
 		var conn *connection
 		if conn = n.getAvailableConnection(); conn == nil {
 			// TODO new conn and execute, maybe retry
 			n.connMtx.Lock()
 			defer n.connMtx.Unlock()
 			if n.currentNumConnections < n.maxConnections {
-				if conn, err = n.createNewConnection(); conn == nil || err != nil {
+				if conn, err = n.createNewConnection(nil); conn == nil || err != nil {
 					// TODO if conn == nil or err, immediately health check
 					executed = false
+					go n.healthCheck()
 					return
 				}
 			} else {
@@ -201,6 +203,11 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 				return
 			}
 			n.connMtx.Unlock()
+		}
+
+		if conn == nil {
+			// Should never happen
+			panic(fmt.Sprintf("[Node] (%v) expected connection", n))
 		}
 
 		// TODO handle errors like connection closed / timeout
@@ -238,7 +245,7 @@ func (n *Node) returnConnectionToPool(c *connection, shouldLock bool) {
 		n.connMtx.Lock()
 		defer n.connMtx.Unlock()
 	}
-	if n.state < SHUTTING_DOWN {
+	if n.state < NODE_SHUTTING_DOWN {
 		c.inFlight = false
 		// TODO c.resetBuffer()
 		n.available = append(n.available, c)
@@ -260,13 +267,13 @@ func (n *Node) shutdown() (err error) {
 		err = conn.close()
 	}
 	if err != nil {
-		n.setState(ERROR)
+		n.setState(NODE_ERROR)
 		return
 	}
 
 	if n.currentNumConnections == 0 {
 		n.available = nil
-		n.setState(SHUTDOWN)
+		n.setState(NODE_SHUTDOWN)
 		logDebug("[Node] (%v) shut down.", n)
 	} else {
 		// Should never happen
@@ -299,20 +306,40 @@ func (n *Node) stateCheck(allowed ...state) (err error) {
 	return
 }
 
-func (n *Node) createNewConnection() (conn *connection, err error) {
+func (n *Node) healthCheck() {
+	n.setState(NODE_HEALTH_CHECKING)
+
+    logDebug("[Node] (%v) running health check", n)
+
+	healthCheck := n.getHealthCheckCommand()
+
+	for {
+		if conn, err := n.createNewConnection(healthCheck); conn == nil || err != nil {
+			logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
+			// TODO: 30 secs seems too long
+			time.Sleep(thirtySeconds)
+		} else {
+			n.returnConnectionToPool(conn, true)
+			n.setState(NODE_RUNNING)
+			logDebug("[Node] (%v) healthcheck success", n)
+			break
+		}
+	}
+
+	return
+}
+
+func (n *Node) createNewConnection(healthCheck Command) (conn *connection, err error) {
 	connectionOptions := &connectionOptions{
 		remoteAddress:  n.addr,
 		connectTimeout: n.connectTimeout,
 		requestTimeout: n.requestTimeout,
-	}
-	// This is necessary to have a unique Command struct as part of each
-	// connection so that concurrent calls to check health can all have
-	// unique results
-	if n.healthCheckBuilder != nil {
-		connectionOptions.healthCheck = n.healthCheckBuilder.Build()
+		healthCheck: healthCheck,
 	}
 	if conn, err = newConnection(connectionOptions); err == nil {
 		if err = conn.connect(); err == nil {
+			n.connMtx.Lock()
+			defer n.connMtx.Unlock()
 			n.currentNumConnections++
 			return
 		}
@@ -357,4 +384,16 @@ func (n *Node) expireIdleConnections() {
 			logDebug("[Node] (%v) expired %d connections.", n, count)
 		}
 	}
+}
+
+func (n *Node) getHealthCheckCommand() (hc Command) {
+	// This is necessary to have a unique Command struct as part of each
+	// connection so that concurrent calls to check health can all have
+	// unique results
+	if n.healthCheckBuilder != nil {
+		hc = n.healthCheckBuilder.Build()
+	} else {
+		hc = &PingCommand{}
+	}
+	return
 }
