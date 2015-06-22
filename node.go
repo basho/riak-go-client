@@ -167,12 +167,12 @@ func (n *Node) Start() (err error) {
 }
 
 func (n *Node) Stop() (err error) {
-	if err = n.stateCheck(NODE_CREATED, NODE_HEALTH_CHECKING); err != nil {
+	if err = n.stateCheck(NODE_RUNNING, NODE_HEALTH_CHECKING); err != nil {
 		return
 	}
+	n.setState(NODE_SHUTTING_DOWN)
 	n.stop <- true
 	n.expireTicker.Stop()
-	n.setState(NODE_SHUTTING_DOWN)
 	logDebug("[Node] (%v) shutting down.", n)
 	n.shutdown()
 	return
@@ -193,6 +193,7 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 			defer n.connMtx.RUnlock()
 			if n.currentNumConnections < n.maxConnections {
 				if conn, err = n.createNewConnection(nil, true); conn == nil || err != nil {
+					// TODO log error
 					executed = false
 					go n.healthCheck()
 					return
@@ -217,8 +218,12 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 			executed = true
 			n.returnConnectionToPool(conn, true)
 		} else {
+			// TODO basically, this is _connectionClosed in Node.js client
 			executed = false
 			n.returnConnectionToPool(conn, true)
+			if tmpErr := n.stateCheck(NODE_HEALTH_CHECKING, NODE_SHUTTING_DOWN); tmpErr != nil {
+				go n.healthCheck()
+			}
 			// TODO retry command if retries remain by calling n.Execute
 			// after decrementing # of tries.
 		}
@@ -307,7 +312,7 @@ func (n *Node) stateCheck(allowed ...state) (err error) {
 		}
 	}
 	if !stateChecked {
-		err = fmt.Errorf("[Node]: Illegal State; required %s: current: %s", allowed, n.state)
+		err = fmt.Errorf("[Node]: Illegal State; required %v: current: %v", allowed, n.state)
 	}
 	return
 }
@@ -334,7 +339,7 @@ func (n *Node) healthCheck() {
 				n.returnConnectionToPool(conn, true)
 				n.setState(NODE_RUNNING)
 				logDebug("[Node] (%v) healthcheck success", n)
-				break
+				return
 			}
 		}
 	}

@@ -3,18 +3,21 @@
 package riak
 
 import (
+	"net"
 	"testing"
+	"time"
 )
 
 func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	opts := &NodeOptions{
-		RemoteAddress:      "riak-test:10017",
-		MinConnections:     2,
-		MaxConnections:     2048,
-		IdleTimeout:        thirtyMinutes,
-		ConnectTimeout:     thirtySeconds,
-		RequestTimeout:     thirtySeconds,
-		HealthCheckBuilder: &PingCommandBuilder{},
+		RemoteAddress:       "riak-test:10017",
+		MinConnections:      2,
+		MaxConnections:      2048,
+		IdleTimeout:         thirtyMinutes,
+		ConnectTimeout:      thirtySeconds,
+		RequestTimeout:      thirtySeconds,
+		HealthCheckInterval: time.Millisecond * 500,
+		HealthCheckBuilder:  &PingCommandBuilder{},
 	}
 	node, err := NewNode(opts)
 	if err != nil {
@@ -62,4 +65,64 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 			t.Errorf("expected %v, got: %v", expected, actual)
 		}
 	}
+	if err := node.Stop(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:1337")
+	if err != nil {
+		t.Error(err)
+	}
+	defer ln.Close()
+	logDebug("[TestRecoverViaDefaultPingHealthCheck] listener started")
+
+	connects := 0
+	connChan := make(chan int, 2)
+
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				break
+			}
+			connects++
+			if connects == 1 {
+				c.Close()
+			} else {
+				writePingResp(t, c)
+			}
+			connChan <- connects
+			if connects > 1 {
+				break
+			}
+		}
+	}()
+
+	opts := &NodeOptions{
+		RemoteAddress:  "127.0.0.1:1337",
+		MinConnections: 0,
+		HealthCheckInterval: time.Second,
+	}
+	node, err := NewNode(opts)
+	if err != nil {
+		t.Error(err)
+	}
+	node.Start()
+	logDebug("[TestRecoverViaDefaultPingHealthCheck] node started")
+
+	ping := &PingCommand{}
+	executed, err := node.Execute(ping)
+	if executed == true {
+		t.Error("expected error executing")
+	}
+	if err == nil {
+		t.Error("expected non-nil error")
+	}
+	tmp := <-connChan
+	logDebug("[TestRecoverViaDefaultPingHealthCheck] connects: %v, state: %v", tmp, node.state)
+	tmp = <-connChan
+	logDebug("[TestRecoverViaDefaultPingHealthCheck] connects: %v, state: %v", tmp, node.state)
+	node.Stop()
 }

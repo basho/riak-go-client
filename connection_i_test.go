@@ -214,15 +214,7 @@ func TestHealthCheckSuccess(t *testing.T) {
 				t.Error(err)
 				break
 			}
-			data := rpbWrite(rpbCode_RpbPingResp, nil)
-			count, err := c.Write(data)
-			if err != nil {
-				t.Error(err)
-				break
-			}
-			if count != len(data) {
-				t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
-			}
+			writePingResp(t, c)
 		}
 	}()
 
