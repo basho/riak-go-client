@@ -8,13 +8,14 @@ import (
 func TestCreateNodeWithOptions(t *testing.T) {
 	builder := &PingCommandBuilder{}
 	opts := &NodeOptions{
-		RemoteAddress:      "8.8.8.8:1234",
-		MinConnections:     2,
-		MaxConnections:     2048,
-		IdleTimeout:        thirtyMinutes,
-		ConnectTimeout:     thirtySeconds,
-		RequestTimeout:     thirtySeconds,
-		HealthCheckBuilder: builder,
+		RemoteAddress:       "8.8.8.8:1234",
+		MinConnections:      2,
+		MaxConnections:      2048,
+		IdleTimeout:         thirtyMinutes,
+		ConnectTimeout:      thirtySeconds,
+		RequestTimeout:      thirtySeconds,
+		HealthCheckInterval: thirtySeconds,
+		HealthCheckBuilder:  builder,
 	}
 	node, err := NewNode(opts)
 	if err != nil {
@@ -45,7 +46,16 @@ func TestCreateNodeWithOptions(t *testing.T) {
 	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
+	if expected, actual := node.connectTimeout, opts.ConnectTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := node.requestTimeout, opts.RequestTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
 	if expected, actual := 0, len(node.available); expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := node.healthCheckInterval, opts.HealthCheckInterval; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 	if expected, actual := builder, node.healthCheckBuilder; expected != actual {
@@ -76,7 +86,19 @@ func TestEnsureDefaultNodeValues(t *testing.T) {
 	if node.idleTimeout != defaultIdleTimeout {
 		t.Errorf("expected %v, got: %v", defaultIdleTimeout, node.idleTimeout)
 	}
+	if expected, actual := defaultConnectTimeout, node.connectTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := defaultRequestTimeout, node.requestTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := defaultConnectTimeout, node.connectTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
 	if expected, actual := 0, len(node.available); expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := defaultHealthCheckInterval, node.healthCheckInterval; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 	if node.healthCheckBuilder != nil {

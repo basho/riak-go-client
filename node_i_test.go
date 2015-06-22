@@ -35,7 +35,6 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	var lastAddr *Command
 	if err := node.Start(); err != nil {
 		t.Error(err)
 	}
@@ -53,15 +52,8 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		if conn.addr.Zone != "" {
 			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
 		}
-		if conn.healthCheck == nil {
-			t.Error("expected non-nil conn.healthCheck")
-		} else {
-			currentAddr := &conn.healthCheck
-			if lastAddr == currentAddr {
-				t.Errorf("expected unique conn.healthCheck struct lastAddr %v, currentAddr %v", lastAddr, currentAddr)
-			} else {
-				lastAddr = currentAddr
-			}
+		if conn.healthCheck != nil {
+			t.Error("expected nil conn.healthCheck")
 		}
 		if expected, actual := conn.connectTimeout, opts.ConnectTimeout; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)

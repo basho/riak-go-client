@@ -9,30 +9,32 @@ import (
 
 // TODO auth
 type NodeOptions struct {
-	RemoteAddress      string
-	MinConnections     uint16
-	MaxConnections     uint16
-	IdleTimeout        time.Duration
-	ConnectTimeout     time.Duration
-	RequestTimeout     time.Duration
-	HealthCheckBuilder CommandBuilder
+	RemoteAddress       string
+	MinConnections      uint16
+	MaxConnections      uint16
+	IdleTimeout         time.Duration
+	ConnectTimeout      time.Duration
+	RequestTimeout      time.Duration
+	HealthCheckInterval time.Duration
+	HealthCheckBuilder  CommandBuilder
 }
 
 type Node struct {
-	addr               *net.TCPAddr
-	minConnections     uint16
-	maxConnections     uint16
-	idleTimeout        time.Duration
-	connectTimeout     time.Duration
-	requestTimeout     time.Duration
-	healthCheckBuilder CommandBuilder
+	addr                *net.TCPAddr
+	minConnections      uint16
+	maxConnections      uint16
+	idleTimeout         time.Duration
+	connectTimeout      time.Duration
+	requestTimeout      time.Duration
+	healthCheckInterval time.Duration
+	healthCheckBuilder  CommandBuilder
 
 	// Health Check stop channel / timer
 	stop         chan bool
 	expireTicker *time.Ticker
 
 	// Connection Pool
-	connMtx               sync.Mutex
+	connMtx               sync.RWMutex
 	available             []*connection
 	currentNumConnections uint16
 
@@ -99,19 +101,23 @@ func NewNode(options *NodeOptions) (*Node, error) {
 	if options.RequestTimeout == 0 {
 		options.RequestTimeout = defaultRequestTimeout
 	}
+	if options.HealthCheckInterval == 0 {
+		options.HealthCheckInterval = defaultHealthCheckInterval
+	}
 
 	if resolvedAddress, err := net.ResolveTCPAddr("tcp", options.RemoteAddress); err == nil {
 		return &Node{
-			stop:               make(chan bool),
-			addr:               resolvedAddress,
-			minConnections:     options.MinConnections,
-			maxConnections:     options.MaxConnections,
-			idleTimeout:        options.IdleTimeout,
-			connectTimeout:     options.ConnectTimeout,
-			requestTimeout:     options.RequestTimeout,
-			healthCheckBuilder: options.HealthCheckBuilder,
-			available:          make([]*connection, 0, options.MinConnections),
-			state:              NODE_CREATED,
+			stop:                make(chan bool),
+			addr:                resolvedAddress,
+			minConnections:      options.MinConnections,
+			maxConnections:      options.MaxConnections,
+			idleTimeout:         options.IdleTimeout,
+			connectTimeout:      options.ConnectTimeout,
+			requestTimeout:      options.RequestTimeout,
+			healthCheckInterval: options.HealthCheckInterval,
+			healthCheckBuilder:  options.HealthCheckBuilder,
+			available:           make([]*connection, 0, options.MinConnections),
+			state:               NODE_CREATED,
 		}, nil
 	} else {
 		return nil, err
@@ -131,12 +137,9 @@ func (n *Node) Start() (err error) {
 
 	logDebug("[Node] (%v) starting", n)
 
-	n.connMtx.Lock()
-	defer n.connMtx.Unlock()
-
 	var i uint16
 	for i = 0; i < n.minConnections; i++ {
-		if conn, err := n.createNewConnection(nil); err == nil {
+		if conn, err := n.createNewConnection(nil, false); err == nil {
 			if conn == nil {
 				// Should never happen
 				panic(fmt.Sprintf("[Node] (%v) could not create connection in Start", n))
@@ -182,17 +185,14 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 		return
 	}
 
-	n.stateMtx.RLock()
-	defer n.stateMtx.RUnlock()
-	if n.state == NODE_RUNNING {
+	if n.currentState(NODE_RUNNING) {
 		var conn *connection
 		if conn = n.getAvailableConnection(); conn == nil {
-			// TODO new conn and execute, maybe retry
-			n.connMtx.Lock()
-			defer n.connMtx.Unlock()
+			// TODO retry?
+			n.connMtx.RLock()
+			defer n.connMtx.RUnlock()
 			if n.currentNumConnections < n.maxConnections {
-				if conn, err = n.createNewConnection(nil); conn == nil || err != nil {
-					// TODO if conn == nil or err, immediately health check
+				if conn, err = n.createNewConnection(nil, true); conn == nil || err != nil {
 					executed = false
 					go n.healthCheck()
 					return
@@ -202,7 +202,7 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 				executed = false
 				return
 			}
-			n.connMtx.Unlock()
+			n.connMtx.RUnlock()
 		}
 
 		if conn == nil {
@@ -283,6 +283,12 @@ func (n *Node) shutdown() (err error) {
 	return
 }
 
+func (n *Node) currentState(s state) bool {
+	n.stateMtx.RLock()
+	defer n.stateMtx.RUnlock()
+	return n.state == s
+}
+
 func (n *Node) setState(s state) {
 	n.stateMtx.Lock()
 	defer n.stateMtx.Unlock()
@@ -309,37 +315,46 @@ func (n *Node) stateCheck(allowed ...state) (err error) {
 func (n *Node) healthCheck() {
 	n.setState(NODE_HEALTH_CHECKING)
 
-    logDebug("[Node] (%v) running health check", n)
+	logDebug("[Node] (%v) running health check", n)
 
+	healthCheckTicker := time.NewTicker(n.healthCheckInterval)
+	defer healthCheckTicker.Stop()
 	healthCheck := n.getHealthCheckCommand()
 
 	for {
-		if conn, err := n.createNewConnection(healthCheck); conn == nil || err != nil {
-			logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
-			// TODO: 30 secs seems too long
-			time.Sleep(thirtySeconds)
-		} else {
-			n.returnConnectionToPool(conn, true)
-			n.setState(NODE_RUNNING)
-			logDebug("[Node] (%v) healthcheck success", n)
-			break
+		select {
+		case <-n.stop:
+			logDebug("[Node] (%v) health check routine quitting!")
+			return
+		case t := <-healthCheckTicker.C:
+			logDebug("[Node] (%v) running health check at %v", n, t)
+			if conn, err := n.createNewConnection(healthCheck, true); conn == nil || err != nil {
+				logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
+			} else {
+				n.returnConnectionToPool(conn, true)
+				n.setState(NODE_RUNNING)
+				logDebug("[Node] (%v) healthcheck success", n)
+				break
+			}
 		}
 	}
 
 	return
 }
 
-func (n *Node) createNewConnection(healthCheck Command) (conn *connection, err error) {
+func (n *Node) createNewConnection(healthCheck Command, shouldLock bool) (conn *connection, err error) {
 	connectionOptions := &connectionOptions{
 		remoteAddress:  n.addr,
 		connectTimeout: n.connectTimeout,
 		requestTimeout: n.requestTimeout,
-		healthCheck: healthCheck,
+		healthCheck:    healthCheck,
 	}
 	if conn, err = newConnection(connectionOptions); err == nil {
 		if err = conn.connect(); err == nil {
-			n.connMtx.Lock()
-			defer n.connMtx.Unlock()
+			if shouldLock {
+				n.connMtx.Lock()
+				defer n.connMtx.Unlock()
+			}
 			n.currentNumConnections++
 			return
 		}
@@ -348,10 +363,11 @@ func (n *Node) createNewConnection(healthCheck Command) (conn *connection, err e
 }
 
 func (n *Node) expireIdleConnections() {
+	logDebug("[Node] (%v) idle connection expiration routine starting", n)
 	for {
 		select {
 		case <-n.stop:
-			logDebug("[Node] (%v) idle connection expiration routine quitting!")
+			logDebug("[Node] (%v) idle connection expiration routine quitting", n)
 			return
 		case t := <-n.expireTicker.C:
 			logDebug("[Node] (%v) expiring idle connections at %v", n, t)
