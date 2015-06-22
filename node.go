@@ -294,11 +294,15 @@ func (n *Node) currentState(s state) bool {
 	return n.state == s
 }
 
-func (n *Node) setState(s state) {
+var setState = func(n *Node, s state) {
 	n.stateMtx.Lock()
 	defer n.stateMtx.Unlock()
 	n.state = s
 	return
+}
+
+func (n *Node) setState(s state) {
+	setState(n, s)
 }
 
 func (n *Node) stateCheck(allowed ...state) (err error) {
