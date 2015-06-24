@@ -40,34 +40,7 @@ type Node struct {
 
 	// Node State
 	stateMtx sync.RWMutex
-	state    state
-}
-
-type state byte
-
-const (
-	NODE_ERROR state = iota
-	NODE_CREATED
-	NODE_RUNNING
-	NODE_HEALTH_CHECKING
-	NODE_SHUTTING_DOWN
-	NODE_SHUTDOWN
-)
-
-func (v state) String() (rv string) {
-	switch v {
-	case NODE_CREATED:
-		rv = "CREATED"
-	case NODE_RUNNING:
-		rv = "RUNNING"
-	case NODE_HEALTH_CHECKING:
-		rv = "HEALTH_CHECKING"
-	case NODE_SHUTTING_DOWN:
-		rv = "SHUTTING_DOWN"
-	case NODE_SHUTDOWN:
-		rv = "SHUTDOWN"
-	}
-	return
+	state    nodeState
 }
 
 var defaultNodeOptions = &NodeOptions{
@@ -193,9 +166,9 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 			defer n.connMtx.RUnlock()
 			if n.currentNumConnections < n.maxConnections {
 				if conn, err = n.createNewConnection(nil, true); conn == nil || err != nil {
-					// TODO log error
+					logErr(err)
 					executed = false
-					go n.healthCheck()
+					n.doHealthCheck()
 					return
 				}
 			} else {
@@ -214,16 +187,13 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 		// TODO handle errors like connection closed / timeout
 		// with regard to re-execution of command
 		logDebug("[Node] (%v) - executing command '%v'", n, cmd.Name())
+		defer n.returnConnectionToPool(conn, true)
 		if err = conn.execute(cmd); err == nil {
 			executed = true
-			n.returnConnectionToPool(conn, true)
 		} else {
 			// TODO basically, this is _connectionClosed in Node.js client
 			executed = false
-			n.returnConnectionToPool(conn, true)
-			if tmpErr := n.stateCheck(NODE_HEALTH_CHECKING, NODE_SHUTTING_DOWN); tmpErr != nil {
-				go n.healthCheck()
-			}
+			n.doHealthCheck()
 			// TODO retry command if retries remain by calling n.Execute
 			// after decrementing # of tries.
 		}
@@ -288,24 +258,24 @@ func (n *Node) shutdown() (err error) {
 	return
 }
 
-func (n *Node) currentState(s state) bool {
+func (n *Node) currentState(s nodeState) bool {
 	n.stateMtx.RLock()
 	defer n.stateMtx.RUnlock()
 	return n.state == s
 }
 
-var setState = func(n *Node, s state) {
+var setState = func(n *Node, s nodeState) {
 	n.stateMtx.Lock()
 	defer n.stateMtx.Unlock()
 	n.state = s
 	return
 }
 
-func (n *Node) setState(s state) {
+func (n *Node) setState(s nodeState) {
 	setState(n, s)
 }
 
-func (n *Node) stateCheck(allowed ...state) (err error) {
+func (n *Node) stateCheck(allowed ...nodeState) (err error) {
 	n.stateMtx.RLock()
 	defer n.stateMtx.RUnlock()
 	stateChecked := false
@@ -321,34 +291,14 @@ func (n *Node) stateCheck(allowed ...state) (err error) {
 	return
 }
 
-func (n *Node) healthCheck() {
-	n.setState(NODE_HEALTH_CHECKING)
-
-	logDebug("[Node] (%v) running health check", n)
-
-	healthCheckTicker := time.NewTicker(n.healthCheckInterval)
-	defer healthCheckTicker.Stop()
-	healthCheck := n.getHealthCheckCommand()
-
-	for {
-		select {
-		case <-n.stop:
-			logDebug("[Node] (%v) health check routine quitting!")
-			return
-		case t := <-healthCheckTicker.C:
-			logDebug("[Node] (%v) running health check at %v", n, t)
-			if conn, err := n.createNewConnection(healthCheck, true); conn == nil || err != nil {
-				logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
-			} else {
-				n.returnConnectionToPool(conn, true)
-				n.setState(NODE_RUNNING)
-				logDebug("[Node] (%v) healthcheck success", n)
-				return
-			}
-		}
+func (n *Node) doHealthCheck() {
+	// NB: ensure we're not already health checking or shutting down
+	if tmpErr := n.stateCheck(NODE_HEALTH_CHECKING, NODE_SHUTTING_DOWN); tmpErr == nil {
+		logDebug("[Node] (%v) already health checking.")
+	} else {
+		n.setState(NODE_HEALTH_CHECKING)
+		go n.healthCheck()
 	}
-
-	return
 }
 
 func (n *Node) createNewConnection(healthCheck Command, shouldLock bool) (conn *connection, err error) {
@@ -368,6 +318,49 @@ func (n *Node) createNewConnection(healthCheck Command, shouldLock bool) (conn *
 			return
 		}
 	}
+	return
+}
+
+func (n *Node) getHealthCheckCommand() (hc Command) {
+	// This is necessary to have a unique Command struct as part of each
+	// connection so that concurrent calls to check health can all have
+	// unique results
+	if n.healthCheckBuilder != nil {
+		hc = n.healthCheckBuilder.Build()
+	} else {
+		hc = &PingCommand{}
+	}
+	return
+}
+
+// private goroutine funcs
+
+func (n *Node) healthCheck() {
+
+	logDebug("[Node] (%v) running health check", n)
+
+	healthCheckTicker := time.NewTicker(n.healthCheckInterval)
+	defer healthCheckTicker.Stop()
+	healthCheck := n.getHealthCheckCommand()
+
+	for {
+		select {
+		case <-n.stop:
+			logDebug("[Node] (%v) health check routine quitting.")
+			return
+		case t := <-healthCheckTicker.C:
+			logDebug("[Node] (%v) running health check at %v", n, t)
+			if conn, err := n.createNewConnection(healthCheck, true); conn == nil || err != nil {
+				logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
+			} else {
+				n.returnConnectionToPool(conn, true)
+				n.setState(NODE_RUNNING)
+				logDebug("[Node] (%v) healthcheck success", n)
+				return
+			}
+		}
+	}
+
 	return
 }
 
@@ -409,16 +402,4 @@ func (n *Node) expireIdleConnections() {
 			logDebug("[Node] (%v) expired %d connections.", n, count)
 		}
 	}
-}
-
-func (n *Node) getHealthCheckCommand() (hc Command) {
-	// This is necessary to have a unique Command struct as part of each
-	// connection so that concurrent calls to check health can all have
-	// unique results
-	if n.healthCheckBuilder != nil {
-		hc = n.healthCheckBuilder.Build()
-	} else {
-		hc = &PingCommand{}
-	}
-	return
 }

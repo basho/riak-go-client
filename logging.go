@@ -27,6 +27,10 @@ func logError(format string, v ...interface{}) {
 	errLogger.Printf(format, v...)
 }
 
+func logErr(err error) {
+	errLogger.Println(err.Error())
+}
+
 func logErrorln(v string) {
 	errLogger.Println(v)
 }

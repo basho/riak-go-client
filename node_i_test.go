@@ -71,9 +71,9 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 }
 
 func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
-	stateChan := make(chan state, 3)
+	stateChan := make(chan nodeState, 3)
 	origSetState := setState
-	setState = func(n *Node, s state) {
+	setState = func(n *Node, s nodeState) {
 		origSetState(n, s)
 		stateChan <- s
 	}
