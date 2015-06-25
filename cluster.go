@@ -20,6 +20,9 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 	if options == nil {
 		options = defaultClusterOptions
 	}
+	if options.NodeManager == nil {
+		options.NodeManager = &defaultNodeManager{}
+	}
 
 	c = &Cluster{}
 
@@ -43,6 +46,8 @@ func optNodes(nodes []*Node) (rv []*Node, err error) {
 		if defaultNode, err = NewNode(nil); err == nil {
 			rv = append(nodes, defaultNode)
 		}
+	} else {
+		rv = nodes
 	}
 	return
 }
