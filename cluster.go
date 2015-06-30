@@ -15,7 +15,7 @@ type Cluster struct {
 
 	// Cluster State
 	stateMtx sync.RWMutex
-	state       clusterState
+	state    clusterState
 }
 
 var defaultClusterOptions = &ClusterOptions{
@@ -53,23 +53,23 @@ func (c *Cluster) String() string {
 
 func (c *Cluster) Start(options *ClusterOptions) (err error) {
 	/*
-	if c.currentState(CLUSTER_RUNNING) {
-        logWarn("[Cluster] cluster already running.")
-		return
-	}
-
-	if err = n.stateCheck(CLUSTER_CREATED); err == nil {
-        logDebug("[Cluster] starting.")
-
-		for _, node := range c.nodes {
-			if err = node.Start(); err != nil {
+			if c.currentState(CLUSTER_RUNNING) {
+		        logWarn("[Cluster] cluster already running.")
 				return
 			}
-		}
 
-		c.setState(CLUSTER_RUNNING)
-        logDebug("[Cluster] cluster started.")
-	}
+			if err = n.stateCheck(CLUSTER_CREATED); err == nil {
+		        logDebug("[Cluster] starting.")
+
+				for _, node := range c.nodes {
+					if err = node.Start(); err != nil {
+						return
+					}
+				}
+
+				c.setState(CLUSTER_RUNNING)
+		        logDebug("[Cluster] cluster started.")
+			}
 	*/
 
 	return
