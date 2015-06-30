@@ -1,5 +1,9 @@
 package riak
 
+import (
+	"sync"
+)
+
 type ClusterOptions struct {
 	Nodes       []*Node
 	NodeManager NodeManager
@@ -7,8 +11,11 @@ type ClusterOptions struct {
 
 type Cluster struct {
 	nodes       []*Node
-	state       clusterState
 	nodeManager NodeManager
+
+	// Cluster State
+	stateMtx sync.RWMutex
+	state       clusterState
 }
 
 var defaultClusterOptions = &ClusterOptions{
@@ -37,6 +44,39 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 	return
 }
 
+// exported funcs
+
+func (c *Cluster) String() string {
+	// return fmt.Sprintf("%v|%d", c.addr)
+	return "TODO cluster"
+}
+
+func (c *Cluster) Start(options *ClusterOptions) (err error) {
+	/*
+	if c.currentState(CLUSTER_RUNNING) {
+        logWarn("[Cluster] cluster already running.")
+		return
+	}
+
+	if err = n.stateCheck(CLUSTER_CREATED); err == nil {
+        logDebug("[Cluster] starting.")
+
+		for _, node := range c.nodes {
+			if err = node.Start(); err != nil {
+				return
+			}
+		}
+
+		c.setState(CLUSTER_RUNNING)
+        logDebug("[Cluster] cluster started.")
+	}
+	*/
+
+	return
+}
+
+// non-exported funcs
+
 func optNodes(nodes []*Node) (rv []*Node, err error) {
 	if nodes == nil {
 		nodes = make([]*Node, 0)
@@ -50,11 +90,4 @@ func optNodes(nodes []*Node) (rv []*Node, err error) {
 		rv = nodes
 	}
 	return
-}
-
-// exported funcs
-
-func (c *Cluster) String() string {
-	// return fmt.Sprintf("%v|%d", c.addr)
-	return "TODO cluster"
 }

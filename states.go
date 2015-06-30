@@ -1,5 +1,33 @@
 package riak
 
+import "sync"
+
+type state byte
+
+type stateful interface {
+	isCurrentState(st state) (rv bool)
+	setState(st state)
+}
+
+type stateData struct {
+	sync.RWMutex
+	stateVal state
+}
+
+func (s *stateData) isCurrentState(st state) (rv bool) {
+	rv = false
+	s.RLock()
+	defer s.RUnlock()
+	rv = s.stateVal == st
+	return
+}
+
+func (s *stateData) setState(st state) {
+	s.Lock()
+	defer s.Unlock()
+	s.stateVal = st
+}
+
 // Cluster states
 
 type clusterState byte
