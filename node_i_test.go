@@ -71,12 +71,15 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 }
 
 func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
-	stateChan := make(chan nodeState, 3)
-	origSetState := setState
-	setState = func(n *Node, s nodeState) {
-		origSetState(n, s)
-		stateChan <- s
+	stateChan := make(chan state, 4)
+	origSetStateFunc := setStateFunc
+	setStateFunc = func(s *stateData, st state) {
+		origSetStateFunc(s, st)
+		stateChan <- st
 	}
+	defer func() {
+		setStateFunc = origSetStateFunc
+	}()
 
 	ln, err := net.Listen("tcp", "127.0.0.1:1337")
 	if err != nil {
@@ -113,6 +116,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		t.Error(err)
 	}
 	node.Start()
+	defer node.Stop()
 	logDebug("[TestRecoverViaDefaultPingHealthCheck] node started")
 
 	ping := &PingCommand{}
@@ -124,6 +128,10 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		t.Error("expected non-nil error")
 	}
 	nodeState := <-stateChan
+	if expected, actual := NODE_CREATED, nodeState; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	nodeState = <-stateChan
 	if expected, actual := NODE_RUNNING, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
@@ -135,5 +143,4 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	if expected, actual := NODE_RUNNING, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	node.Stop()
 }
