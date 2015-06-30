@@ -56,7 +56,7 @@ func TestAllowedState(t *testing.T) {
 }
 
 func TestStateDesc(t *testing.T) {
-	data := NewStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
+	data := newStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
 
 	data.setState(STATE_ONE)
 	if expected, actual := "STATE_ONE", data.String(); expected != actual {
@@ -75,10 +75,10 @@ func TestStateDesc(t *testing.T) {
 }
 
 func TestStateDescUnknown(t *testing.T) {
-	data := NewStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
+	data := newStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
 	data.setState(STATE_FOUR)
 
-	if expected, actual := "UNKNOWN_STATE", data.String(); expected != actual {
+	if expected, actual := "STATE_3", data.String(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }

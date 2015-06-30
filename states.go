@@ -9,7 +9,9 @@ type state byte
 
 type stateful interface {
 	fmt.Stringer
+	setStateDesc(desc ...string)
 	isCurrentState(st state) (rv bool)
+	isStateLessThan(st state) (rv bool)
 	setState(st state)
 	getState() (st state)
 	stateCheck(allowed ...state) (err error)
@@ -21,10 +23,11 @@ type stateData struct {
 	stateDesc []string
 }
 
-func NewStateData(desc ...string) *stateData {
-	return &stateData{
+func newStateData(desc ...string) *stateData {
+	sd := &stateData{
 		stateDesc: desc,
 	}
+	return sd
 }
 
 func (s *stateData) String() string {
@@ -32,8 +35,12 @@ func (s *stateData) String() string {
 	if len(s.stateDesc) > stateIdx {
 		return s.stateDesc[stateIdx]
 	} else {
-		return "UNKNOWN_STATE"
+		return fmt.Sprintf("STATE_%v", stateIdx)
 	}
+}
+
+func (s *stateData) setStateDesc(desc ...string) {
+	s.stateDesc = desc
 }
 
 func (s *stateData) isCurrentState(st state) (rv bool) {
@@ -44,6 +51,14 @@ func (s *stateData) isCurrentState(st state) (rv bool) {
 	return
 }
 
+func (s *stateData) isStateLessThan(st state) (rv bool) {
+	rv = false
+	s.RLock()
+	defer s.RUnlock()
+	rv = s.stateVal < st
+	return
+}
+
 func (s *stateData) getState() (st state) {
 	s.RLock()
 	defer s.RUnlock()
@@ -51,10 +66,14 @@ func (s *stateData) getState() (st state) {
 	return
 }
 
-func (s *stateData) setState(st state) {
+var setStateFunc = func(s *stateData, st state) {
 	s.Lock()
 	defer s.Unlock()
 	s.stateVal = st
+}
+
+func (s *stateData) setState(st state) {
+	setStateFunc(s, st)
 }
 
 func (s *stateData) stateCheck(allowed ...state) (err error) {
@@ -69,64 +88,6 @@ func (s *stateData) stateCheck(allowed ...state) (err error) {
 	}
 	if !stateAllowed {
 		err = fmt.Errorf("Illegal State - required %v: current: %v", allowed, s.stateVal)
-	}
-	return
-}
-
-// Cluster states
-
-type clusterState byte
-
-const (
-	CLUSTER_ERROR clusterState = iota
-	CLUSTER_CREATED
-	CLUSTER_RUNNING
-	CLUSTER_QUEUING
-	CLUSTER_SHUTTING_DOWN
-	CLUSTER_SHUTDOWN
-)
-
-func (v clusterState) String() (rv string) {
-	switch v {
-	case CLUSTER_CREATED:
-		rv = "CLUSTER_CREATED"
-	case CLUSTER_RUNNING:
-		rv = "CLUSTER_RUNNING"
-	case CLUSTER_QUEUING:
-		rv = "CLUSTER_QUEUING"
-	case CLUSTER_SHUTTING_DOWN:
-		rv = "CLUSTER_SHUTTING_DOWN"
-	case CLUSTER_SHUTDOWN:
-		rv = "CLUSTER_SHUTDOWN"
-	}
-	return
-}
-
-// Node states
-
-type nodeState byte
-
-const (
-	NODE_ERROR nodeState = iota
-	NODE_CREATED
-	NODE_RUNNING
-	NODE_HEALTH_CHECKING
-	NODE_SHUTTING_DOWN
-	NODE_SHUTDOWN
-)
-
-func (v nodeState) String() (rv string) {
-	switch v {
-	case NODE_CREATED:
-		rv = "NODE_CREATED"
-	case NODE_RUNNING:
-		rv = "NODE_RUNNING"
-	case NODE_HEALTH_CHECKING:
-		rv = "NODE_HEALTH_CHECKING"
-	case NODE_SHUTTING_DOWN:
-		rv = "NODE_SHUTTING_DOWN"
-	case NODE_SHUTDOWN:
-		rv = "NODE_SHUTDOWN"
 	}
 	return
 }

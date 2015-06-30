@@ -7,6 +7,17 @@ import (
 	"time"
 )
 
+// Node states
+
+const (
+	NODE_ERROR state = iota
+	NODE_CREATED
+	NODE_RUNNING
+	NODE_HEALTH_CHECKING
+	NODE_SHUTTING_DOWN
+	NODE_SHUTDOWN
+)
+
 // TODO auth
 type NodeOptions struct {
 	RemoteAddress       string
@@ -28,19 +39,15 @@ type Node struct {
 	requestTimeout      time.Duration
 	healthCheckInterval time.Duration
 	healthCheckBuilder  CommandBuilder
-
 	// Health Check stop channel / timer
 	stop         chan bool
 	expireTicker *time.Ticker
-
 	// Connection Pool
 	connMtx               sync.RWMutex
 	available             []*connection
 	currentNumConnections uint16
-
-	// Node State
-	stateMtx sync.RWMutex
-	state    nodeState
+	// State
+	stateData
 }
 
 var defaultNodeOptions = &NodeOptions{
@@ -79,7 +86,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 	}
 
 	if resolvedAddress, err := net.ResolveTCPAddr("tcp", options.RemoteAddress); err == nil {
-		return &Node{
+		n := &Node{
 			stop:                make(chan bool),
 			addr:                resolvedAddress,
 			minConnections:      options.MinConnections,
@@ -90,8 +97,10 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			healthCheckInterval: options.HealthCheckInterval,
 			healthCheckBuilder:  options.HealthCheckBuilder,
 			available:           make([]*connection, 0, options.MinConnections),
-			state:               NODE_CREATED,
-		}, nil
+		}
+		n.setStateDesc("NODE_ERROR", "NODE_CREATED", "NODE_RUNNING", "NODE_HEALTH_CHECKING", "NODE_SHUTTING_DOWN", "NODE_SHUTDOWN")
+		n.setState(NODE_CREATED)
+		return n, nil
 	} else {
 		return nil, err
 	}
@@ -158,7 +167,7 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 		return
 	}
 
-	if n.currentState(NODE_RUNNING) {
+	if n.isCurrentState(NODE_RUNNING) {
 		var conn *connection
 		if conn = n.getAvailableConnection(); conn == nil {
 			// TODO retry?
@@ -220,7 +229,7 @@ func (n *Node) returnConnectionToPool(c *connection, shouldLock bool) {
 		n.connMtx.Lock()
 		defer n.connMtx.Unlock()
 	}
-	if n.state < NODE_SHUTTING_DOWN {
+	if n.isStateLessThan(NODE_SHUTTING_DOWN) {
 		c.inFlight = false
 		// TODO c.resetBuffer()
 		n.available = append(n.available, c)
@@ -255,39 +264,6 @@ func (n *Node) shutdown() (err error) {
 		panic(fmt.Sprintf("[Node] (%v); Connections still in use.", n))
 	}
 
-	return
-}
-
-func (n *Node) currentState(s nodeState) bool {
-	n.stateMtx.RLock()
-	defer n.stateMtx.RUnlock()
-	return n.state == s
-}
-
-var setState = func(n *Node, s nodeState) {
-	n.stateMtx.Lock()
-	defer n.stateMtx.Unlock()
-	n.state = s
-	return
-}
-
-func (n *Node) setState(s nodeState) {
-	setState(n, s)
-}
-
-func (n *Node) stateCheck(allowed ...nodeState) (err error) {
-	n.stateMtx.RLock()
-	defer n.stateMtx.RUnlock()
-	stateChecked := false
-	for _, s := range allowed {
-		if n.state == s {
-			stateChecked = true
-			break
-		}
-	}
-	if !stateChecked {
-		err = fmt.Errorf("[Node]: Illegal State; required %v: current: %v", allowed, n.state)
-	}
 	return
 }
 

@@ -1,7 +1,14 @@
 package riak
 
-import (
-	"sync"
+// Cluster states
+
+const (
+	CLUSTER_ERROR state = iota
+	CLUSTER_CREATED
+	CLUSTER_RUNNING
+	CLUSTER_QUEUING
+	CLUSTER_SHUTTING_DOWN
+	CLUSTER_SHUTDOWN
 )
 
 type ClusterOptions struct {
@@ -12,10 +19,7 @@ type ClusterOptions struct {
 type Cluster struct {
 	nodes       []*Node
 	nodeManager NodeManager
-
-	// Cluster State
-	stateMtx sync.RWMutex
-	state    clusterState
+	stateData
 }
 
 var defaultClusterOptions = &ClusterOptions{
@@ -40,7 +44,8 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 
 	c.nodeManager = options.NodeManager
 
-	c.state = CLUSTER_CREATED
+	c.setStateDesc("CLUSTER_ERROR", "CLUSTER_CREATED", "CLUSTER_RUNNING", "CLUSTER_QUEUING", "CLUSTER_SHUTTING_DOWN", "CLUSTER_SHUTDOWN")
+	c.setState(CLUSTER_CREATED)
 	return
 }
 
@@ -52,26 +57,22 @@ func (c *Cluster) String() string {
 }
 
 func (c *Cluster) Start(options *ClusterOptions) (err error) {
-	/*
-			if c.currentState(CLUSTER_RUNNING) {
-		        logWarn("[Cluster] cluster already running.")
+	if c.isCurrentState(CLUSTER_RUNNING) {
+		logWarnln("[Cluster] cluster already running.")
+		return
+	}
+	if c.isCurrentState(CLUSTER_CREATED) {
+		logDebug("[Cluster] starting.")
+
+		for _, node := range c.nodes {
+			if err = node.Start(); err != nil {
 				return
 			}
+		}
 
-			if err = n.stateCheck(CLUSTER_CREATED); err == nil {
-		        logDebug("[Cluster] starting.")
-
-				for _, node := range c.nodes {
-					if err = node.Start(); err != nil {
-						return
-					}
-				}
-
-				c.setState(CLUSTER_RUNNING)
-		        logDebug("[Cluster] cluster started.")
-			}
-	*/
-
+		c.setState(CLUSTER_RUNNING)
+		logDebug("[Cluster] cluster started.")
+	}
 	return
 }
 

@@ -23,6 +23,10 @@ func logDebug(format string, v ...interface{}) {
 	}
 }
 
+func logWarnln(v string) {
+	logger.Println(v)
+}
+
 func logError(format string, v ...interface{}) {
 	errLogger.Printf(format, v...)
 }
