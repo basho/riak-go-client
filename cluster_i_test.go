@@ -65,7 +65,7 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 	nodeOpts := &NodeOptions{
 		MinConnections: 32,
 		MaxConnections: 64,
-		RemoteAddress: remoteAddress,
+		RemoteAddress:  remoteAddress,
 	}
 
 	var node *Node
@@ -113,9 +113,9 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 	j := 0
 	for i := 0; i < count; i++ {
 		select {
-			case pingCommand := <-pingChan:
-				logDebug("j: %d, pingCommand: %v", j, pingCommand)
-				j++
+		case pingCommand := <-pingChan:
+			logDebug("j: %d, pingCommand: %v", j, pingCommand)
+			j++
 		}
 	}
 	if expected, actual := count, j; expected != actual {
