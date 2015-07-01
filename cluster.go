@@ -105,7 +105,7 @@ func (c *Cluster) Stop() (err error) {
 			logDebug("[Cluster] cluster shut down")
 			/* TODO
 			if (this._commandQueue.length) {
-				logger.warn('[RiakCluster] There were %d commands in the queue at shutdown', 
+				logger.warn('[RiakCluster] There were %d commands in the queue at shutdown',
 					this._commandQueue.length);
 			}
 			*/
@@ -113,10 +113,10 @@ func (c *Cluster) Stop() (err error) {
 			// TODO is this even possible?
 			logDebug("[Cluster] nodes still running")
 			/*
-			var self = this;
-			setTimeout(function() {
-				self._shutdown();
-			}, 1000);
+				var self = this;
+				setTimeout(function() {
+					self._shutdown();
+				}, 1000);
 			*/
 		}
 	}
@@ -132,9 +132,9 @@ func (c *Cluster) Execute(command Command) (err error) {
 		return
 	}
 
-    if (!executed) {
+	if !executed {
 		err = errors.New("No nodes available to execute command.")
-    }
+	}
 
 	return
 }
