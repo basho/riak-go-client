@@ -106,11 +106,17 @@ func (c *connection) execute(cmd Command) (err error) {
 	c.inFlight = true
 	c.lastUsed = time.Now()
 
-	if err = c.write(cmd.rpbData()); err != nil {
+	var data []byte
+	data, err = cmd.rpbData()
+	if err != nil {
 		return
 	}
 
-	data, err := c.read()
+	if err = c.write(data); err != nil {
+		return
+	}
+
+	data, err = c.read()
 	if err != nil {
 		return
 	}

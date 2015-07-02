@@ -301,11 +301,18 @@ func (n *Node) getHealthCheckCommand() (hc Command) {
 	// This is necessary to have a unique Command struct as part of each
 	// connection so that concurrent calls to check health can all have
 	// unique results
+	var err error
 	if n.healthCheckBuilder != nil {
-		hc = n.healthCheckBuilder.Build()
+		hc, err = n.healthCheckBuilder.Build()
 	} else {
 		hc = &PingCommand{}
 	}
+
+	if err != nil {
+		logErr(err)
+		hc = &PingCommand{}
+	}
+
 	return
 }
 
@@ -317,7 +324,7 @@ func (n *Node) healthCheck() {
 
 	healthCheckTicker := time.NewTicker(n.healthCheckInterval)
 	defer healthCheckTicker.Stop()
-	healthCheck := n.getHealthCheckCommand()
+	healthCheckCommand := n.getHealthCheckCommand()
 
 	for {
 		select {
@@ -326,7 +333,7 @@ func (n *Node) healthCheck() {
 			return
 		case t := <-healthCheckTicker.C:
 			logDebug("[Node] (%v) running health check at %v", n, t)
-			if conn, err := n.createNewConnection(healthCheck, true); conn == nil || err != nil {
+			if conn, err := n.createNewConnection(healthCheckCommand, true); conn == nil || err != nil {
 				logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
 			} else {
 				n.returnConnectionToPool(conn, true)
