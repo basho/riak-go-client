@@ -36,7 +36,7 @@ type FetchValueCommandOptions struct {
 }
 
 type FetchValueCommand struct {
-	Result  bool
+	CommandImpl
 	options *FetchValueCommandOptions
 }
 
@@ -55,14 +55,13 @@ func (cmd *FetchValueCommand) Name() string {
 	return "FetchValue"
 }
 
-func (cmd *FetchValueCommand) Success() bool {
-	// TODO
-	return true
-}
-
 func (cmd *FetchValueCommand) constructPbRequest() (rpb *rpbRiakKV.RpbGetReq, err error) {
 	// TODO
-	rpb = &rpbRiakKV.RpbGetReq{}
+	rpb = &rpbRiakKV.RpbGetReq{
+		Type:   []byte(cmd.options.BucketType),
+		Bucket: []byte(cmd.options.Bucket),
+		Key:    []byte(cmd.options.Key),
+	}
 	return
 }
 
@@ -82,6 +81,12 @@ func (cmd *FetchValueCommand) rpbData() ([]byte, error) {
 
 func (cmd *FetchValueCommand) rpbRead(data []byte) (err error) {
 	err = rpbValidateResp(data, rpbCode_RpbGetResp)
-	// TODO data
+	if err != nil {
+		return
+	}
+
+	rpb := &rpbRiakKV.RpbGetResp{}
+	err = proto.Unmarshal(data[1:], rpb)
+	logDebug("[FetchValueCommand] RpbGetResp: %v", rpb)
 	return
 }

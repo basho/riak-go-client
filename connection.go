@@ -123,6 +123,7 @@ func (c *connection) execute(cmd Command) (err error) {
 
 	// Maybe translate RpbErrorResp into golang error
 	if err = maybeRiakError(data); err != nil {
+		cmd.onError(err)
 		return
 	}
 

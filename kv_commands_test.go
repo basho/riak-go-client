@@ -30,8 +30,17 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+	if protobuf == nil {
+		t.FailNow()
+	}
 
 	if expected, actual := "bucket_type", string(protobuf.GetType()); expected != actual {
+		t.Errorf("expected %v, got %v")
+	}
+	if expected, actual := "bucket_name", string(protobuf.GetBucket()); expected != actual {
+		t.Errorf("expected %v, got %v")
+	}
+	if expected, actual := "key", string(protobuf.GetKey()); expected != actual {
 		t.Errorf("expected %v, got %v")
 	}
 	/*

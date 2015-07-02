@@ -10,15 +10,11 @@ func (builder *PingCommandBuilder) Build() (Command, error) {
 }
 
 type PingCommand struct {
-	Result bool
+	CommandImpl
 }
 
 func (cmd *PingCommand) Name() string {
 	return "Ping"
-}
-
-func (cmd *PingCommand) Success() bool {
-	return cmd.Result == true
 }
 
 func (cmd *PingCommand) rpbData() ([]byte, error) {
@@ -26,11 +22,12 @@ func (cmd *PingCommand) rpbData() ([]byte, error) {
 }
 
 func (cmd *PingCommand) rpbRead(data []byte) (err error) {
+	// TODO take onError into account
 	err = rpbValidateResp(data, rpbCode_RpbPingResp)
 	if err == nil {
-		cmd.Result = true
+		cmd.IsSuccess = true
 	} else {
-		cmd.Result = false
+		cmd.IsSuccess = false
 	}
 	return
 }
