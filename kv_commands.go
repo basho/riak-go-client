@@ -1,9 +1,9 @@
 package riak
 
 import (
-	"time"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
+	"time"
 )
 
 // FetchValueCommand and FetchValueCommandBuilder
@@ -20,19 +20,19 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 }
 
 type FetchValueCommandOptions struct {
-	BucketType    string
-	Bucket        string
-	Key           string
-	R             uint32
-	Pr            uint32
-	BasicQuorum   bool
-	NotFoundOk    bool
-	IfNotModified    []byte // TODO pb field is IfModified
-	HeadOnly      bool
+	BucketType          string
+	Bucket              string
+	Key                 string
+	R                   uint32
+	Pr                  uint32
+	BasicQuorum         bool
+	NotFoundOk          bool
+	IfNotModified       []byte // TODO pb field is IfModified
+	HeadOnly            bool
 	ReturnDeletedVClock bool
-	Timeout       time.Duration
-	SloppyQuorum  bool
-	NVal          uint32
+	Timeout             time.Duration
+	SloppyQuorum        bool
+	NVal                uint32
 }
 
 type FetchValueCommand struct {
@@ -47,7 +47,7 @@ func NewFetchValueCommand(options *FetchValueCommandOptions) (cmd *FetchValueCom
 	}
 	cmd = &FetchValueCommand{
 		options: options,
-	} 
+	}
 	return
 }
 
@@ -62,8 +62,7 @@ func (cmd *FetchValueCommand) Success() bool {
 
 func (cmd *FetchValueCommand) constructPbRequest() (rpb *rpbRiakKV.RpbGetReq, err error) {
 	// TODO
-	rpb = &rpbRiakKV.RpbGetReq{
-	}
+	rpb = &rpbRiakKV.RpbGetReq{}
 	return
 }
 
