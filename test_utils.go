@@ -7,7 +7,7 @@ import (
 
 func writePingResp(t *testing.T, c net.Conn) (success bool) {
 	success = false
-	data := rpbWrite(rpbCode_RpbPingResp, nil)
+	data := buildRiakMessage(rpbCode_RpbPingResp, nil)
 	count, err := c.Write(data)
 	if err != nil {
 		t.Error(err)

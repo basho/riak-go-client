@@ -2,6 +2,8 @@ package riak
 
 import (
 	"bytes"
+	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -34,14 +36,18 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 		t.FailNow()
 	}
 
-	if expected, actual := "bucket_type", string(protobuf.GetType()); expected != actual {
-		t.Errorf("expected %v, got %v")
-	}
-	if expected, actual := "bucket_name", string(protobuf.GetBucket()); expected != actual {
-		t.Errorf("expected %v, got %v")
-	}
-	if expected, actual := "key", string(protobuf.GetKey()); expected != actual {
-		t.Errorf("expected %v, got %v")
+	if rpbGetReq, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
+		if expected, actual := "bucket_type", string(rpbGetReq.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v")
+		}
+		if expected, actual := "bucket_name", string(rpbGetReq.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v")
+		}
+		if expected, actual := "key", string(rpbGetReq.GetKey()); expected != actual {
+			t.Errorf("expected %v, got %v")
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbGetReq", ok, reflect.TypeOf(protobuf))
 	}
 	/*
 		assert.equal(protobuf.getType().toString('utf8'), 'bucket_type');

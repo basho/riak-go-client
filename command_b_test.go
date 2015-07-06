@@ -14,6 +14,6 @@ func BenchmarkRpbOldWrite(b *testing.B) {
 
 func BenchmarkRpbWrite(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		data = rpbWrite(byte((i%255)+1), randomBytes)
+		data = buildRiakMessage(byte((i%255)+1), randomBytes)
 	}
 }

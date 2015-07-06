@@ -3,6 +3,7 @@ package riak
 import (
 	"encoding/binary"
 	"fmt"
+	proto "github.com/golang/protobuf/proto"
 	"io"
 	"net"
 	"syscall"
@@ -106,30 +107,34 @@ func (c *connection) execute(cmd Command) (err error) {
 	c.inFlight = true
 	c.lastUsed = time.Now()
 
-	var data []byte
-	data, err = cmd.rpbData()
+	var message []byte
+	message, err = getRiakMessage(cmd)
 	if err != nil {
 		return
 	}
 
-	if err = c.write(data); err != nil {
+	if err = c.write(message); err != nil {
 		return
 	}
 
-	data, err = c.read()
+	var response []byte
+	response, err = c.read()
 	if err != nil {
 		return
 	}
 
 	// Maybe translate RpbErrorResp into golang error
-	if err = maybeRiakError(data); err != nil {
+	if err = maybeRiakError(response); err != nil {
 		cmd.onError(err)
 		return
 	}
 
-	if err = cmd.rpbRead(data); err != nil {
+	var decoded proto.Message
+	if decoded, err = decodeRiakMessage(cmd, response); err != nil {
 		return
 	}
+
+	err = cmd.onSuccess(decoded)
 
 	// TODO streaming responses
 	return

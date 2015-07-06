@@ -1,10 +1,11 @@
 package riak
 
 import (
-	"errors"
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	proto "github.com/golang/protobuf/proto"
 )
-
-var ErrNilOptions error = errors.New("[Command] options must be non-nil")
 
 type CommandBuilder interface {
 	Build() (Command, error)
@@ -13,21 +14,64 @@ type CommandBuilder interface {
 type Command interface {
 	Name() string
 	Success() bool
+	getRequestCode() byte
+	constructPbRequest() (proto.Message, error)
 	onError(error)
-	rpbData() ([]byte, error)
-	rpbRead(data []byte) error
+	onSuccess(proto.Message) error
+	getExpectedResponseCode() byte
+	getResponseProtobufMessage() proto.Message
 }
 
-type CommandImpl struct {
-	Error     error
-	IsSuccess bool
+func getRiakMessage(cmd Command) (msg []byte, err error) {
+	requestCode := cmd.getRequestCode()
+	if requestCode == 0 {
+		panic(fmt.Sprintf("Must have non-zero value for getRequestCode(): %s", cmd.Name()))
+	}
+
+	var rpb proto.Message
+	rpb, err = cmd.constructPbRequest()
+	if err != nil {
+		return
+	}
+
+	var bytes []byte
+	if rpb != nil {
+		bytes, err = proto.Marshal(rpb)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	msg = buildRiakMessage(requestCode, bytes)
+	return
 }
 
-func (cmd *CommandImpl) Success() bool {
-	return cmd.IsSuccess == true
+func decodeRiakMessage(cmd Command, data []byte) (msg proto.Message, err error) {
+	responseCode := cmd.getExpectedResponseCode()
+	if responseCode == 0 {
+		panic(fmt.Sprintf("Must have non-zero value for getExpectedResponseCode(): %s", cmd.Name()))
+	}
+
+	err = rpbValidateResp(data, responseCode)
+	if err != nil {
+		return
+	}
+
+	msg = cmd.getResponseProtobufMessage()
+	if msg != nil {
+		err = proto.Unmarshal(data[1:], msg)
+	}
+
+	return
 }
 
-func (cmd *CommandImpl) onError(err error) {
-	cmd.Error = err
-	cmd.IsSuccess = false
+func buildRiakMessage(code byte, data []byte) []byte {
+	buf := new(bytes.Buffer)
+	// write total message length, including one byte for msg code
+	binary.Write(buf, binary.BigEndian, uint32(len(data)+1))
+	// write the message code
+	binary.Write(buf, binary.BigEndian, byte(code))
+	// write the protobuf data
+	buf.Write(data)
+	return buf.Bytes()
 }

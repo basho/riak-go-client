@@ -42,6 +42,7 @@ type FetchValueCommand struct {
 
 func NewFetchValueCommand(options *FetchValueCommandOptions) (cmd *FetchValueCommand, err error) {
 	if options == nil {
+		// TODO default options?
 		err = ErrNilOptions
 		return
 	}
@@ -55,9 +56,9 @@ func (cmd *FetchValueCommand) Name() string {
 	return "FetchValue"
 }
 
-func (cmd *FetchValueCommand) constructPbRequest() (rpb *rpbRiakKV.RpbGetReq, err error) {
+func (cmd *FetchValueCommand) constructPbRequest() (msg proto.Message, err error) {
 	// TODO
-	rpb = &rpbRiakKV.RpbGetReq{
+	msg = &rpbRiakKV.RpbGetReq{
 		Type:   []byte(cmd.options.BucketType),
 		Bucket: []byte(cmd.options.Bucket),
 		Key:    []byte(cmd.options.Key),
@@ -65,28 +66,19 @@ func (cmd *FetchValueCommand) constructPbRequest() (rpb *rpbRiakKV.RpbGetReq, er
 	return
 }
 
-func (cmd *FetchValueCommand) rpbData() ([]byte, error) {
-	rpb, err := cmd.constructPbRequest()
-	if err != nil {
-		return nil, err
-	}
-
-	bytes, err := proto.Marshal(rpb)
-	if err != nil {
-		return nil, err
-	}
-
-	return rpbWrite(rpbCode_RpbGetReq, bytes), nil
+func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
+	// TODO
+	return nil
 }
 
-func (cmd *FetchValueCommand) rpbRead(data []byte) (err error) {
-	err = rpbValidateResp(data, rpbCode_RpbGetResp)
-	if err != nil {
-		return
-	}
+func (cmd *FetchValueCommand) getRequestCode() byte {
+	return rpbCode_RpbGetReq
+}
 
-	rpb := &rpbRiakKV.RpbGetResp{}
-	err = proto.Unmarshal(data[1:], rpb)
-	logDebug("[FetchValueCommand] RpbGetResp: %v", rpb)
-	return
+func (cmd *FetchValueCommand) getExpectedResponseCode() byte {
+	return rpbCode_RpbGetResp
+}
+
+func (cmd *FetchValueCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakKV.RpbGetResp{}
 }

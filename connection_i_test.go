@@ -160,7 +160,7 @@ func TestHealthCheckFail(t *testing.T) {
 				break
 			}
 
-			data := rpbWrite(rpbCode_RpbErrorResp, encoded)
+			data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
 			count, err := c.Write(data)
 			if err != nil {
 				t.Error(err)
