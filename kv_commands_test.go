@@ -10,6 +10,7 @@ import (
 
 func TestBuildRpbGetReqCorrectly(t *testing.T) {
 	vclock := bytes.NewBufferString("vclock123456789")
+	vclockBytes := vclock.Bytes()
 
 	fetchValueCommandOptions := &FetchValueCommandOptions{
 		BucketType:          "bucket_type",
@@ -19,7 +20,7 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 		Pr:                  1,
 		BasicQuorum:         true,
 		NotFoundOk:          true,
-		IfNotModified:       vclock.Bytes(),
+		IfNotModified:       vclockBytes, // TODO pb is IfModified?
 		HeadOnly:            true,
 		ReturnDeletedVClock: true,
 		Timeout:             time.Second * 20,
@@ -38,28 +39,44 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 
 	if rpbGetReq, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
 		if expected, actual := "bucket_type", string(rpbGetReq.GetType()); expected != actual {
-			t.Errorf("expected %v, got %v")
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
 		if expected, actual := "bucket_name", string(rpbGetReq.GetBucket()); expected != actual {
-			t.Errorf("expected %v, got %v")
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
 		if expected, actual := "key", string(rpbGetReq.GetKey()); expected != actual {
-			t.Errorf("expected %v, got %v")
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(3), rpbGetReq.GetR(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(1), rpbGetReq.GetPr(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, rpbGetReq.GetNotfoundOk(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := 0, bytes.Compare(vclockBytes, rpbGetReq.GetIfModified()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, rpbGetReq.GetHead(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, rpbGetReq.GetDeletedvclock(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		expectedTimeoutDuration := 20 * time.Second
+		actualTimeoutDuration := time.Duration(rpbGetReq.GetTimeout()) * time.Millisecond
+		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, rpbGetReq.GetSloppyQuorum(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(4), rpbGetReq.GetNVal(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbGetReq", ok, reflect.TypeOf(protobuf))
 	}
-	/*
-		assert.equal(protobuf.getType().toString('utf8'), 'bucket_type');
-		assert.equal(protobuf.getBucket().toString('utf8'), 'bucket_name');
-		assert.equal(protobuf.getKey().toString('utf8'), 'key');
-		assert.equal(protobuf.getR(), 3);
-		assert.equal(protobuf.getPr(), 1);
-		assert.equal(protobuf.getNotfoundOk(), true);
-		assert.equal(protobuf.getBasicQuorum(), true);
-		assert.equal(protobuf.getDeletedvclock(), true);
-		assert.equal(protobuf.getHead(), true);
-		assert(protobuf.getIfModified().toBuffer() !== null);
-		assert.equal(protobuf.getTimeout(), 20000);
-	*/
 }

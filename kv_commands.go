@@ -35,6 +35,11 @@ type FetchValueCommandOptions struct {
 	NVal                uint32
 }
 
+func (options *FetchValueCommandOptions) GetTimeoutMilliseconds() *uint32 {
+	timeoutMilliseconds := uint32(options.Timeout / time.Millisecond)
+	return &timeoutMilliseconds
+}
+
 type FetchValueCommand struct {
 	CommandImpl
 	options *FetchValueCommandOptions
@@ -57,11 +62,20 @@ func (cmd *FetchValueCommand) Name() string {
 }
 
 func (cmd *FetchValueCommand) constructPbRequest() (msg proto.Message, err error) {
-	// TODO
 	msg = &rpbRiakKV.RpbGetReq{
-		Type:   []byte(cmd.options.BucketType),
-		Bucket: []byte(cmd.options.Bucket),
-		Key:    []byte(cmd.options.Key),
+		Type:          []byte(cmd.options.BucketType),
+		Bucket:        []byte(cmd.options.Bucket),
+		Key:           []byte(cmd.options.Key),
+		R:             &cmd.options.R,
+		Pr:            &cmd.options.Pr,
+		BasicQuorum:   &cmd.options.BasicQuorum,
+		NotfoundOk:    &cmd.options.NotFoundOk,
+		IfModified:    cmd.options.IfNotModified,
+		Head:          &cmd.options.HeadOnly,
+		Deletedvclock: &cmd.options.ReturnDeletedVClock,
+		Timeout:       cmd.options.GetTimeoutMilliseconds(),
+		SloppyQuorum:  &cmd.options.SloppyQuorum,
+		NVal:          &cmd.options.NVal,
 	}
 	return
 }
