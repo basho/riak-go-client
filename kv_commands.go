@@ -6,18 +6,7 @@ import (
 	"time"
 )
 
-// FetchValueCommand and FetchValueCommandBuilder
-
-type FetchValueCommandBuilder struct {
-	Options *FetchValueCommandOptions
-}
-
-func (builder *FetchValueCommandBuilder) Build() (Command, error) {
-	if builder.Options == nil {
-		return nil, ErrNilOptions
-	}
-	return NewFetchValueCommand(builder.Options)
-}
+// FetchValueCommand
 
 type FetchValueCommandOptions struct {
 	BucketType          string
@@ -95,4 +84,39 @@ func (cmd *FetchValueCommand) getExpectedResponseCode() byte {
 
 func (cmd *FetchValueCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbGetResp{}
+}
+
+// FetchValueCommandBuilder
+
+type FetchValueCommandBuilder struct {
+	Options *FetchValueCommandOptions
+}
+
+func NewFetchValueCommandBuilder() *FetchValueCommandBuilder {
+	builder := &FetchValueCommandBuilder{
+		Options: &FetchValueCommandOptions{},
+	}
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) Build() (Command, error) {
+	if builder.Options == nil {
+		return nil, ErrNilOptions
+	}
+	return NewFetchValueCommand(builder.Options)
+}
+
+func (builder *FetchValueCommandBuilder) WithBucketType(bucketType string) *FetchValueCommandBuilder {
+	builder.Options.BucketType = bucketType
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithBucket(bucket string) *FetchValueCommandBuilder {
+	builder.Options.Bucket = bucket
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithKey(key string) *FetchValueCommandBuilder {
+	builder.Options.Key = key
+	return builder
 }
