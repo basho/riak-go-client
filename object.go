@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+type Link struct {
+	Bucket string
+	Key    string
+	Tag    string
+}
+
+type Pair struct {
+	Key   string
+	Value string
+}
+
 type Object struct {
 	BucketType      string
 	Bucket          string
@@ -15,7 +26,7 @@ type Object struct {
 	ContentEncoding string
 	LastModified    time.Time
 	UserMeta        []Pair
-	// TODO int indexes
+	// TODO int indexes vs string
 	Indexes map[string][]string
 	Links   []Link
 	VClock  []byte
@@ -23,6 +34,10 @@ type Object struct {
 
 func (o *Object) HasIndexes() bool {
 	return len(o.Indexes) > 0
+}
+
+func (o *Object) HasUserMeta() bool {
+	return len(o.UserMeta) > 0
 }
 
 func NewObjectFromRpbContent(rpbContent *rpbRiakKV.RpbContent) (ro *Object, err error) {
@@ -77,38 +92,17 @@ func NewObjectFromRpbContent(rpbContent *rpbRiakKV.RpbContent) (ro *Object, err 
 		}
 	}
 
-	/*
-	   //links
-	   var pbLinks = rpbContent.getLinks();
-	   if (pbLinks.length) {
-	       var links = new Array(pbLinks.length);
-	       var link;
-	       for (i = 0; i < pbLinks.length; i++) {
-	           link = {};
-	           if (pbLinks[i].bucket) {
-	               link.bucket = pbLinks[i].bucket.toString('utf8');
-	           }
-	           if (pbLinks[i].key) {
-	               link.key = pbLinks[i].key.toString('utf8');
-	           }
-	           if (pbLinks[i].tag) {
-	               link.tag = pbLinks[i].tag.toString('utf8');
-	           }
-	           links[i] = link;
-	       }
-	       ro.links = links;
-	   }
-	*/
+	rpbLinks := rpbContent.GetLinks()
+	if len(rpbLinks) > 0 {
+		ro.Links = make([]Link, len(rpbLinks))
+		for i, link := range rpbLinks {
+			ro.Links[i] = Link{
+				Bucket: string(link.Bucket),
+				Key:    string(link.Key),
+				Tag:    string(link.Tag),
+			}
+		}
+	}
+
 	return
-}
-
-type Link struct {
-	Bucket string
-	Key    string
-	Tag    string
-}
-
-type Pair struct {
-	Key   string
-	Value string
 }

@@ -131,19 +131,48 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 		if expected, actual := true, riakObject.HasIndexes(); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		/*
-			assert.equal(riakObject.getIndex('email_bin')[0], 'roach@basho.com');
-			assert.equal(riakObject.hasUserMeta(), true);
-			assert.equal(riakObject.getUserMeta()[0].key, 'metaKey1');
-			assert.equal(riakObject.getUserMeta()[0].value, 'metaValue1');
-			assert.equal(riakObject.getLinks()[0].bucket, 'b');
-			assert.equal(riakObject.getLinks()[0].key, 'k');
-			assert.equal(riakObject.getLinks()[0].tag, 't');
-			assert.equal(riakObject.getLinks()[1].bucket, 'b');
-			assert.equal(riakObject.getLinks()[1].key, 'k2');
-			assert.equal(riakObject.getLinks()[1].tag, 't2');
-			assert.equal(riakObject.getVClock().toString('utf8'), '1234');
-		*/
+		if expected, actual := true, riakObject.HasIndexes(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "golang@basho.com", riakObject.Indexes["email_bin"][0]; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, riakObject.HasUserMeta(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "golang@basho.com", riakObject.Indexes["email_bin"][0]; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "frazzle@basho.com", riakObject.Indexes["email_bin"][1]; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "metaKey1", riakObject.UserMeta[0].Key; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "metaValue1", riakObject.UserMeta[0].Value; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "b0", riakObject.Links[0].Bucket; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "k0", riakObject.Links[0].Key; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "t0", riakObject.Links[0].Tag; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "b1", riakObject.Links[1].Bucket; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "k1", riakObject.Links[1].Key; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "t1", riakObject.Links[1].Tag; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "vclock123456789", string(riakObject.VClock); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
 	}
@@ -164,7 +193,7 @@ func generateTestRpbContent(value string, contentType string) (rpbContent *rpbRi
 		LastMod:         &lastMod,
 		LastModUsecs:    &lastModUsecs,
 		Usermeta:        make([]*rpbRiak.RpbPair, 2),
-		Indexes:         make([]*rpbRiak.RpbPair, 2),
+		Indexes:         make([]*rpbRiak.RpbPair, 3),
 		Deleted:         &deleted,
 	}
 
@@ -193,6 +222,10 @@ func generateTestRpbContent(value string, contentType string) (rpbContent *rpbRi
 		Value: []byte("golang@basho.com"),
 	}
 	rpbContent.Indexes[1] = &rpbRiak.RpbPair{
+		Key:   []byte("email_bin"),
+		Value: []byte("frazzle@basho.com"),
+	}
+	rpbContent.Indexes[2] = &rpbRiak.RpbPair{
 		Key:   []byte("phone_bin"),
 		Value: []byte("15551234567"),
 	}
