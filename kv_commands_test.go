@@ -91,17 +91,47 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 		Vclock:  vclock.Bytes(),
 	}
 
-	/*
-		var callback = function(err, response) {
-			assert(!err, err);
-			assert(response, 'expected a response!');
-			assert.equal(response.values.length, 1);
-			var riakObject = response.values[0];
-			assert.equal(riakObject.getBucketType(), 'bucket_type');
-			assert.equal(riakObject.getBucket(), 'bucket_name');
-			assert.equal(riakObject.getKey(), 'key');
-			assert.equal(riakObject.getContentType(), 'application/json');
-			assert.equal(riakObject.hasIndexes(), true);
+	builder := NewFetchValueCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("key").
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	cmd.onSuccess(rpbGetResp)
+
+	if fetchValueCommand, ok := cmd.(*FetchValueCommand); ok {
+		if fetchValueCommand.Response == nil {
+			t.Error("unexpected nil object")
+			t.FailNow()
+		}
+		if expected, actual := 1, len(fetchValueCommand.Response.Values); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		riakObject := fetchValueCommand.Response.Values[0]
+		if riakObject == nil {
+			t.Error("unexpected nil object")
+			t.FailNow()
+		}
+		if expected, actual := "bucket_type", riakObject.BucketType; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", riakObject.Bucket; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "key", riakObject.Key; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "application/json", riakObject.ContentType; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, riakObject.HasIndexes(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		/*
 			assert.equal(riakObject.getIndex('email_bin')[0], 'roach@basho.com');
 			assert.equal(riakObject.hasUserMeta(), true);
 			assert.equal(riakObject.getUserMeta()[0].key, 'metaKey1');
@@ -113,21 +143,10 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 			assert.equal(riakObject.getLinks()[1].key, 'k2');
 			assert.equal(riakObject.getLinks()[1].tag, 't2');
 			assert.equal(riakObject.getVClock().toString('utf8'), '1234');
-			done();
-		};
-	*/
-
-	fetchValueCommandBuilder := NewFetchValueCommandBuilder()
-	fetchValueCommand, err := fetchValueCommandBuilder.
-		WithBucketType("bucket_type").
-		WithBucket("bucket_name").
-		WithKey("key").
-		Build()
-	if err != nil {
-		t.Error(err.Error())
+		*/
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
 	}
-
-	fetchValueCommand.onSuccess(rpbGetResp)
 }
 
 func generateTestRpbContent(value string, contentType string) (rpbContent *rpbRiakKV.RpbContent) {

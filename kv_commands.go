@@ -1,8 +1,10 @@
 package riak
 
 import (
+	"fmt"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
+	"reflect"
 	"time"
 )
 
@@ -22,6 +24,7 @@ type FetchValueCommandOptions struct {
 	Timeout             time.Duration
 	SloppyQuorum        bool
 	NVal                uint32
+	// TODO ConflictResolver
 }
 
 func (options *FetchValueCommandOptions) GetTimeoutMilliseconds() *uint32 {
@@ -31,7 +34,8 @@ func (options *FetchValueCommandOptions) GetTimeoutMilliseconds() *uint32 {
 
 type FetchValueCommand struct {
 	CommandImpl
-	options *FetchValueCommandOptions
+	options  *FetchValueCommandOptions
+	Response *FetchValueResponse
 }
 
 func NewFetchValueCommand(options *FetchValueCommandOptions) (cmd *FetchValueCommand, err error) {
@@ -70,7 +74,55 @@ func (cmd *FetchValueCommand) constructPbRequest() (msg proto.Message, err error
 }
 
 func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
-	// TODO
+	if msg == nil {
+		cmd.Response = &FetchValueResponse{
+			IsNotFound:  true,
+			IsUnchanged: false,
+		}
+	} else {
+		if rpbGetResp, ok := msg.(*rpbRiakKV.RpbGetResp); ok {
+			vclock := rpbGetResp.GetVclock()
+			response := &FetchValueResponse{
+				VClock:      vclock,
+				IsUnchanged: rpbGetResp.GetUnchanged(),
+			}
+
+			if pbContent := rpbGetResp.GetContent(); pbContent == nil || len(pbContent) == 0 {
+				object := &Object{
+					IsTombstone: true,
+					BucketType:  cmd.options.BucketType,
+					Bucket:      cmd.options.Bucket,
+					Key:         cmd.options.Key,
+				}
+				response.IsNotFound = false
+				response.Values = []*Object{object}
+			} else {
+				response.Values = make([]*Object, len(pbContent))
+				for i, content := range pbContent {
+					if ro, err := NewObjectFromRpbContent(content); err != nil {
+						return err
+					} else {
+						ro.VClock = vclock
+						ro.BucketType = cmd.options.BucketType
+						ro.Bucket = cmd.options.Bucket
+						ro.Key = cmd.options.Key
+						/*
+							* TODO
+							if (this.options.conflictResolver) {
+								values = [this.options.conflictResolver(values)];
+							}
+						*/
+						response.Values[i] = ro
+					}
+				}
+			}
+
+			cmd.Response = response
+		} else {
+			// TODO specific Riak error?
+			return fmt.Errorf("[FetchValueCommand] could not convert %v to RpbGetResp", reflect.TypeOf(msg))
+		}
+	}
 	return nil
 }
 
@@ -84,6 +136,15 @@ func (cmd *FetchValueCommand) getExpectedResponseCode() byte {
 
 func (cmd *FetchValueCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbGetResp{}
+}
+
+// FetchValueResponse
+
+type FetchValueResponse struct {
+	IsNotFound  bool
+	IsUnchanged bool
+	VClock      []byte
+	Values      []*Object
 }
 
 // FetchValueCommandBuilder
