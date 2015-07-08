@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"errors"
 	"fmt"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
@@ -11,7 +12,9 @@ import (
 // FetchValueCommand
 
 type FetchValueCommandOptions struct {
-	Location
+	BucketType          string
+	Bucket              string
+	Key                 string
 	R                   uint32
 	Pr                  uint32
 	BasicQuorum         bool
@@ -47,7 +50,16 @@ func NewFetchValueCommand(options *FetchValueCommandOptions) (cmd *FetchValueCom
 		return
 	}
 
-	if err = validateObjectLocator(options); err != nil {
+	// TODO refactor this out somehow
+	if options.BucketType == "" {
+		options.BucketType = defaultBucketType
+	}
+	if options.Bucket == "" {
+		err = errors.New("Bucket is required")
+		return
+	}
+	if options.Key == "" {
+		err = errors.New("Key is required")
 		return
 	}
 
@@ -75,6 +87,7 @@ func (cmd *FetchValueCommand) constructPbRequest() (proto.Message, error) {
 		Timeout:       cmd.options.GetTimeoutMilliseconds(),
 		SloppyQuorum:  &cmd.options.SloppyQuorum,
 	}
+	// TODO refactor this out
 	if cmd.options.R > 0 {
 		rpb.R = &cmd.options.R
 	}

@@ -14,11 +14,9 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 	vclockBytes := vclock.Bytes()
 
 	fetchValueCommandOptions := &FetchValueCommandOptions{
-		Location: Location{
-			BucketType: "bucket_type",
-			Bucket:     "bucket_name",
-			Key:        "key",
-		},
+		BucketType:          "bucket_type",
+		Bucket:              "bucket_name",
+		Key:                 "key",
 		R:                   3,
 		Pr:                  1,
 		BasicQuorum:         true,
