@@ -14,9 +14,11 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 	vclockBytes := vclock.Bytes()
 
 	fetchValueCommandOptions := &FetchValueCommandOptions{
-		BucketType:          "bucket_type",
-		Bucket:              "bucket_name",
-		Key:                 "key",
+		Location: Location{
+			BucketType: "bucket_type",
+			Bucket:     "bucket_name",
+			Key:        "key",
+		},
 		R:                   3,
 		Pr:                  1,
 		BasicQuorum:         true,
@@ -126,6 +128,18 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := "application/json", riakObject.ContentType; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "utf-8", riakObject.Charset; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "utf-8", riakObject.ContentEncoding; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "test-vtag", riakObject.VTag; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := time.Unix(1234, 123456789), riakObject.LastModified; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := true, riakObject.HasIndexes(); expected != actual {

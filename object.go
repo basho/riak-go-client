@@ -23,13 +23,14 @@ type Object struct {
 	IsTombstone     bool
 	Value           []byte
 	ContentType     string
+	Charset         string
 	ContentEncoding string
+	VTag            string
 	LastModified    time.Time
 	UserMeta        []Pair
-	// TODO int indexes vs string
-	Indexes map[string][]string
-	Links   []Link
-	VClock  []byte
+	Indexes         map[string][]string // TODO int indexes vs string
+	Links           []Link
+	VClock          []byte
 }
 
 func (o *Object) HasIndexes() bool {
@@ -62,7 +63,9 @@ func NewObjectFromRpbContent(rpbContent *rpbRiakKV.RpbContent) (ro *Object, err 
 	}
 
 	ro.ContentType = string(rpbContent.GetContentType())
+	ro.Charset = string(rpbContent.GetCharset())
 	ro.ContentEncoding = string(rpbContent.GetContentEncoding())
+	ro.VTag = string(rpbContent.GetVtag())
 	ro.LastModified = time.Unix(int64(rpbContent.GetLastMod()), int64(rpbContent.GetLastModUsecs()))
 
 	rpbUserMeta := rpbContent.GetUsermeta()

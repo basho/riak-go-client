@@ -32,5 +32,6 @@ func maybeRiakError(data []byte) (e error) {
 }
 
 func (e Error) Error() (s string) {
-	return fmt.Sprintf("%d:%s", e.Errcode, e.Errmsg)
+	// TODO standard error message format?
+	return fmt.Sprintf("riak error - errcode '%d', errmsg '%s'", e.Errcode, e.Errmsg)
 }
