@@ -46,43 +46,43 @@ func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
 }
 
 func validateRpbGetReq(t *testing.T, protobuf proto.Message) {
-	if rpbGetReq, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
-		if expected, actual := "bucket_type", string(rpbGetReq.GetType()); expected != actual {
+	if req, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := "bucket_name", string(rpbGetReq.GetBucket()); expected != actual {
+		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := "key", string(rpbGetReq.GetKey()); expected != actual {
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := uint32(3), rpbGetReq.GetR(); expected != actual {
+		if expected, actual := uint32(3), req.GetR(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := uint32(1), rpbGetReq.GetPr(); expected != actual {
+		if expected, actual := uint32(1), req.GetPr(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := true, rpbGetReq.GetNotfoundOk(); expected != actual {
+		if expected, actual := true, req.GetNotfoundOk(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := 0, bytes.Compare(vclockBytes, rpbGetReq.GetIfModified()); expected != actual {
+		if expected, actual := 0, bytes.Compare(vclockBytes, req.GetIfModified()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := true, rpbGetReq.GetHead(); expected != actual {
+		if expected, actual := true, req.GetHead(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := true, rpbGetReq.GetDeletedvclock(); expected != actual {
+		if expected, actual := true, req.GetDeletedvclock(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 		expectedTimeoutDuration := 20 * time.Second
-		actualTimeoutDuration := time.Duration(rpbGetReq.GetTimeout()) * time.Millisecond
+		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
 		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := true, rpbGetReq.GetSloppyQuorum(); expected != actual {
+		if expected, actual := true, req.GetSloppyQuorum(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := uint32(4), rpbGetReq.GetNVal(); expected != actual {
+		if expected, actual := uint32(4), req.GetNVal(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -103,41 +103,41 @@ func TestBuildRpbGetReqCorrectlyWithDefaults(t *testing.T) {
 	if protobuf == nil {
 		t.FailNow()
 	}
-	if rpbGetReq, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
-		if expected, actual := "default", string(rpbGetReq.Type); expected != actual {
+	if req, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
+		if expected, actual := "default", string(req.Type); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := "bucket_name", string(rpbGetReq.Bucket); expected != actual {
+		if expected, actual := "bucket_name", string(req.Bucket); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := "key", string(rpbGetReq.Key); expected != actual {
+		if expected, actual := "key", string(req.Key); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if rpbGetReq.R != nil {
+		if req.R != nil {
 			t.Errorf("expected nil value")
 		}
-		if rpbGetReq.Pr != nil {
+		if req.Pr != nil {
 			t.Errorf("expected nil value")
 		}
-		if rpbGetReq.NotfoundOk != nil {
+		if req.NotfoundOk != nil {
 			t.Error("expected nil value")
 		}
-		if rpbGetReq.IfModified != nil {
+		if req.IfModified != nil {
 			t.Errorf("expected nil value")
 		}
-		if rpbGetReq.Head != nil {
+		if req.Head != nil {
 			t.Error("expected nil value")
 		}
-		if rpbGetReq.Deletedvclock != nil {
+		if req.Deletedvclock != nil {
 			t.Error("expected nil value")
 		}
-		if rpbGetReq.Timeout != nil {
+		if req.Timeout != nil {
 			t.Errorf("expected nil value")
 		}
-		if rpbGetReq.SloppyQuorum != nil {
+		if req.SloppyQuorum != nil {
 			t.Error("expected nil value")
 		}
-		if rpbGetReq.NVal != nil {
+		if req.NVal != nil {
 			t.Errorf("expected nil value")
 		}
 	} else {
@@ -351,4 +351,139 @@ func TestValidationOfRpbPutReqViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal("expected nil err since PUT requests can generate keys")
 	}
+}
+
+func TestBuildRpbPutReqCorrectlyViaBuilder(t *testing.T) {
+	value := "this is a value"
+	userMeta := []*Pair{
+		{"metaKey1", "metaValue1"},
+	}
+	links := []*Link{
+		{"b0", "k0", "t0"},
+		{"b1", "k1", "t1"},
+	}
+	ro := &Object{
+		ContentType:     "application/json",
+		ContentEncoding: "gzip",
+		Charset:         "utf-8",
+		UserMeta:        userMeta,
+		Links:           links,
+		Value:           []byte(value),
+	}
+	ro.AddToIndex("email_bin", "golang@basho.com")
+
+	key := "key"
+	builder := NewStoreValueCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey(key).
+		WithW(3).
+		WithPw(1).
+		WithDw(2).
+		WithNVal(3).
+		WithVClock(vclockBytes).
+		WithReturnHead(true).
+		WithReturnBody(true).
+		WithIfNotModified(true).
+		WithIfNoneMatch(true).
+		WithAsis(true).
+		WithSloppyQuorum(true).
+		WithTimeout(time.Second * 20).
+		WithContent(ro)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if req, ok := protobuf.(*rpbRiakKV.RpbPutReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(3), req.GetW(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(1), req.GetPw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(2), req.GetDw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(3), req.GetNVal(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := 0, bytes.Compare(vclockBytes, req.GetVclock()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetReturnHead(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetReturnBody(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetIfNotModified(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetIfNoneMatch(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetAsis(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetSloppyQuorum(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		expectedTimeoutDuration := 20 * time.Second
+		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
+		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		content := req.GetContent()
+		if content == nil {
+			t.Fatal("expected non-nil content")
+		} else {
+			if expected, actual := value, string(content.GetValue()); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "application/json", string(content.GetContentType()); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "gzip", string(content.GetContentEncoding()); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "utf-8", string(content.GetCharset()); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			indexes := content.GetIndexes()
+			if expected, actual := 1, len(indexes); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbPutReq", ok, reflect.TypeOf(protobuf))
+	}
+	/*
+		assert(content.getIndexes().length === 1)
+		assert.equal(content.getIndexes()[0].key.toString('utf8'), 'email_bin')
+		assert.equal(content.getIndexes()[0].value.toString('utf8'), 'roach@basho.com')
+		assert(content.getUsermeta().length === 1)
+		assert.equal(content.getUsermeta()[0].key.toString('utf8'), 'metaKey1')
+		assert.equal(content.getUsermeta()[0].value.toString('utf8'), 'metaValue1')
+		assert.equal(content.getLinks()[0].bucket.toString('utf8'), 'b')
+		assert.equal(content.getLinks()[0].key.toString('utf8'), 'k')
+		assert.equal(content.getLinks()[0].tag.toString('utf8'), 't')
+		assert.equal(content.getLinks()[1].bucket.toString('utf8'), 'b')
+		assert.equal(content.getLinks()[1].key.toString('utf8'), 'k2')
+		assert.equal(content.getLinks()[1].tag.toString('utf8'), 't2')
+		assert.equal(protobuf.getTimeout(), 20000)
+	*/
 }

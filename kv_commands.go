@@ -55,7 +55,7 @@ func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
 			} else {
 				response.Values = make([]*Object, len(pbContent))
 				for i, content := range pbContent {
-					if ro, err := NewObjectFromRpbContent(content); err != nil {
+					if ro, err := fromRpbContent(content); err != nil {
 						return err
 					} else {
 						ro.VClock = vclock
@@ -200,6 +200,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 type StoreValueCommand struct {
 	CommandImpl
 	Response *StoreValueResponse
+	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
 	resolver ConflictResolver
 }
@@ -208,8 +209,30 @@ func (cmd *StoreValueCommand) Name() string {
 	return "StoreValue"
 }
 
-func (cmd *StoreValueCommand) constructPbRequest() (proto.Message, error) {
-	return cmd.protobuf, nil
+func (cmd *StoreValueCommand) constructPbRequest() (msg proto.Message, err error) {
+	value := cmd.value
+
+	// Some properties of the value override options
+	if value.VClock != nil {
+		cmd.protobuf.Vclock = value.VClock
+	}
+	if value.BucketType != "" {
+		cmd.protobuf.Type = []byte(value.BucketType)
+	}
+	if value.Bucket != "" {
+		cmd.protobuf.Bucket = []byte(value.Bucket)
+	}
+	if value.Key != "" {
+		cmd.protobuf.Key = []byte(value.Key)
+	}
+
+	cmd.protobuf.Content, err = toRpbContent(value)
+	if err != nil {
+		return
+	}
+
+	msg = cmd.protobuf
+	return
 }
 
 func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
@@ -232,7 +255,7 @@ func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
 			if pbContent := rpbPutResp.GetContent(); pbContent != nil && len(pbContent) > 0 {
 				response.Values = make([]*Object, len(pbContent))
 				for i, content := range pbContent {
-					if ro, err := NewObjectFromRpbContent(content); err != nil {
+					if ro, err := fromRpbContent(content); err != nil {
 						return err
 					} else {
 						ro.VClock = vclock
@@ -278,7 +301,7 @@ type StoreValueResponse struct {
 }
 
 type StoreValueCommandBuilder struct {
-	content  *Object
+	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
 	resolver ConflictResolver
 }
@@ -314,7 +337,7 @@ func (builder *StoreValueCommandBuilder) WithVClock(vclock []byte) *StoreValueCo
 }
 
 func (builder *StoreValueCommandBuilder) WithContent(object *Object) *StoreValueCommandBuilder {
-	builder.content = object
+	builder.value = object
 	return builder
 }
 
@@ -330,6 +353,11 @@ func (builder *StoreValueCommandBuilder) WithDw(dw uint32) *StoreValueCommandBui
 
 func (builder *StoreValueCommandBuilder) WithPw(pw uint32) *StoreValueCommandBuilder {
 	builder.protobuf.Pw = &pw
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithNVal(nval uint32) *StoreValueCommandBuilder {
+	builder.protobuf.NVal = &nval
 	return builder
 }
 
@@ -376,5 +404,5 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &StoreValueCommand{protobuf: builder.protobuf}, nil
+	return &StoreValueCommand{value: builder.value, protobuf: builder.protobuf}, nil
 }
