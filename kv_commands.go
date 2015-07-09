@@ -17,7 +17,7 @@ type FetchValueCommandOptions struct {
 	Key                 string
 	R                   uint32
 	Pr                  uint32
-	BasicQuorum         bool
+	BasicQuorum         bool // TODO the only reason we can use bool is that the default is false. Maybe options should be Java-client style
 	NotFoundOk          bool
 	IfNotModified       []byte // TODO pb field is IfModified
 	HeadOnly            bool
@@ -199,6 +199,56 @@ func (builder *FetchValueCommandBuilder) WithBucket(bucket string) *FetchValueCo
 
 func (builder *FetchValueCommandBuilder) WithKey(key string) *FetchValueCommandBuilder {
 	builder.Options.Key = key
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithR(r uint32) *FetchValueCommandBuilder {
+	builder.Options.R = r
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithPr(pr uint32) *FetchValueCommandBuilder {
+	builder.Options.Pr = pr
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithNVal(nval uint32) *FetchValueCommandBuilder {
+	builder.Options.NVal = nval
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchValueCommandBuilder {
+	builder.Options.BasicQuorum = basicQuorum
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchValueCommandBuilder {
+	builder.Options.NotFoundOk = notFoundOk
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithIfNotModified(ifNotModified []byte) *FetchValueCommandBuilder {
+	builder.Options.IfNotModified = ifNotModified
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithHeadOnly(headOnly bool) *FetchValueCommandBuilder {
+	builder.Options.HeadOnly = headOnly
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithReturnDeletedVClock(returnDeletedVClock bool) *FetchValueCommandBuilder {
+	builder.Options.ReturnDeletedVClock = returnDeletedVClock
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithTimeout(timeout time.Duration) *FetchValueCommandBuilder {
+	builder.Options.Timeout = timeout
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *FetchValueCommandBuilder {
+	builder.Options.SloppyQuorum = sloppyQuorum
 	return builder
 }
 

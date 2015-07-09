@@ -4,15 +4,16 @@ import (
 	"bytes"
 	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
+	proto "github.com/golang/protobuf/proto"
 	"reflect"
 	"testing"
 	"time"
 )
 
-func TestBuildRpbGetReqCorrectly(t *testing.T) {
-	vclock := bytes.NewBufferString("vclock123456789")
-	vclockBytes := vclock.Bytes()
+var vclock = bytes.NewBufferString("vclock123456789")
+var vclockBytes = vclock.Bytes()
 
+func TestBuildRpbGetReqCorrectlyViaOptions(t *testing.T) {
 	fetchValueCommandOptions := &FetchValueCommandOptions{
 		BucketType:          "bucket_type",
 		Bucket:              "bucket_name",
@@ -32,12 +33,45 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 
 	protobuf, err := fetchValueCommand.constructPbRequest()
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
 		t.FailNow()
 	}
+	validateRpbGetReq(t, protobuf)
+}
 
+func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewFetchValueCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("key").
+		WithR(3).
+		WithPr(1).
+		WithBasicQuorum(true).
+		WithNotFoundOk(true).
+		WithIfNotModified(vclockBytes).
+		WithHeadOnly(true).
+		WithReturnDeletedVClock(true).
+		WithTimeout(time.Second * 20).
+		WithSloppyQuorum(true).
+		WithNVal(4)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	validateRpbGetReq(t, protobuf)
+}
+
+func validateRpbGetReq(t *testing.T, protobuf proto.Message) {
 	if rpbGetReq, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
 		if expected, actual := "bucket_type", string(rpbGetReq.GetType()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
@@ -76,6 +110,66 @@ func TestBuildRpbGetReqCorrectly(t *testing.T) {
 		}
 		if expected, actual := uint32(4), rpbGetReq.GetNVal(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbGetReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestBuildRpbGetReqCorrectlyWithDefaults(t *testing.T) {
+	fetchValueCommandOptions := &FetchValueCommandOptions{
+		Bucket: "bucket_name",
+		Key:    "key",
+	}
+	fetchValueCommand, err := NewFetchValueCommand(fetchValueCommandOptions)
+
+	protobuf, err := fetchValueCommand.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if rpbGetReq, ok := protobuf.(*rpbRiakKV.RpbGetReq); ok {
+		if expected, actual := "default", string(rpbGetReq.Type); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", string(rpbGetReq.Bucket); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "key", string(rpbGetReq.Key); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if rpbGetReq.R != nil {
+			t.Errorf("expected nil value")
+		}
+		if rpbGetReq.Pr != nil {
+			t.Errorf("expected nil value")
+		}
+		if rpbGetReq.NotfoundOk != nil {
+			// TODO
+			t.Logf("expected nil value")
+		}
+		if rpbGetReq.IfModified != nil {
+			t.Errorf("expected nil value")
+		}
+		if rpbGetReq.Head != nil {
+			// TODO
+			t.Logf("expected nil value")
+		}
+		if rpbGetReq.Deletedvclock != nil {
+			// TODO
+			t.Logf("expected nil value")
+		}
+		if rpbGetReq.Timeout != nil {
+			t.Errorf("expected nil value")
+		}
+		if rpbGetReq.SloppyQuorum != nil {
+			// TODO
+			t.Logf("expected nil value")
+		}
+		if rpbGetReq.NVal != nil {
+			t.Errorf("expected nil value")
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbGetReq", ok, reflect.TypeOf(protobuf))
