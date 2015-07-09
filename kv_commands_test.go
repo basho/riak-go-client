@@ -13,34 +13,6 @@ import (
 var vclock = bytes.NewBufferString("vclock123456789")
 var vclockBytes = vclock.Bytes()
 
-func TestBuildRpbGetReqCorrectlyViaOptions(t *testing.T) {
-	fetchValueCommandOptions := &FetchValueCommandOptions{
-		BucketType:          "bucket_type",
-		Bucket:              "bucket_name",
-		Key:                 "key",
-		R:                   3,
-		Pr:                  1,
-		BasicQuorum:         true,
-		NotFoundOk:          true,
-		IfNotModified:       vclockBytes, // TODO pb is IfModified?
-		HeadOnly:            true,
-		ReturnDeletedVClock: true,
-		Timeout:             time.Second * 20,
-		SloppyQuorum:        true,
-		NVal:                4,
-	}
-	fetchValueCommand, err := NewFetchValueCommand(fetchValueCommandOptions)
-
-	protobuf, err := fetchValueCommand.constructPbRequest()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	if protobuf == nil {
-		t.FailNow()
-	}
-	validateRpbGetReq(t, protobuf)
-}
-
 func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
 	builder := NewFetchValueCommandBuilder().
 		WithBucketType("bucket_type").
@@ -117,13 +89,12 @@ func validateRpbGetReq(t *testing.T, protobuf proto.Message) {
 }
 
 func TestBuildRpbGetReqCorrectlyWithDefaults(t *testing.T) {
-	fetchValueCommandOptions := &FetchValueCommandOptions{
-		Bucket: "bucket_name",
-		Key:    "key",
-	}
-	fetchValueCommand, err := NewFetchValueCommand(fetchValueCommandOptions)
+	builder := NewFetchValueCommandBuilder().
+		WithBucket("bucket_name").
+		WithKey("key")
+	cmd, err := builder.Build()
 
-	protobuf, err := fetchValueCommand.constructPbRequest()
+	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -147,26 +118,22 @@ func TestBuildRpbGetReqCorrectlyWithDefaults(t *testing.T) {
 			t.Errorf("expected nil value")
 		}
 		if rpbGetReq.NotfoundOk != nil {
-			// TODO
-			t.Logf("expected nil value")
+			t.Error("expected nil value")
 		}
 		if rpbGetReq.IfModified != nil {
 			t.Errorf("expected nil value")
 		}
 		if rpbGetReq.Head != nil {
-			// TODO
-			t.Logf("expected nil value")
+			t.Error("expected nil value")
 		}
 		if rpbGetReq.Deletedvclock != nil {
-			// TODO
-			t.Logf("expected nil value")
+			t.Error("expected nil value")
 		}
 		if rpbGetReq.Timeout != nil {
 			t.Errorf("expected nil value")
 		}
 		if rpbGetReq.SloppyQuorum != nil {
-			// TODO
-			t.Logf("expected nil value")
+			t.Error("expected nil value")
 		}
 		if rpbGetReq.NVal != nil {
 			t.Errorf("expected nil value")

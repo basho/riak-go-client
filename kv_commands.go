@@ -1,7 +1,6 @@
 package riak
 
 import (
-	"errors"
 	"fmt"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
@@ -9,65 +8,16 @@ import (
 	"time"
 )
 
+type ConflictResolver interface {
+	Resolve([]*Object) *Object
+}
+
 // FetchValueCommand
-
-type FetchValueCommandOptions struct {
-	BucketType          string
-	Bucket              string
-	Key                 string
-	R                   uint32
-	Pr                  uint32
-	BasicQuorum         bool // TODO the only reason we can use bool is that the default is false. Maybe options should be Java-client style
-	NotFoundOk          bool
-	IfNotModified       []byte // TODO pb field is IfModified
-	HeadOnly            bool
-	ReturnDeletedVClock bool
-	Timeout             time.Duration
-	SloppyQuorum        bool
-	NVal                uint32
-	// TODO ConflictResolver
-}
-
-func (options *FetchValueCommandOptions) GetTimeoutMilliseconds() *uint32 {
-	if options.Timeout > 0 {
-		timeoutMilliseconds := uint32(options.Timeout / time.Millisecond)
-		return &timeoutMilliseconds
-	} else {
-		return nil
-	}
-}
 
 type FetchValueCommand struct {
 	CommandImpl
-	options  *FetchValueCommandOptions
+	protobuf *rpbRiakKV.RpbGetReq
 	Response *FetchValueResponse
-}
-
-func NewFetchValueCommand(options *FetchValueCommandOptions) (cmd *FetchValueCommand, err error) {
-	if options == nil {
-		// TODO default options?
-		err = ErrNilOptions
-		return
-	}
-
-	// TODO refactor this out somehow
-	if options.BucketType == "" {
-		options.BucketType = defaultBucketType
-	}
-	if options.Bucket == "" {
-		err = errors.New("Bucket is required")
-		return
-	}
-	if options.Key == "" {
-		err = errors.New("Key is required")
-		return
-	}
-
-	cmd = &FetchValueCommand{
-		options: options,
-	}
-
-	return
 }
 
 func (cmd *FetchValueCommand) Name() string {
@@ -75,29 +25,7 @@ func (cmd *FetchValueCommand) Name() string {
 }
 
 func (cmd *FetchValueCommand) constructPbRequest() (proto.Message, error) {
-	rpb := &rpbRiakKV.RpbGetReq{
-		Type:          []byte(cmd.options.BucketType),
-		Bucket:        []byte(cmd.options.Bucket),
-		Key:           []byte(cmd.options.Key),
-		BasicQuorum:   &cmd.options.BasicQuorum,
-		NotfoundOk:    &cmd.options.NotFoundOk,
-		IfModified:    cmd.options.IfNotModified,
-		Head:          &cmd.options.HeadOnly,
-		Deletedvclock: &cmd.options.ReturnDeletedVClock,
-		Timeout:       cmd.options.GetTimeoutMilliseconds(),
-		SloppyQuorum:  &cmd.options.SloppyQuorum,
-	}
-	// TODO refactor this out
-	if cmd.options.R > 0 {
-		rpb.R = &cmd.options.R
-	}
-	if cmd.options.Pr > 0 {
-		rpb.Pr = &cmd.options.Pr
-	}
-	if cmd.options.NVal > 0 {
-		rpb.NVal = &cmd.options.NVal
-	}
-	return rpb, nil
+	return cmd.protobuf, nil
 }
 
 func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
@@ -118,9 +46,9 @@ func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
 			if pbContent := rpbGetResp.GetContent(); pbContent == nil || len(pbContent) == 0 {
 				object := &Object{
 					IsTombstone: true,
-					BucketType:  cmd.options.BucketType,
-					Bucket:      cmd.options.Bucket,
-					Key:         cmd.options.Key,
+					BucketType:  string(cmd.protobuf.Type),
+					Bucket:      string(cmd.protobuf.Bucket),
+					Key:         string(cmd.protobuf.Key),
 				}
 				response.Values = []*Object{object}
 			} else {
@@ -130,9 +58,9 @@ func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
 						return err
 					} else {
 						ro.VClock = vclock
-						ro.BucketType = cmd.options.BucketType
-						ro.Bucket = cmd.options.Bucket
-						ro.Key = cmd.options.Key
+						ro.BucketType = string(cmd.protobuf.Type)
+						ro.Bucket = string(cmd.protobuf.Bucket)
+						ro.Key = string(cmd.protobuf.Key)
 						/*
 							* TODO
 							if (this.options.conflictResolver) {
@@ -177,84 +105,99 @@ type FetchValueResponse struct {
 // FetchValueCommandBuilder
 
 type FetchValueCommandBuilder struct {
-	Options *FetchValueCommandOptions
+	protobuf *rpbRiakKV.RpbGetReq
+	resolver ConflictResolver
 }
 
 func NewFetchValueCommandBuilder() *FetchValueCommandBuilder {
-	builder := &FetchValueCommandBuilder{
-		Options: &FetchValueCommandOptions{},
-	}
+	builder := &FetchValueCommandBuilder{protobuf: &rpbRiakKV.RpbGetReq{}}
+	return builder
+}
+
+func (builder *FetchValueCommandBuilder) WithConflictResolver(resolver ConflictResolver) *FetchValueCommandBuilder {
+	builder.resolver = resolver
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithBucketType(bucketType string) *FetchValueCommandBuilder {
-	builder.Options.BucketType = bucketType
+	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithBucket(bucket string) *FetchValueCommandBuilder {
-	builder.Options.Bucket = bucket
+	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithKey(key string) *FetchValueCommandBuilder {
-	builder.Options.Key = key
+	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithR(r uint32) *FetchValueCommandBuilder {
-	builder.Options.R = r
+	builder.protobuf.R = &r
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithPr(pr uint32) *FetchValueCommandBuilder {
-	builder.Options.Pr = pr
+	builder.protobuf.Pr = &pr
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithNVal(nval uint32) *FetchValueCommandBuilder {
-	builder.Options.NVal = nval
+	builder.protobuf.NVal = &nval
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchValueCommandBuilder {
-	builder.Options.BasicQuorum = basicQuorum
+	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchValueCommandBuilder {
-	builder.Options.NotFoundOk = notFoundOk
+	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithIfNotModified(ifNotModified []byte) *FetchValueCommandBuilder {
-	builder.Options.IfNotModified = ifNotModified
+	builder.protobuf.IfModified = ifNotModified
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithHeadOnly(headOnly bool) *FetchValueCommandBuilder {
-	builder.Options.HeadOnly = headOnly
+	builder.protobuf.Head = &headOnly
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithReturnDeletedVClock(returnDeletedVClock bool) *FetchValueCommandBuilder {
-	builder.Options.ReturnDeletedVClock = returnDeletedVClock
+	builder.protobuf.Deletedvclock = &returnDeletedVClock
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithTimeout(timeout time.Duration) *FetchValueCommandBuilder {
-	builder.Options.Timeout = timeout
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *FetchValueCommandBuilder {
-	builder.Options.SloppyQuorum = sloppyQuorum
+	builder.protobuf.SloppyQuorum = &sloppyQuorum
 	return builder
 }
 
 func (builder *FetchValueCommandBuilder) Build() (Command, error) {
-	if builder.Options == nil {
-		return nil, ErrNilOptions
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
 	}
-	return NewFetchValueCommand(builder.Options)
+	// TODO refactor this out somehow for other commands that use BT/B/K
+	if builder.protobuf.Type == nil {
+		builder.protobuf.Type = []byte(defaultBucketType)
+	}
+	if builder.protobuf.Bucket == nil {
+		return nil, ErrBucketRequired
+	}
+	if builder.protobuf.Key == nil {
+		return nil, ErrKeyRequired
+	}
+	return &FetchValueCommand{protobuf: builder.protobuf}, nil
 }
