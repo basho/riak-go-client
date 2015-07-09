@@ -8,16 +8,17 @@ import (
 	"time"
 )
 
-type ConflictResolver interface {
-	Resolve([]*Object) *Object
-}
+// FetchValue
 
-// FetchValueCommand
+type ConflictResolver interface {
+	Resolve([]*Object) []*Object
+}
 
 type FetchValueCommand struct {
 	CommandImpl
-	protobuf *rpbRiakKV.RpbGetReq
 	Response *FetchValueResponse
+	protobuf *rpbRiakKV.RpbGetReq
+	resolver ConflictResolver
 }
 
 func (cmd *FetchValueCommand) Name() string {
@@ -61,20 +62,16 @@ func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
 						ro.BucketType = string(cmd.protobuf.Type)
 						ro.Bucket = string(cmd.protobuf.Bucket)
 						ro.Key = string(cmd.protobuf.Key)
-						/*
-							* TODO
-							if (this.options.conflictResolver) {
-								values = [this.options.conflictResolver(values)];
-							}
-						*/
 						response.Values[i] = ro
 					}
+				}
+				if cmd.resolver != nil {
+					response.Values = cmd.resolver.Resolve(response.Values)
 				}
 			}
 
 			cmd.Response = response
 		} else {
-			// TODO specific Riak error?
 			return fmt.Errorf("[FetchValueCommand] could not convert %v to RpbGetResp", reflect.TypeOf(msg))
 		}
 	}
@@ -93,16 +90,12 @@ func (cmd *FetchValueCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbGetResp{}
 }
 
-// FetchValueResponse
-
 type FetchValueResponse struct {
 	IsNotFound  bool
 	IsUnchanged bool
 	VClock      []byte
 	Values      []*Object
 }
-
-// FetchValueCommandBuilder
 
 type FetchValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetReq
@@ -200,4 +193,188 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 		return nil, ErrKeyRequired
 	}
 	return &FetchValueCommand{protobuf: builder.protobuf}, nil
+}
+
+// StoreValue
+
+type StoreValueCommand struct {
+	CommandImpl
+	Response *StoreValueResponse
+	protobuf *rpbRiakKV.RpbPutReq
+	resolver ConflictResolver
+}
+
+func (cmd *StoreValueCommand) Name() string {
+	return "StoreValue"
+}
+
+func (cmd *StoreValueCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
+	if msg == nil {
+		// TODO error?
+		cmd.Response = &StoreValueResponse{}
+	} else {
+		if rpbPutResp, ok := msg.(*rpbRiakKV.RpbPutResp); ok {
+			var responseKey string
+			if responseKeyBytes := rpbPutResp.GetKey(); responseKeyBytes != nil && len(responseKeyBytes) > 0 {
+				responseKey = string(responseKeyBytes)
+			}
+
+			vclock := rpbPutResp.GetVclock()
+			response := &StoreValueResponse{
+				VClock:       vclock,
+				GeneratedKey: responseKey,
+			}
+
+			if pbContent := rpbPutResp.GetContent(); pbContent != nil && len(pbContent) > 0 {
+				response.Values = make([]*Object, len(pbContent))
+				for i, content := range pbContent {
+					if ro, err := NewObjectFromRpbContent(content); err != nil {
+						return err
+					} else {
+						ro.VClock = vclock
+						ro.BucketType = string(cmd.protobuf.Type)
+						ro.Bucket = string(cmd.protobuf.Bucket)
+						if responseKey == "" {
+							ro.Key = string(cmd.protobuf.Key)
+						} else {
+							ro.Key = responseKey
+						}
+						response.Values[i] = ro
+					}
+				}
+				if cmd.resolver != nil {
+					response.Values = cmd.resolver.Resolve(response.Values)
+				}
+			}
+
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[StoreValueCommand] could not convert %v to RpbPutResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *StoreValueCommand) getRequestCode() byte {
+	return rpbCode_RpbGetReq
+}
+
+func (cmd *StoreValueCommand) getExpectedResponseCode() byte {
+	return rpbCode_RpbGetResp
+}
+
+func (cmd *StoreValueCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakKV.RpbGetResp{}
+}
+
+type StoreValueResponse struct {
+	GeneratedKey string
+	VClock       []byte
+	Values       []*Object
+}
+
+type StoreValueCommandBuilder struct {
+	content  *Object
+	protobuf *rpbRiakKV.RpbPutReq
+	resolver ConflictResolver
+}
+
+func NewStoreValueCommandBuilder() *StoreValueCommandBuilder {
+	builder := &StoreValueCommandBuilder{protobuf: &rpbRiakKV.RpbPutReq{}}
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithConflictResolver(resolver ConflictResolver) *StoreValueCommandBuilder {
+	builder.resolver = resolver
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithBucketType(bucketType string) *StoreValueCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithBucket(bucket string) *StoreValueCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithKey(key string) *StoreValueCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithVClock(vclock []byte) *StoreValueCommandBuilder {
+	builder.protobuf.Vclock = vclock
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithContent(object *Object) *StoreValueCommandBuilder {
+	builder.content = object
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithW(w uint32) *StoreValueCommandBuilder {
+	builder.protobuf.W = &w
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithDw(dw uint32) *StoreValueCommandBuilder {
+	builder.protobuf.Dw = &dw
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithPw(pw uint32) *StoreValueCommandBuilder {
+	builder.protobuf.Pw = &pw
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithReturnBody(returnBody bool) *StoreValueCommandBuilder {
+	builder.protobuf.ReturnBody = &returnBody
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithIfNotModified(ifNotModified bool) *StoreValueCommandBuilder {
+	builder.protobuf.IfNotModified = &ifNotModified
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithIfNoneMatch(ifNoneMatch bool) *StoreValueCommandBuilder {
+	builder.protobuf.IfNoneMatch = &ifNoneMatch
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithReturnHead(returnHead bool) *StoreValueCommandBuilder {
+	builder.protobuf.ReturnHead = &returnHead
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithTimeout(timeout time.Duration) *StoreValueCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithAsis(asis bool) *StoreValueCommandBuilder {
+	builder.protobuf.Asis = &asis
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *StoreValueCommandBuilder {
+	builder.protobuf.SloppyQuorum = &sloppyQuorum
+	return builder
+}
+
+func (builder *StoreValueCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &StoreValueCommand{protobuf: builder.protobuf}, nil
 }

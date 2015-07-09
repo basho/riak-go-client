@@ -13,6 +13,8 @@ import (
 var vclock = bytes.NewBufferString("vclock123456789")
 var vclockBytes = vclock.Bytes()
 
+// FetchValue
+
 func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
 	builder := NewFetchValueCommandBuilder().
 		WithBucketType("bucket_type").
@@ -251,6 +253,29 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 	}
 }
 
+func TestValidationOfRpbGetReqViaBuilder(t *testing.T) {
+	// validate that Bucket is required
+	builder := NewFetchValueCommandBuilder()
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is required
+	builder = NewFetchValueCommandBuilder()
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+}
+
 func generateTestRpbContent(value string, contentType string) (rpbContent *rpbRiakKV.RpbContent) {
 	lastMod := uint32(1234)
 	lastModUsecs := uint32(123456789)
@@ -304,4 +329,26 @@ func generateTestRpbContent(value string, contentType string) (rpbContent *rpbRi
 	}
 
 	return rpbContent
+}
+
+// StoreValue
+
+func TestValidationOfRpbPutReqViaBuilder(t *testing.T) {
+	// validate that Bucket is required
+	builder := NewStoreValueCommandBuilder()
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is NOT required
+	builder = NewStoreValueCommandBuilder()
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err != nil {
+		t.Fatal("expected nil err since PUT requests can generate keys")
+	}
 }
