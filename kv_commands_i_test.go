@@ -20,29 +20,37 @@ func init() {
 	}
 }
 
-func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
+func TestFetchANotFoundFromRiakUsingDefaultBucketType(t *testing.T) {
+	var err error
+	var cmd Command
 	builder := NewFetchValueCommandBuilder()
-	if fetch, err := builder.WithBucket(testBucketName).WithKey("my_key1").Build(); err != nil {
-		t.Error(err.Error())
-	} else {
-		if err := cluster.Execute(fetch); err != nil {
-			t.Error(err.Error())
-		}
+	if cmd, err = builder.WithBucket(testBucketName).WithKey("my_key1").Build(); err != nil {
+		t.Fatal(err.Error())
 	}
-	/*
-	   var fetch = new FetchValue.Builder()
-	           .withBucket(Test.bucketName)
-	           .withKey('my_key1')
-	           .withCallback(callback)
-	           .build();
-
-	   cluster.execute(fetch);
-	   var callback = function(err, resp) {
-	       assert(!err, err);
-	       assert.equal(resp.values.length, 1);
-	       assert.equal(resp.values[0].getValue().toString('utf8'), 'this is a value in Riak');
-	       assert.equal(resp.isNotFound, false);
-	       done();
-	   };
-	*/
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if fvc, ok := cmd.(*FetchValueCommand); ok {
+		if fvc.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		rsp := fvc.Response
+		if expected, actual := true, rsp.IsNotFound; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := false, rsp.IsUnchanged; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if rsp.VClock != nil {
+			t.Errorf("expected nil VClock")
+		}
+		if rsp.Values != nil {
+			t.Errorf("expected nil Values")
+		}
+		if expected, actual := 0, len(rsp.Values); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
 }

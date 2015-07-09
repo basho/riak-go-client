@@ -57,9 +57,11 @@ func decodeRiakMessage(cmd Command, data []byte) (msg proto.Message, err error) 
 		return
 	}
 
-	msg = cmd.getResponseProtobufMessage()
-	if msg != nil {
-		err = proto.Unmarshal(data[1:], msg)
+	if len(data) > 1 {
+		msg = cmd.getResponseProtobufMessage()
+		if msg != nil {
+			err = proto.Unmarshal(data[1:], msg)
+		}
 	}
 
 	return
