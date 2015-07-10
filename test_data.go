@@ -1,8 +1,7 @@
-// +build integration
-
 package riak
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +11,9 @@ import (
 var riakHost = "riak-test"
 var riakPort uint16 = 10017
 var remoteAddress = "riak-test:10017"
+
+var vclock = bytes.NewBufferString("vclock123456789")
+var vclockBytes = vclock.Bytes()
 
 /*
  * Test bucket type

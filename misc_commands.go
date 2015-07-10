@@ -64,13 +64,34 @@ func (cmd *FetchBucketPropsCommand) constructPbRequest() (proto.Message, error) 
 func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
 	if msg == nil {
-		// TODO error?
-		cmd.Response = &FetchBucketPropsResponse{}
+		cmd.Success = false
 	} else {
 		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
 			rpbBucketProps := rpbGetBucketResp.GetProps()
 			cmd.Response = &FetchBucketPropsResponse{
-				NVal: rpbBucketProps.GetNVal(),
+				NVal:          rpbBucketProps.GetNVal(),
+				AllowMult:     rpbBucketProps.GetAllowMult(),
+				LastWriteWins: rpbBucketProps.GetLastWriteWins(),
+				HasPrecommit:  rpbBucketProps.GetHasPrecommit(),
+				HasPostcommit: rpbBucketProps.GetHasPostcommit(),
+				OldVClock:     rpbBucketProps.GetOldVclock(),
+				YoungVClock:   rpbBucketProps.GetYoungVclock(),
+				BigVClock:     rpbBucketProps.GetBigVclock(),
+				SmallVClock:   rpbBucketProps.GetSmallVclock(),
+				R:             rpbBucketProps.GetR(),
+				Pr:            rpbBucketProps.GetPr(),
+				W:             rpbBucketProps.GetW(),
+				Pw:            rpbBucketProps.GetPw(),
+				Dw:            rpbBucketProps.GetDw(),
+				Rw:            rpbBucketProps.GetRw(),
+				BasicQuorum:   rpbBucketProps.GetBasicQuorum(),
+				NotFoundOk:    rpbBucketProps.GetNotfoundOk(),
+				Search:        rpbBucketProps.GetSearch(),
+				Consistent:    rpbBucketProps.GetConsistent(),
+				Repl:          ReplMode(rpbBucketProps.GetRepl()),
+				Backend:       string(rpbBucketProps.GetBackend()),
+				SearchIndex:   string(rpbBucketProps.GetSearchIndex()),
+				DataType:      string(rpbBucketProps.GetDatatype()),
 			}
 		} else {
 			return fmt.Errorf("[FetchBucketPropsCommand] could not convert %v to RpbGetResp", reflect.TypeOf(msg))
@@ -91,8 +112,39 @@ func (cmd *FetchBucketPropsCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiak.RpbGetBucketResp{}
 }
 
+type ReplMode int32
+
+const (
+	FALSE    ReplMode = 0
+	REALTIME ReplMode = 1
+	FULLSYNC ReplMode = 2
+	TRUE     ReplMode = 3
+)
+
 type FetchBucketPropsResponse struct {
-	NVal uint32
+	NVal          uint32
+	AllowMult     bool
+	LastWriteWins bool
+	HasPrecommit  bool
+	HasPostcommit bool
+	OldVClock     uint32
+	YoungVClock   uint32
+	BigVClock     uint32
+	SmallVClock   uint32
+	R             uint32
+	Pr            uint32
+	W             uint32
+	Pw            uint32
+	Dw            uint32
+	Rw            uint32
+	BasicQuorum   bool
+	NotFoundOk    bool
+	Search        bool
+	Consistent    bool
+	Repl          ReplMode
+	Backend       string
+	SearchIndex   string
+	DataType      string
 }
 
 type FetchBucketPropsCommandBuilder struct {

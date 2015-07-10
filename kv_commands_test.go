@@ -11,9 +11,6 @@ import (
 	"time"
 )
 
-var vclock = bytes.NewBufferString("vclock123456789")
-var vclockBytes = vclock.Bytes()
-
 // FetchValue
 
 func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
@@ -165,6 +162,9 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(rpbGetResp)
+	if expected, actual := true, cmd.Successful(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
 
 	if fetchValueCommand, ok := cmd.(*FetchValueCommand); ok {
 		if fetchValueCommand.Response == nil {
@@ -609,6 +609,9 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(rpbPutResp)
+	if expected, actual := true, cmd.Successful(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
 
 	if storeValueCommand, ok := cmd.(*StoreValueCommand); ok {
 		if storeValueCommand.Response == nil {
@@ -769,5 +772,27 @@ func TestBuildRpbDelReqCorrectlyViaBuilder(t *testing.T) {
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestValidationOfRpbDelReqViaBuilder(t *testing.T) {
+	builder := NewDeleteValueCommandBuilder()
+	// validate that Bucket is required
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is required
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 }
