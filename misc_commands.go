@@ -116,11 +116,11 @@ func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
 }
 
 func (cmd *FetchBucketPropsCommand) getRequestCode() byte {
-	return rpbCode_RpbGetReq
+	return rpbCode_RpbGetBucketReq
 }
 
 func (cmd *FetchBucketPropsCommand) getExpectedResponseCode() byte {
-	return rpbCode_RpbGetResp
+	return rpbCode_RpbGetBucketResp
 }
 
 func (cmd *FetchBucketPropsCommand) getResponseProtobufMessage() proto.Message {
@@ -233,4 +233,207 @@ func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
 		hooks[i] = commitHook
 	}
 	return hooks
+}
+
+// StoreBucketProps
+
+type StoreBucketPropsCommand struct {
+	CommandImpl
+	protobuf *rpbRiak.RpbSetBucketReq
+}
+
+func (cmd *StoreBucketPropsCommand) Name() string {
+	return "StoreBucketProps"
+}
+
+func (cmd *StoreBucketPropsCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *StoreBucketPropsCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	if msg == nil {
+		cmd.Success = false
+	}
+	return nil
+}
+
+func (cmd *StoreBucketPropsCommand) getRequestCode() byte {
+	return rpbCode_RpbSetBucketReq
+}
+
+func (cmd *StoreBucketPropsCommand) getExpectedResponseCode() byte {
+	return rpbCode_RpbSetBucketResp
+}
+
+func (cmd *StoreBucketPropsCommand) getResponseProtobufMessage() proto.Message {
+	return nil
+}
+
+type StoreBucketPropsCommandBuilder struct {
+	protobuf *rpbRiak.RpbSetBucketReq
+	props    *rpbRiak.RpbBucketProps
+}
+
+func NewStoreBucketPropsCommandBuilder() *StoreBucketPropsCommandBuilder {
+	props := &rpbRiak.RpbBucketProps{}
+	protobuf := &rpbRiak.RpbSetBucketReq{
+		Props: props,
+	}
+	builder := &StoreBucketPropsCommandBuilder{protobuf: protobuf, props: props}
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithBucketType(bucketType string) *StoreBucketPropsCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithBucket(bucket string) *StoreBucketPropsCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithNVal(nval uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.NVal = &nval
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithAllowMult(allowMult bool) *StoreBucketPropsCommandBuilder {
+	builder.props.AllowMult = &allowMult
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithLastWriteWins(lww bool) *StoreBucketPropsCommandBuilder {
+	builder.props.LastWriteWins = &lww
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithOldVClock(oldVClock uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.OldVclock = &oldVClock
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithYoungVClock(youngVClock uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.YoungVclock = &youngVClock
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithBigVClock(bigVClock uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.BigVclock = &bigVClock
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithSmallVClock(smallVClock uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.SmallVclock = &smallVClock
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithR(r uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.R = &r
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithPr(pr uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.Pr = &pr
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithW(w uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.W = &w
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithPw(pw uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.Pw = &pw
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithDw(dw uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.Dw = &dw
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithRw(rw uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.Rw = &rw
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithBasicQuorum(basicQuorum bool) *StoreBucketPropsCommandBuilder {
+	builder.props.BasicQuorum = &basicQuorum
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithNotFoundOk(notFoundOk bool) *StoreBucketPropsCommandBuilder {
+	builder.props.NotfoundOk = &notFoundOk
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithSearch(search bool) *StoreBucketPropsCommandBuilder {
+	builder.props.Search = &search
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithBackend(backend string) *StoreBucketPropsCommandBuilder {
+	builder.props.Backend = []byte(backend)
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithSearchIndex(searchIndex string) *StoreBucketPropsCommandBuilder {
+	builder.props.SearchIndex = []byte(searchIndex)
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) AddPreCommit(commitHook *CommitHook) *StoreBucketPropsCommandBuilder {
+	rpbCommitHook := toRpbCommitHook(commitHook)
+	builder.props.Precommit = addCommitHookTo(builder.props.Precommit, rpbCommitHook)
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) AddPostCommit(commitHook *CommitHook) *StoreBucketPropsCommandBuilder {
+	rpbCommitHook := toRpbCommitHook(commitHook)
+	builder.props.Postcommit = addCommitHookTo(builder.props.Postcommit, rpbCommitHook)
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) WithChashKeyFun(val *ModFun) *StoreBucketPropsCommandBuilder {
+	builder.props.ChashKeyfun = &rpbRiak.RpbModFun{
+		Module:   []byte(val.Module),
+		Function: []byte(val.Function),
+	}
+	return builder
+}
+
+func (builder *StoreBucketPropsCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &StoreBucketPropsCommand{protobuf: builder.protobuf}, nil
+}
+
+func addCommitHookTo(rpbHooks []*rpbRiak.RpbCommitHook, rpbCommitHook *rpbRiak.RpbCommitHook) []*rpbRiak.RpbCommitHook {
+	var rvRpbHooks []*rpbRiak.RpbCommitHook
+	if rpbHooks == nil {
+		rvRpbHooks = make([]*rpbRiak.RpbCommitHook, 1)
+		rvRpbHooks[0] = rpbCommitHook
+	} else {
+		rvRpbHooks = append(rpbHooks, rpbCommitHook)
+	}
+	return rvRpbHooks
+}
+
+func toRpbCommitHook(commitHook *CommitHook) *rpbRiak.RpbCommitHook {
+	rpbCommitHook := &rpbRiak.RpbCommitHook{
+		Name: []byte(commitHook.Name),
+	}
+	if commitHook.ModFun != nil {
+		rpbCommitHook.Modfun = &rpbRiak.RpbModFun{
+			Module:   []byte(commitHook.ModFun.Module),
+			Function: []byte(commitHook.ModFun.Function),
+		}
+	}
+	return rpbCommitHook
 }
