@@ -42,6 +42,10 @@ func (o *Object) HasUserMeta() bool {
 	return len(o.UserMeta) > 0
 }
 
+func (o *Object) HasLinks() bool {
+	return len(o.Links) > 0
+}
+
 func (o *Object) AddToIndex(indexName string, indexValue string) {
 	if o.Indexes == nil {
 		o.Indexes = make(map[string][]string)
@@ -152,50 +156,28 @@ func toRpbContent(ro *Object) (*rpbRiakKV.RpbContent, error) {
 		rpbContent.Indexes = rpbIndexes
 	}
 
-	/*
-	   var i, pair;
-	   if (ro.hasIndexes()) {
-	       var allIndexes = ro.getIndexes();
-	       for (var indexName in allIndexes) {
-	           var indexKeys = allIndexes[indexName];
-	           for (i = 0; i < indexKeys.length; i++) {
-	               pair = new RpbPair();
-	               pair.setKey(new Buffer(indexName));
-	               // The Riak API expects string values, even for _int indexes
-	               pair.setValue(new Buffer(indexKeys[i].toString()));
-	               rpbContent.indexes.push(pair);
-	           }
-	       }
-	   }
+	if ro.HasUserMeta() {
+		rpbUserMeta := make([]*rpbRiak.RpbPair, len(ro.UserMeta))
+		for i, userMeta := range ro.UserMeta {
+			rpbUserMeta[i] = &rpbRiak.RpbPair{
+				Key:   []byte(userMeta.Key),
+				Value: []byte(userMeta.Value),
+			}
+		}
+		rpbContent.Usermeta = rpbUserMeta
+	}
 
-	   if (ro.hasUserMeta()) {
-	       var userMeta = ro.getUserMeta();
-	       for (i = 0; i < userMeta.length; i++) {
-	           pair = new RpbPair();
-	           pair.setKey(new Buffer(userMeta[i].key));
-	           pair.setValue(new Buffer(userMeta[i].value));
-	           rpbContent.usermeta.push(pair);
-	       }
-	   }
-
-	   if (ro.hasLinks()) {
-	       var links = ro.getLinks();
-	       var pbLink;
-	       for (i = 0; i < links.length; i++) {
-	           pbLink = new RpbLink();
-	           if (links[i].bucket) {
-	               pbLink.setBucket(new Buffer(links[i].bucket));
-	           }
-	           if (links[i].key) {
-	               pbLink.setKey(new Buffer(links[i].key));
-	           }
-	           if (links[i].tag) {
-	               pbLink.setTag(new Buffer(links[i].tag));
-	           }
-	           rpbContent.links.push(pbLink);
-	       }
-	   }
-	*/
+	if ro.HasLinks() {
+		rpbLinks := make([]*rpbRiakKV.RpbLink, len(ro.Links))
+		for i, link := range ro.Links {
+			rpbLinks[i] = &rpbRiakKV.RpbLink{
+				Bucket: []byte(link.Bucket),
+				Key:    []byte(link.Key),
+				Tag:    []byte(link.Tag),
+			}
+		}
+		rpbContent.Links = rpbLinks
+	}
 
 	return rpbContent, nil
 }

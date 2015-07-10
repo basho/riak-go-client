@@ -2,6 +2,7 @@ package riak
 
 import (
 	"bytes"
+	"fmt"
 	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
@@ -147,7 +148,6 @@ func TestBuildRpbGetReqCorrectlyWithDefaults(t *testing.T) {
 
 func TestParseRpbGetRespCorrectly(t *testing.T) {
 	rpbContent := generateTestRpbContent("this is a value", "application/json")
-	vclock := bytes.NewBufferString("vclock123456789")
 
 	rpbGetResp := &rpbRiakKV.RpbGetResp{
 		Content: []*rpbRiakKV.RpbContent{rpbContent},
@@ -357,6 +357,7 @@ func TestBuildRpbPutReqCorrectlyViaBuilder(t *testing.T) {
 	value := "this is a value"
 	userMeta := []*Pair{
 		{"metaKey1", "metaValue1"},
+		{"metaKey2", "metaValue2"},
 	}
 	links := []*Link{
 		{"b0", "k0", "t0"},
@@ -371,6 +372,7 @@ func TestBuildRpbPutReqCorrectlyViaBuilder(t *testing.T) {
 		Value:           []byte(value),
 	}
 	ro.AddToIndex("email_bin", "golang@basho.com")
+	ro.AddToIndex("email_bin", "frazzle@basho.com")
 
 	key := "key"
 	builder := NewStoreValueCommandBuilder().
@@ -406,7 +408,7 @@ func TestBuildRpbPutReqCorrectlyViaBuilder(t *testing.T) {
 		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "key", string(req.GetKey()); expected != actual {
+		if expected, actual := key, string(req.GetKey()); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := uint32(3), req.GetW(); expected != actual {
@@ -464,26 +466,233 @@ func TestBuildRpbPutReqCorrectlyViaBuilder(t *testing.T) {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
 			indexes := content.GetIndexes()
-			if expected, actual := 1, len(indexes); expected != actual {
+			if expected, actual := 2, len(indexes); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "email_bin", string(indexes[0].Key); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "golang@basho.com", string(indexes[0].Value); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "email_bin", string(indexes[1].Key); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "frazzle@basho.com", string(indexes[1].Value); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			usermeta := content.GetUsermeta()
+			if expected, actual := 2, len(usermeta); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "metaKey1", string(usermeta[0].Key); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "metaValue1", string(usermeta[0].Value); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "metaKey2", string(usermeta[1].Key); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "metaValue2", string(usermeta[1].Value); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			links := content.GetLinks()
+			if expected, actual := 2, len(links); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "b0", string(links[0].Bucket); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "k0", string(links[0].Key); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "t0", string(links[0].Tag); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "b1", string(links[1].Bucket); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "k1", string(links[1].Key); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "t1", string(links[1].Tag); expected != actual {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbPutReq", ok, reflect.TypeOf(protobuf))
 	}
-	/*
-		assert(content.getIndexes().length === 1)
-		assert.equal(content.getIndexes()[0].key.toString('utf8'), 'email_bin')
-		assert.equal(content.getIndexes()[0].value.toString('utf8'), 'roach@basho.com')
-		assert(content.getUsermeta().length === 1)
-		assert.equal(content.getUsermeta()[0].key.toString('utf8'), 'metaKey1')
-		assert.equal(content.getUsermeta()[0].value.toString('utf8'), 'metaValue1')
-		assert.equal(content.getLinks()[0].bucket.toString('utf8'), 'b')
-		assert.equal(content.getLinks()[0].key.toString('utf8'), 'k')
-		assert.equal(content.getLinks()[0].tag.toString('utf8'), 't')
-		assert.equal(content.getLinks()[1].bucket.toString('utf8'), 'b')
-		assert.equal(content.getLinks()[1].key.toString('utf8'), 'k2')
-		assert.equal(content.getLinks()[1].tag.toString('utf8'), 't2')
-		assert.equal(protobuf.getTimeout(), 20000)
-	*/
+}
+
+func TestBuildRpbPutReqUsingObjectValues(t *testing.T) {
+	objectVclock := "object_vclock"
+	ro := &Object{
+		BucketType: "object_bucket_type",
+		Bucket:     "object_bucket_name",
+		Key:        "object_key",
+		VClock:     []byte(objectVclock),
+	}
+
+	builder := NewStoreValueCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("key").
+		WithVClock([]byte("vclock")).
+		WithContent(ro)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if req, ok := protobuf.(*rpbRiakKV.RpbPutReq); ok {
+		if expected, actual := "object_bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "object_bucket_name", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "object_key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "object_vclock", string(req.GetVclock()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbPutReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestParseRpbPutRespCorrectly(t *testing.T) {
+	rpbContent := &rpbRiakKV.RpbContent{
+		Value:           []byte("this is a value"),
+		ContentType:     []byte("text/plain"),
+		ContentEncoding: []byte("ascii"),
+		Charset:         []byte("ascii"),
+		Links: []*rpbRiakKV.RpbLink{
+			{[]byte("b0"), []byte("k0"), []byte("t0"), nil},
+			{[]byte("b1"), []byte("k1"), []byte("t1"), nil},
+		},
+		Usermeta: []*rpbRiak.RpbPair{
+			{[]byte("metaKey0"), []byte("metaValue0"), nil},
+			{[]byte("metaKey1"), []byte("metaValue1"), nil},
+		},
+		Indexes: []*rpbRiak.RpbPair{
+			{[]byte("email_bin"), []byte("golang@basho.com"), nil},
+			{[]byte("email_bin"), []byte("frazzle@basho.com"), nil},
+			{[]byte("test_int"), []byte("1"), nil},
+			{[]byte("test_int"), []byte("2"), nil},
+		},
+	}
+
+	rpbPutResp := &rpbRiakKV.RpbPutResp{
+		Content: []*rpbRiakKV.RpbContent{rpbContent},
+		Vclock:  vclock.Bytes(),
+		Key:     []byte("generated_riak_key"),
+	}
+
+	builder := NewStoreValueCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("ignored_key").
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	cmd.onSuccess(rpbPutResp)
+
+	if storeValueCommand, ok := cmd.(*StoreValueCommand); ok {
+		if storeValueCommand.Response == nil {
+			t.Error("unexpected nil object")
+			t.FailNow()
+		}
+		if expected, actual := 1, len(storeValueCommand.Response.Values); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		ro := storeValueCommand.Response.Values[0]
+		if ro == nil {
+			t.Error("unexpected nil object")
+			t.FailNow()
+		}
+		if expected, actual := "bucket_type", ro.BucketType; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", ro.Bucket; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "generated_riak_key", ro.Key; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "text/plain", ro.ContentType; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "ascii", ro.Charset; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "ascii", ro.ContentEncoding; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, ro.HasLinks(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := 2, len(ro.Links); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		for i, link := range ro.Links {
+			bucket := fmt.Sprintf("b%d", i)
+			if expected, actual := bucket, string(link.Bucket); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+			key := fmt.Sprintf("k%d", i)
+			if expected, actual := key, string(link.Key); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+			tag := fmt.Sprintf("t%d", i)
+			if expected, actual := tag, string(link.Tag); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+		}
+		if expected, actual := true, ro.HasUserMeta(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := 2, len(ro.UserMeta); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		for i, meta := range ro.UserMeta {
+			key := fmt.Sprintf("metaKey%d", i)
+			if expected, actual := key, string(meta.Key); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+			value := fmt.Sprintf("metaValue%d", i)
+			if expected, actual := value, string(meta.Value); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+		}
+		if expected, actual := true, ro.HasIndexes(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := 2, len(ro.Indexes); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "golang@basho.com", ro.Indexes["email_bin"][0]; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "frazzle@basho.com", ro.Indexes["email_bin"][1]; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "1", ro.Indexes["test_int"][0]; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "2", ro.Indexes["test_int"][1]; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
+	}
 }
