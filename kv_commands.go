@@ -30,6 +30,7 @@ func (cmd *FetchValueCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
 	if msg == nil {
 		cmd.Response = &FetchValueResponse{
 			IsNotFound:  true,
@@ -182,15 +183,8 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
 	}
-	// TODO refactor this out somehow for other commands that use BT/B/K
-	if builder.protobuf.Type == nil {
-		builder.protobuf.Type = []byte(defaultBucketType)
-	}
-	if builder.protobuf.Bucket == nil {
-		return nil, ErrBucketRequired
-	}
-	if builder.protobuf.Key == nil {
-		return nil, ErrKeyRequired
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
 	}
 	return &FetchValueCommand{protobuf: builder.protobuf}, nil
 }
@@ -236,6 +230,7 @@ func (cmd *StoreValueCommand) constructPbRequest() (msg proto.Message, err error
 }
 
 func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
 	if msg == nil {
 		// TODO error?
 		cmd.Response = &StoreValueResponse{}
@@ -425,6 +420,7 @@ func (cmd *DeleteValueCommand) constructPbRequest() (msg proto.Message, err erro
 }
 
 func (cmd *DeleteValueCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
 	cmd.Response = true
 	return nil
 }

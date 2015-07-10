@@ -13,7 +13,7 @@ type CommandBuilder interface {
 
 type Command interface {
 	Name() string
-	Success() bool
+	Successful() bool
 	getRequestCode() byte
 	constructPbRequest() (proto.Message, error)
 	onError(error)

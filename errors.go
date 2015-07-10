@@ -10,4 +10,5 @@ var (
 	ErrBucketRequired   error = errors.New("bucket is required")
 	ErrKeyRequired      error = errors.New("key is required")
 	ErrExpectedResponse error = errors.New("expected a response from Riak but did not receive one")
+	ErrNilOptions       error = errors.New("[Command] options must be non-nil")
 )

@@ -171,6 +171,9 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 			t.Error("unexpected nil object")
 			t.FailNow()
 		}
+		if expected, actual := true, fetchValueCommand.Success; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
 		if expected, actual := 1, len(fetchValueCommand.Response.Values); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
@@ -611,6 +614,9 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 		if storeValueCommand.Response == nil {
 			t.Error("unexpected nil object")
 			t.FailNow()
+		}
+		if expected, actual := true, storeValueCommand.Success; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := 1, len(storeValueCommand.Response.Values); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
