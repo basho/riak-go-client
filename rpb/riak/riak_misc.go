@@ -16,9 +16,10 @@ func (m *RpbGetBucketReq) KeyIsRequired() bool {
 
 // RpbSetBucketReq "extension" methods
 
-func (m *RpbSetBucketReq) SetKey() []byte {
+func (m *RpbSetBucketReq) GetKey() []byte {
 	return nil
 }
+
 
 func (m *RpbSetBucketReq) SetType(bt []byte) {
 	m.Type = bt

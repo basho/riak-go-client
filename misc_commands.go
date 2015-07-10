@@ -252,9 +252,6 @@ func (cmd *StoreBucketPropsCommand) constructPbRequest() (proto.Message, error) 
 
 func (cmd *StoreBucketPropsCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
-	if msg == nil {
-		cmd.Success = false
-	}
 	return nil
 }
 

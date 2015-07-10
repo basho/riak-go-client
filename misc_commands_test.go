@@ -215,3 +215,183 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 		t.Errorf("ok: %v - could not convert %v to *FetchBucketPropsCommand", ok, reflect.TypeOf(cmd))
 	}
 }
+
+// StoreBucketProps
+
+func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
+	trueVal := true
+	uint32val := uint32(9)
+
+	/*
+		rpbModFun := &rpbRiak.RpbModFun{
+			Module:   []byte("module_name"),
+			Function: []byte("function_name"),
+		}
+
+		rpbCommitHook := &rpbRiak.RpbCommitHook{
+			Name:   []byte("hook_name"),
+			Modfun: rpbModFun,
+		}
+
+		rpbBucketProps.Precommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
+		rpbBucketProps.Postcommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
+
+		rpbBucketProps.ChashKeyfun = rpbModFun
+		rpbBucketProps.Linkfun = rpbModFun
+	*/
+
+	builder := NewStoreBucketPropsCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithNVal(uint32val).
+		WithAllowMult(trueVal).
+		WithLastWriteWins(trueVal).
+		WithOldVClock(uint32val).
+		WithYoungVClock(uint32val).
+		WithBigVClock(uint32val).
+		WithSmallVClock(uint32val).
+		WithR(uint32val).
+		WithPr(uint32val).
+		WithW(uint32val).
+		WithPw(uint32val).
+		WithDw(uint32val).
+		WithRw(uint32val).
+		WithBasicQuorum(trueVal).
+		WithNotFoundOk(trueVal).
+		WithSearch(trueVal).
+		WithBackend("backend").
+		WithSearchIndex("index")
+
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if req, ok := protobuf.(*rpbRiak.RpbSetBucketReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		props := req.Props
+		if expected, actual := uint32val, props.GetNVal(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, props.GetAllowMult(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, props.GetLastWriteWins(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetOldVclock(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetYoungVclock(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetBigVclock(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetSmallVclock(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetR(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetPr(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetW(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetPw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetDw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32val, props.GetRw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, props.GetBasicQuorum(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, props.GetNotfoundOk(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, props.GetSearch(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "backend", string(props.GetBackend()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "index", string(props.GetSearchIndex()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		/*
+		if expected, actual := "hook_name", props.PreCommit[0].Name; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", props.PreCommit[0].ModFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", props.PreCommit[0].ModFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "hook_name", props.PostCommit[0].Name; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", props.PostCommit[0].ModFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", props.PostCommit[0].ModFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", props.ChashKeyFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", props.ChashKeyFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", props.LinkFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", props.LinkFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		*/
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbGetBucketReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestParseRpbStoreBucketRespCorrectly(t *testing.T) {
+	builder := NewStoreBucketPropsCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	cmd.onSuccess(nil)
+	if expected, actual := true, cmd.Successful(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	if storeBucketPropsCommand, ok := cmd.(*StoreBucketPropsCommand); ok {
+		if expected, actual := true, storeBucketPropsCommand.Success; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *StoreBucketPropsCommand", ok, reflect.TypeOf(cmd))
+	}
+}
