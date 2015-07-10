@@ -68,7 +68,7 @@ func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
 	} else {
 		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
 			rpbBucketProps := rpbGetBucketResp.GetProps()
-			cmd.Response = &FetchBucketPropsResponse{
+			response := &FetchBucketPropsResponse{
 				NVal:          rpbBucketProps.GetNVal(),
 				AllowMult:     rpbBucketProps.GetAllowMult(),
 				LastWriteWins: rpbBucketProps.GetLastWriteWins(),
@@ -93,6 +93,21 @@ func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
 				SearchIndex:   string(rpbBucketProps.GetSearchIndex()),
 				DataType:      string(rpbBucketProps.GetDatatype()),
 			}
+
+			if rpbBucketProps.GetHasPrecommit() {
+				response.PreCommit = getHooksFrom(rpbBucketProps.Precommit)
+			}
+			if rpbBucketProps.GetHasPostcommit() {
+				response.PostCommit = getHooksFrom(rpbBucketProps.Postcommit)
+			}
+			if rpbBucketProps.ChashKeyfun != nil {
+				response.ChashKeyFun = getFunFrom(rpbBucketProps.ChashKeyfun)
+			}
+			if rpbBucketProps.Linkfun != nil {
+				response.LinkFun = getFunFrom(rpbBucketProps.Linkfun)
+			}
+
+			cmd.Response = response
 		} else {
 			return fmt.Errorf("[FetchBucketPropsCommand] could not convert %v to RpbGetResp", reflect.TypeOf(msg))
 		}
@@ -121,6 +136,16 @@ const (
 	TRUE     ReplMode = 3
 )
 
+type CommitHook struct {
+	Name   string
+	ModFun *ModFun
+}
+
+type ModFun struct {
+	Module   string
+	Function string
+}
+
 type FetchBucketPropsResponse struct {
 	NVal          uint32
 	AllowMult     bool
@@ -145,6 +170,10 @@ type FetchBucketPropsResponse struct {
 	Backend       string
 	SearchIndex   string
 	DataType      string
+	PreCommit     []*CommitHook
+	PostCommit    []*CommitHook
+	ChashKeyFun   *ModFun
+	LinkFun       *ModFun
 }
 
 type FetchBucketPropsCommandBuilder struct {
@@ -174,4 +203,34 @@ func (builder *FetchBucketPropsCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	return &FetchBucketPropsCommand{protobuf: builder.protobuf}, nil
+}
+
+func getFunFrom(rpbModFun *rpbRiak.RpbModFun) *ModFun {
+	var modFun *ModFun
+	if rpbModFun == nil {
+		modFun = nil
+	} else {
+		modFun = &ModFun{
+			Module:   string(rpbModFun.Module),
+			Function: string(rpbModFun.Function),
+		}
+	}
+	return modFun
+}
+
+func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
+	hooks := make([]*CommitHook, len(rpbHooks))
+	for i, hook := range rpbHooks {
+		commitHook := &CommitHook{
+			Name: string(hook.Name),
+		}
+		if hook.Modfun != nil {
+			commitHook.ModFun = &ModFun{
+				Module:   string(hook.Modfun.Module),
+				Function: string(hook.Modfun.Function),
+			}
+		}
+		hooks[i] = commitHook
+	}
+	return hooks
 }

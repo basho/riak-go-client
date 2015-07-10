@@ -72,6 +72,7 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 	}
 
 	rpbCommitHook := &rpbRiak.RpbCommitHook{
+		Name:   []byte("hook_name"),
 		Modfun: rpbModFun,
 	}
 
@@ -180,17 +181,36 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 		if expected, actual := "datatype", response.DataType; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		/*
-			response.precommit[0].mod "module_name"
-			response.precommit[0].fun "function_name"
-			response.postcommit[0].mod "module_name"
-			response.postcommit[0].fun "function_name"
-			response.chashKeyfun.mod "module_name"
-			response.chashKeyfun.fun "function_name"
-
-			response.linkFun.mod "module_name"
-			response.linkFun.fun "function_name"
-		*/
+		if expected, actual := "hook_name", response.PreCommit[0].Name; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", response.PreCommit[0].ModFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", response.PreCommit[0].ModFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "hook_name", response.PostCommit[0].Name; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", response.PostCommit[0].ModFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", response.PostCommit[0].ModFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", response.ChashKeyFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", response.ChashKeyFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "module_name", response.LinkFun.Module; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "function_name", response.LinkFun.Function; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *FetchBucketPropsCommand", ok, reflect.TypeOf(cmd))
 	}
