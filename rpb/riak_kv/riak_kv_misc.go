@@ -19,3 +19,13 @@ func (m *RpbPutReq) SetType(bt []byte) {
 func (m *RpbPutReq) KeyIsRequired() bool {
 	return false
 }
+
+// RpbDelReq "extension" methods
+
+func (m *RpbDelReq) SetType(bt []byte) {
+	m.Type = bt
+}
+
+func (m *RpbDelReq) KeyIsRequired() bool {
+	return true
+}

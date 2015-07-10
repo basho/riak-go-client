@@ -696,3 +696,72 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
 	}
 }
+
+// DeleteValue
+
+func TestBuildRpbDelReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewDeleteValueCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("key").
+		WithR(1).
+		WithPr(2).
+		WithW(3).
+		WithPw(4).
+		WithDw(5).
+		WithRw(6).
+		WithVClock(vclockBytes).
+		WithSloppyQuorum(true).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if req, ok := protobuf.(*rpbRiakKV.RpbDelReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(1), req.GetR(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(2), req.GetPr(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(3), req.GetW(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(4), req.GetPw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(5), req.GetDw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(6), req.GetRw(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := 0, bytes.Compare(vclockBytes, req.GetVclock()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetSloppyQuorum(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		expectedTimeoutDuration := 20 * time.Second
+		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
+		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
+	}
+}

@@ -406,3 +406,122 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 	}
 	return &StoreValueCommand{value: builder.value, protobuf: builder.protobuf}, nil
 }
+
+// DeleteValue
+
+type DeleteValueCommand struct {
+	CommandImpl
+	Response bool
+	protobuf *rpbRiakKV.RpbDelReq
+}
+
+func (cmd *DeleteValueCommand) Name() string {
+	return "DeleteValue"
+}
+
+func (cmd *DeleteValueCommand) constructPbRequest() (msg proto.Message, err error) {
+	msg = cmd.protobuf
+	return
+}
+
+func (cmd *DeleteValueCommand) onSuccess(msg proto.Message) error {
+	cmd.Response = true
+	return nil
+}
+
+func (cmd *DeleteValueCommand) getRequestCode() byte {
+	return rpbCode_RpbDelReq
+}
+
+func (cmd *DeleteValueCommand) getExpectedResponseCode() byte {
+	return rpbCode_RpbDelResp
+}
+
+func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
+	return nil
+}
+
+type DeleteValueCommandBuilder struct {
+	protobuf *rpbRiakKV.RpbDelReq
+}
+
+func NewDeleteValueCommandBuilder() *DeleteValueCommandBuilder {
+	builder := &DeleteValueCommandBuilder{protobuf: &rpbRiakKV.RpbDelReq{}}
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithBucketType(bucketType string) *DeleteValueCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithBucket(bucket string) *DeleteValueCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithKey(key string) *DeleteValueCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithVClock(vclock []byte) *DeleteValueCommandBuilder {
+	builder.protobuf.Vclock = vclock
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithR(r uint32) *DeleteValueCommandBuilder {
+	builder.protobuf.R = &r
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithW(w uint32) *DeleteValueCommandBuilder {
+	builder.protobuf.W = &w
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithPr(pr uint32) *DeleteValueCommandBuilder {
+	builder.protobuf.Pr = &pr
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithPw(pw uint32) *DeleteValueCommandBuilder {
+	builder.protobuf.Pw = &pw
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithDw(dw uint32) *DeleteValueCommandBuilder {
+	builder.protobuf.Dw = &dw
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithRw(rw uint32) *DeleteValueCommandBuilder {
+	builder.protobuf.Rw = &rw
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithTimeout(timeout time.Duration) *DeleteValueCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *DeleteValueCommandBuilder {
+	builder.protobuf.SloppyQuorum = &sloppyQuorum
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) WithNVal(nval uint32) *DeleteValueCommandBuilder {
+	builder.protobuf.NVal = &nval
+	return builder
+}
+
+func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &DeleteValueCommand{protobuf: builder.protobuf}, nil
+}
