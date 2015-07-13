@@ -800,9 +800,11 @@ func TestValidationOfRpbDelReqViaBuilder(t *testing.T) {
 // ListBuckets
 
 func TestBuildRpbListBucketsReqCorrectlyViaBuilder(t *testing.T) {
+	var streamingCallback = func(buckets []string) error { return nil }
 	builder := NewListBucketsCommandBuilder().
 		WithBucketType("bucket_type").
 		WithStreaming(true).
+		WithCallback(streamingCallback).
 		WithTimeout(time.Second * 20)
 	cmd, err := builder.Build()
 	if err != nil {
@@ -839,7 +841,7 @@ func TestMultipleRpbListBucketsRespValuesNonStreaming(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	
+
 	done := true
 	for i := 0; i < 20; i++ {
 		rpbListBucketsResp := &rpbRiakKV.RpbListBucketsResp{}
@@ -865,12 +867,47 @@ func TestMultipleRpbListBucketsRespValuesNonStreaming(t *testing.T) {
 	}
 }
 
-/*
 func TestMultipleRpbListBucketsRespValuesWithStreaming(t *testing.T) {
+	count := 0
+	timesCalled := 0
 	var streamingCallback = func(buckets []string) error {
+		timesCalled++
+		count += len(buckets)
+		return nil
+	}
+
+	builder := NewListBucketsCommandBuilder().
+		WithBucketType("bucket_type").
+		WithStreaming(true).
+		WithCallback(streamingCallback)
+
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	done := true
+	for i := 0; i < 20; i++ {
+		rpbListBucketsResp := &rpbRiakKV.RpbListBucketsResp{}
+		buckets := make([][]byte, 5)
+		for j := 0; j < 5; j++ {
+			buckets[j] = []byte("bucket")
+		}
+		rpbListBucketsResp.Buckets = buckets
+		if i == 19 {
+			rpbListBucketsResp.Done = &done
+		}
+
+		cmd.onSuccess(rpbListBucketsResp)
+	}
+
+	if expected, actual := 20, timesCalled; expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+	if expected, actual := 100, count; expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 }
-*/
 
 func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
 	builder := NewListBucketsCommandBuilder()

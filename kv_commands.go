@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"errors"
 	"fmt"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
@@ -534,9 +535,9 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 
 type ListBucketsCommand struct {
 	CommandImpl
-	Callback func(buckets []string) error
 	Response *ListBucketsResponse
 	protobuf *rpbRiakKV.RpbListBucketsReq
+	callback func(buckets []string) error
 	done     bool
 }
 
@@ -573,16 +574,22 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 				for i, bucket := range rpbListBucketsResp.GetBuckets() {
 					buckets[i] = string(bucket)
 				}
-				if cmd.Callback != nil {
-					if err := cmd.Callback(buckets); err != nil {
-						cmd.Response = nil
-						return err
+
+				if cmd.protobuf.GetStream() {
+					if cmd.callback == nil {
+						panic("ListBucketsCommand requires a callback when streaming.")
+					} else {
+						if err := cmd.callback(buckets); err != nil {
+							cmd.Response = nil
+							return err
+						}
 					}
-				}
-				if response.Buckets == nil {
-					response.Buckets = buckets
 				} else {
-					response.Buckets = append(response.Buckets, buckets...)
+					if response.Buckets == nil {
+						response.Buckets = buckets
+					} else {
+						response.Buckets = append(response.Buckets, buckets...)
+					}
 				}
 			}
 		} else {
@@ -609,6 +616,7 @@ type ListBucketsResponse struct {
 }
 
 type ListBucketsCommandBuilder struct {
+	callback func(buckets []string) error
 	protobuf *rpbRiakKV.RpbListBucketsReq
 }
 
@@ -627,6 +635,11 @@ func (builder *ListBucketsCommandBuilder) WithStreaming(streaming bool) *ListBuc
 	return builder
 }
 
+func (builder *ListBucketsCommandBuilder) WithCallback(callback func([]string) error) *ListBucketsCommandBuilder {
+	builder.callback = callback
+	return builder
+}
+
 func (builder *ListBucketsCommandBuilder) WithTimeout(timeout time.Duration) *ListBucketsCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
@@ -640,5 +653,8 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &ListBucketsCommand{protobuf: builder.protobuf}, nil
+	if builder.protobuf.GetStream() && builder.callback == nil {
+		return nil, errors.New("ListBucketsCommand requires a callback when streaming.")
+	}
+	return &ListBucketsCommand{protobuf: builder.protobuf, callback: builder.callback}, nil
 }
