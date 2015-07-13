@@ -561,7 +561,13 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 	} else {
 		if rpbListBucketsResp, ok := msg.(*rpbRiakKV.RpbListBucketsResp); ok {
 			cmd.done = rpbListBucketsResp.GetDone()
-			response := &ListBucketsResponse{}
+
+			response := cmd.Response
+			if response == nil {
+				response = &ListBucketsResponse{}
+				cmd.Response = response
+			}
+
 			if rpbListBucketsResp.GetBuckets() != nil {
 				buckets := make([]string, len(rpbListBucketsResp.GetBuckets()))
 				for i, bucket := range rpbListBucketsResp.GetBuckets() {
@@ -569,12 +575,16 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 				}
 				if cmd.Callback != nil {
 					if err := cmd.Callback(buckets); err != nil {
+						cmd.Response = nil
 						return err
 					}
 				}
-				response.Buckets = buckets
+				if response.Buckets == nil {
+					response.Buckets = buckets
+				} else {
+					response.Buckets = append(response.Buckets, buckets...)
+				}
 			}
-			cmd.Response = response
 		} else {
 			return fmt.Errorf("[StoreValueCommand] could not convert %v to RpbPutResp", reflect.TypeOf(msg))
 		}

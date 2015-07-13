@@ -830,6 +830,48 @@ func TestBuildRpbListBucketsReqCorrectlyViaBuilder(t *testing.T) {
 	}
 }
 
+func TestMultipleRpbListBucketsRespValuesNonStreaming(t *testing.T) {
+	builder := NewListBucketsCommandBuilder().
+		WithBucketType("bucket_type").
+		WithStreaming(false)
+
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	
+	done := true
+	for i := 0; i < 20; i++ {
+		rpbListBucketsResp := &rpbRiakKV.RpbListBucketsResp{}
+		buckets := make([][]byte, 5)
+		for j := 0; j < 5; j++ {
+			buckets[j] = []byte("bucket")
+		}
+		rpbListBucketsResp.Buckets = buckets
+		if i == 19 {
+			rpbListBucketsResp.Done = &done
+		}
+
+		cmd.onSuccess(rpbListBucketsResp)
+	}
+
+	if listBucketsCommand, ok := cmd.(*ListBucketsCommand); ok {
+		response := listBucketsCommand.Response
+		if expected, actual := 100, len(response.Buckets); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *ListBucketsCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+/*
+func TestMultipleRpbListBucketsRespValuesWithStreaming(t *testing.T) {
+	var streamingCallback = func(buckets []string) error {
+	}
+}
+*/
+
 func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
 	builder := NewListBucketsCommandBuilder()
 	// validate that Bucket and Key are NOT required
