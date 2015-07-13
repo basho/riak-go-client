@@ -561,24 +561,17 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 		cmd.Response = &ListBucketsResponse{}
 	} else {
 		if rpbListBucketsResp, ok := msg.(*rpbRiakKV.RpbListBucketsResp); ok {
-			if rpbListBucketsResp.Done == nil {
-				cmd.done = true
-			} else {
-				cmd.done = rpbListBucketsResp.GetDone()
-			}
-
+			cmd.done = rpbListBucketsResp.StreamingDone()
 			response := cmd.Response
 			if response == nil {
 				response = &ListBucketsResponse{}
 				cmd.Response = response
 			}
-
 			if rpbListBucketsResp.GetBuckets() != nil {
 				buckets := make([]string, len(rpbListBucketsResp.GetBuckets()))
 				for i, bucket := range rpbListBucketsResp.GetBuckets() {
 					buckets[i] = string(bucket)
 				}
-
 				if cmd.protobuf.GetStream() {
 					if cmd.callback == nil {
 						panic("ListBucketsCommand requires a callback when streaming.")
@@ -597,7 +590,7 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 				}
 			}
 		} else {
-			return fmt.Errorf("[StoreValueCommand] could not convert %v to RpbPutResp", reflect.TypeOf(msg))
+			return fmt.Errorf("[ListBucketsCommand] could not convert %v to RpbListBucketsResp", reflect.TypeOf(msg))
 		}
 	}
 	return nil
@@ -661,4 +654,142 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 		return nil, errors.New("ListBucketsCommand requires a callback when streaming.")
 	}
 	return &ListBucketsCommand{protobuf: builder.protobuf, callback: builder.callback}, nil
+}
+
+// ListKeys
+// RpbListKeysReq
+// RpbListKeysResp
+
+type ListKeysCommand struct {
+	CommandImpl
+	Response *ListKeysResponse
+	protobuf *rpbRiakKV.RpbListKeysReq
+	streaming bool
+	callback func(keys []string) error
+	done     bool
+}
+
+func (cmd *ListKeysCommand) Name() string {
+	return "ListKeys"
+}
+
+func (cmd *ListKeysCommand) Done() bool {
+	return cmd.done
+}
+
+func (cmd *ListKeysCommand) constructPbRequest() (msg proto.Message, err error) {
+	msg = cmd.protobuf
+	return
+}
+
+func (cmd *ListKeysCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	if msg == nil {
+		cmd.done = true
+		cmd.Response = &ListKeysResponse{}
+	} else {
+		if rpbListKeysResp, ok := msg.(*rpbRiakKV.RpbListKeysResp); ok {
+			cmd.done = rpbListKeysResp.StreamingDone()
+			response := cmd.Response
+			if response == nil {
+				response = &ListKeysResponse{}
+				cmd.Response = response
+			}
+			if rpbListKeysResp.GetKeys() != nil {
+				keys := make([]string, len(rpbListKeysResp.GetKeys()))
+				for i, key := range rpbListKeysResp.GetKeys() {
+					keys[i] = string(key)
+				}
+				if cmd.streaming {
+					if cmd.callback == nil {
+						panic("ListKeysCommand requires a callback when streaming.")
+					} else {
+						if err := cmd.callback(keys); err != nil {
+							cmd.Response = nil
+							return err
+						}
+					}
+				} else {
+					if response.Keys == nil {
+						response.Keys = keys
+					} else {
+						response.Keys = append(response.Keys, keys...)
+					}
+				}
+			}
+		} else {
+			return fmt.Errorf("[ListKeysCommand] could not convert %v to RpbListKeysResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *ListKeysCommand) getRequestCode() byte {
+	return rpbCode_RpbListKeysReq
+}
+
+func (cmd *ListKeysCommand) getResponseCode() byte {
+	return rpbCode_RpbListKeysResp
+}
+
+func (cmd *ListKeysCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakKV.RpbListKeysResp{}
+}
+
+type ListKeysResponse struct {
+	Keys []string
+}
+
+type ListKeysCommandBuilder struct {
+	protobuf *rpbRiakKV.RpbListKeysReq
+	streaming bool
+	callback func(buckets []string) error
+}
+
+func NewListKeysCommandBuilder() *ListKeysCommandBuilder {
+	builder := &ListKeysCommandBuilder{protobuf: &rpbRiakKV.RpbListKeysReq{}}
+	return builder
+}
+
+func (builder *ListKeysCommandBuilder) WithBucketType(bucketType string) *ListKeysCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *ListKeysCommandBuilder) WithBucket(bucket string) *ListKeysCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *ListKeysCommandBuilder) WithStreaming(streaming bool) *ListKeysCommandBuilder {
+	builder.streaming = streaming
+	return builder
+}
+
+func (builder *ListKeysCommandBuilder) WithCallback(callback func([]string) error) *ListKeysCommandBuilder {
+	builder.callback = callback
+	return builder
+}
+
+func (builder *ListKeysCommandBuilder) WithTimeout(timeout time.Duration) *ListKeysCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+func (builder *ListKeysCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	if builder.streaming && builder.callback == nil {
+		return nil, errors.New("ListKeysCommand requires a callback when streaming.")
+	}
+	return &ListKeysCommand{
+		protobuf: builder.protobuf,
+		streaming: builder.streaming,
+		callback: builder.callback,
+	}, nil
 }

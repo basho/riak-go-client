@@ -930,3 +930,143 @@ func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
 		t.Fatal("expected nil err")
 	}
 }
+
+// ListKeys
+
+func TestBuildRpbListKeysReqCorrectlyViaBuilder(t *testing.T) {
+	var streamingCallback = func(buckets []string) error { return nil }
+	builder := NewListKeysCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket").
+		WithStreaming(true).
+		WithCallback(streamingCallback).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if req, ok := protobuf.(*rpbRiakKV.RpbListKeysReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		expectedTimeoutDuration := 20 * time.Second
+		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
+		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestMultipleRpbListKeysRespValuesNonStreaming(t *testing.T) {
+	builder := NewListKeysCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket").
+		WithStreaming(false)
+
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	done := true
+	for i := 0; i < 20; i++ {
+		rpbListKeysResp := &rpbRiakKV.RpbListKeysResp{}
+		buckets := make([][]byte, 5)
+		for j := 0; j < 5; j++ {
+			buckets[j] = []byte("bucket")
+		}
+		rpbListKeysResp.Keys = buckets
+		if i == 19 {
+			rpbListKeysResp.Done = &done
+		}
+
+		cmd.onSuccess(rpbListKeysResp)
+	}
+
+	if listKeysCommand, ok := cmd.(*ListKeysCommand); ok {
+		response := listKeysCommand.Response
+		if expected, actual := 100, len(response.Keys); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *ListKeysCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestMultipleRpbListKeysRespValuesWithStreaming(t *testing.T) {
+	count := 0
+	timesCalled := 0
+	var streamingCallback = func(buckets []string) error {
+		timesCalled++
+		count += len(buckets)
+		return nil
+	}
+
+	builder := NewListKeysCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket").
+		WithStreaming(true).
+		WithCallback(streamingCallback)
+
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	done := true
+	for i := 0; i < 20; i++ {
+		rpbListKeysResp := &rpbRiakKV.RpbListKeysResp{}
+		buckets := make([][]byte, 5)
+		for j := 0; j < 5; j++ {
+			buckets[j] = []byte("bucket")
+		}
+		rpbListKeysResp.Keys = buckets
+		if i == 19 {
+			rpbListKeysResp.Done = &done
+		}
+
+		cmd.onSuccess(rpbListKeysResp)
+	}
+
+	if expected, actual := 20, timesCalled; expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+	if expected, actual := 100, count; expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+}
+
+func TestValidationOfRpbListKeysReqViaBuilder(t *testing.T) {
+	builder := NewListKeysCommandBuilder().WithBucket("bucket")
+	// validate that Key is NOT required
+	// and that type is "default"
+	cmd, err := builder.Build()
+	if err == nil {
+		protobuf, err := cmd.constructPbRequest()
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		if req, ok := protobuf.(*rpbRiakKV.RpbListKeysReq); ok {
+			if expected, actual := "default", string(req.GetType()); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+			if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+		} else {
+			t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
+		}
+	} else {
+		t.Fatal("expected nil err")
+	}
+}

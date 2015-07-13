@@ -63,3 +63,37 @@ func (m *RpbListBucketsReq) KeyIsRequired() bool {
 func (m *RpbListBucketsReq) GetKey() []byte {
 	return nil
 }
+
+// RpbListBucketsResp
+
+func (m *RpbListBucketsResp) StreamingDone() bool {
+	if m.Done == nil {
+		return true
+	} else {
+		return m.GetDone()
+	}
+}
+
+// RpbListKeysReq
+
+func (m *RpbListKeysReq) SetType(bt []byte) {
+	m.Type = bt
+}
+
+func (m *RpbListKeysReq) BucketIsRequired() bool {
+	return true
+}
+
+func (m *RpbListKeysReq) KeyIsRequired() bool {
+	return false
+}
+
+func (m *RpbListKeysReq) GetKey() []byte {
+	return nil
+}
+
+// RpbListKeysResp
+
+func (m *RpbListKeysResp) StreamingDone() bool {
+	return m.GetDone()
+}

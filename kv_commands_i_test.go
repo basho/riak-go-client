@@ -166,8 +166,8 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 		ContentEncoding: "utf-8",
 		Value:           []byte("value"),
 	}
-	for i := 0; i < 5; i++ {
-		bucket := bucketPrefix + string(i)
+	for i := 0; i < 50; i++ {
+		bucket := fmt.Sprintf("%s%d", bucketPrefix, i)
 		store, err := NewStoreValueCommandBuilder().
 			WithBucket(bucket).
 			WithContent(obj).
@@ -181,6 +181,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 	}
 	var err error
 	var cmd Command
+	// non-streaming
 	builder := NewListBucketsCommandBuilder()
 	if cmd, err = builder.WithBucketType(defaultBucketType).WithStreaming(false).Build(); err != nil {
 		t.Fatal(err.Error())
@@ -199,7 +200,116 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 				count++
 			}
 		}
-		if expected, actual := 5, count; expected != actual {
+		if expected, actual := 50, count; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
+
+	// streaming
+	builder = NewListBucketsCommandBuilder()
+	count := 0
+	cb := func (buckets []string) error {
+		for _, b := range buckets {
+			if strings.HasPrefix(b, bucketPrefix) {
+				count++
+			}
+		}
+		return nil
+	}
+	if cmd, err = builder.WithStreaming(true).WithCallback(cb).Build(); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if lbc, ok := cmd.(*ListBucketsCommand); ok {
+		if lbc.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		if expected, actual := 50, count; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
+}
+
+// ListKeys
+
+func TestListKeysInDefaultBucketType(t *testing.T) {
+	keyPrefix := "listKeysInDefaultType_"
+	obj := &Object{
+		ContentType:     "text/plain",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           []byte("value"),
+	}
+	for i := 0; i < 50; i++ {
+		key := fmt.Sprintf("%s%d", keyPrefix, i)
+		store, err := NewStoreValueCommandBuilder().
+			WithBucket(testBucketName).
+			WithKey(key).
+			WithContent(obj).
+			Build()
+		if err != nil {
+			panic(err.Error())
+		}
+		if err := cluster.Execute(store); err != nil {
+			t.Fatalf("error storing test objects: %s", err.Error())
+		}
+	}
+	var err error
+	var cmd Command
+	// non-streaming
+	builder := NewListKeysCommandBuilder()
+	if cmd, err = builder.WithBucketType(defaultBucketType).WithBucket(testBucketName).WithStreaming(false).Build(); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if lkc, ok := cmd.(*ListKeysCommand); ok {
+		if lkc.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		count := 0
+		rsp := lkc.Response
+		for _, k := range rsp.Keys {
+			if strings.HasPrefix(k, keyPrefix) {
+				count++
+			}
+		}
+		if expected, actual := 50, count; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
+
+	// streaming
+	builder = NewListKeysCommandBuilder()
+	count := 0
+	cb := func (keys []string) error {
+		for _, k := range keys {
+			if strings.HasPrefix(k, keyPrefix) {
+				count++
+			}
+		}
+		return nil
+	}
+	if cmd, err = builder.WithBucket(testBucketName).WithStreaming(true).WithCallback(cb).Build(); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if lbc, ok := cmd.(*ListKeysCommand); ok {
+		if lbc.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		if expected, actual := 50, count; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {

@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-var EnableDebugLogging = true
+var EnableDebugLogging = false
 
 var errLogger = log.New(os.Stderr, "", log.LstdFlags)
 var logger = log.New(os.Stderr, "", log.LstdFlags)

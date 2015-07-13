@@ -98,4 +98,16 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if _, ok := msg.(*rpbRiakKV.RpbListBucketsResp); !ok {
 		t.Errorf("error casting %v to RpbListBucketsResp", reflect.TypeOf(msg))
 	}
+	// ListKeys
+	cmd = &ListKeysCommand{}
+	if expected, actual := rpbCode_RpbListKeysReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbListKeysResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakKV.RpbListKeysResp); !ok {
+		t.Errorf("error casting %v to RpbListKeysResp", reflect.TypeOf(msg))
+	}
 }
