@@ -37,7 +37,7 @@ func (cmd *PingCommand) onSuccess(msg proto.Message) error {
 	return nil
 }
 
-func (cmd *PingCommand) getExpectedResponseCode() byte {
+func (cmd *PingCommand) getResponseCode() byte {
 	return rpbCode_RpbPingResp
 }
 
@@ -119,7 +119,7 @@ func (cmd *FetchBucketPropsCommand) getRequestCode() byte {
 	return rpbCode_RpbGetBucketReq
 }
 
-func (cmd *FetchBucketPropsCommand) getExpectedResponseCode() byte {
+func (cmd *FetchBucketPropsCommand) getResponseCode() byte {
 	return rpbCode_RpbGetBucketResp
 }
 
@@ -259,7 +259,7 @@ func (cmd *StoreBucketPropsCommand) getRequestCode() byte {
 	return rpbCode_RpbSetBucketReq
 }
 
-func (cmd *StoreBucketPropsCommand) getExpectedResponseCode() byte {
+func (cmd *StoreBucketPropsCommand) getResponseCode() byte {
 	return rpbCode_RpbSetBucketResp
 }
 

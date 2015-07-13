@@ -22,7 +22,7 @@ type Command interface {
 	constructPbRequest() (proto.Message, error)
 	onError(error)
 	onSuccess(proto.Message) error // NB: important for streaming commands to "do the right thing" here
-	getExpectedResponseCode() byte
+	getResponseCode() byte
 	getResponseProtobufMessage() proto.Message
 }
 
@@ -51,9 +51,9 @@ func getRiakMessage(cmd Command) (msg []byte, err error) {
 }
 
 func decodeRiakMessage(cmd Command, data []byte) (msg proto.Message, err error) {
-	responseCode := cmd.getExpectedResponseCode()
+	responseCode := cmd.getResponseCode()
 	if responseCode == 0 {
-		panic(fmt.Sprintf("Must have non-zero value for getExpectedResponseCode(): %s", cmd.Name()))
+		panic(fmt.Sprintf("Must have non-zero value for getResponseCode(): %s", cmd.Name()))
 	}
 
 	err = rpbValidateResp(data, responseCode)

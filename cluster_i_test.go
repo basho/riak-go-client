@@ -56,7 +56,7 @@ func TestExecuteCommandOnCluster(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	if expected, actual := true, command.Success(); expected != actual {
+	if expected, actual := true, command.Successful(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }

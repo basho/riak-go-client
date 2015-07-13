@@ -20,6 +20,8 @@ func init() {
 	}
 }
 
+// FetchValue
+
 func TestFetchANotFoundFromRiakUsingDefaultBucketType(t *testing.T) {
 	var err error
 	var cmd Command
@@ -56,7 +58,24 @@ func TestFetchANotFoundFromRiakUsingDefaultBucketType(t *testing.T) {
 }
 
 func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
-	var err error
+	obj := &Object{
+		ContentType:     "text/plain",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           []byte("this is a value in Riak"),
+	}
+	store, err := NewStoreValueCommandBuilder().
+		WithBucket(testBucketName).
+		WithKey("my_key1").
+		WithContent(obj).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(store); err != nil {
+		t.Fatalf("error storing test object: %s", err.Error())
+	}
+
 	var cmd Command
 	builder := NewFetchValueCommandBuilder()
 	if cmd, err = builder.WithBucket(testBucketName).WithKey("my_key1").Build(); err != nil {
@@ -92,11 +111,88 @@ func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
 		if expected, actual := "text/plain", object.ContentType; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if object.Charset != "" {
-			t.Errorf("expected empty Charset")
+		if expected, actual := "utf-8", object.Charset; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if object.ContentEncoding != "" {
-			t.Errorf("expected empty ContentEncoding")
+		if expected, actual := "utf-8", object.ContentEncoding; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
+}
+
+// StoreValue
+func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
+	obj := &Object{
+		ContentType:     "text/plain",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           []byte("value"),
+	}
+	cmd, err := NewStoreValueCommandBuilder().
+		WithBucket(testBucketName).
+		WithContent(obj).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if svc, ok := cmd.(*StoreValueCommand); ok {
+		if svc.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		rsp := svc.Response
+		if rsp.GeneratedKey == "" {
+			t.Error("expected non empty GeneratedKey")
+		} else {
+			t.Logf("GeneratedKey: %s", rsp.GeneratedKey)
+		}
+	} else {
+		t.FailNow()
+	}
+}
+
+// ListBuckets
+
+func TestListBucketsInDefaultBucketType(t *testing.T) {
+	obj := &Object{
+		ContentType:     "text/plain",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           []byte("value"),
+	}
+	for i := 0; i < 5; i++ {
+		bucket := fmt.Sprintf("%d_lb", i)
+		store, err := NewStoreValueCommandBuilder().
+			WithBucket(bucket).
+			WithContent(obj).
+			Build()
+		if err != nil {
+			panic(err.Error())
+		}
+		if err := cluster.Execute(store); err != nil {
+			t.Fatalf("error storing test objects: %s", err.Error())
+		}
+	}
+	var err error
+	var cmd Command
+	builder := NewListBucketsCommandBuilder()
+	if cmd, err = builder.WithBucketType(defaultBucketType).WithStreaming(false).Build(); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if lbc, ok := cmd.(*ListBucketsCommand); ok {
+		if lbc.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		rsp := lbc.Response
+		if expected, actual := 5, len(rsp.Buckets); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
 		t.FailNow()

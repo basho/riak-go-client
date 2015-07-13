@@ -36,7 +36,7 @@ func TestPing(t *testing.T) {
 				t.Errorf("expected %v, got: %v", expected, actual)
 			}
 			if err = conn.execute(cmd); err == nil {
-				if cmd.Success() != true {
+				if cmd.Successful() != true {
 					t.Error("ping did not return true")
 				}
 			}

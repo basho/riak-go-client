@@ -86,7 +86,7 @@ func (cmd *FetchValueCommand) getRequestCode() byte {
 	return rpbCode_RpbGetReq
 }
 
-func (cmd *FetchValueCommand) getExpectedResponseCode() byte {
+func (cmd *FetchValueCommand) getResponseCode() byte {
 	return rpbCode_RpbGetResp
 }
 
@@ -283,15 +283,15 @@ func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
 }
 
 func (cmd *StoreValueCommand) getRequestCode() byte {
-	return rpbCode_RpbGetReq
+	return rpbCode_RpbPutReq
 }
 
-func (cmd *StoreValueCommand) getExpectedResponseCode() byte {
-	return rpbCode_RpbGetResp
+func (cmd *StoreValueCommand) getResponseCode() byte {
+	return rpbCode_RpbPutResp
 }
 
 func (cmd *StoreValueCommand) getResponseProtobufMessage() proto.Message {
-	return &rpbRiakKV.RpbGetResp{}
+	return &rpbRiakKV.RpbPutResp{}
 }
 
 type StoreValueResponse struct {
@@ -436,7 +436,7 @@ func (cmd *DeleteValueCommand) getRequestCode() byte {
 	return rpbCode_RpbDelReq
 }
 
-func (cmd *DeleteValueCommand) getExpectedResponseCode() byte {
+func (cmd *DeleteValueCommand) getResponseCode() byte {
 	return rpbCode_RpbDelResp
 }
 
@@ -603,7 +603,7 @@ func (cmd *ListBucketsCommand) getRequestCode() byte {
 	return rpbCode_RpbListBucketsReq
 }
 
-func (cmd *ListBucketsCommand) getExpectedResponseCode() byte {
+func (cmd *ListBucketsCommand) getResponseCode() byte {
 	return rpbCode_RpbListBucketsResp
 }
 
