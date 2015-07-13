@@ -10,6 +10,10 @@ func (m *RpbGetBucketReq) SetType(bt []byte) {
 	m.Type = bt
 }
 
+func (m *RpbGetBucketReq) BucketIsRequired() bool {
+	return true
+}
+
 func (m *RpbGetBucketReq) KeyIsRequired() bool {
 	return false
 }
@@ -22,6 +26,10 @@ func (m *RpbSetBucketReq) GetKey() []byte {
 
 func (m *RpbSetBucketReq) SetType(bt []byte) {
 	m.Type = bt
+}
+
+func (m *RpbSetBucketReq) BucketIsRequired() bool {
+	return true
 }
 
 func (m *RpbSetBucketReq) KeyIsRequired() bool {

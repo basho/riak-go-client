@@ -1,31 +1,65 @@
 package riak_kv
 
-// RpbGetReq "extension" methods
+// RpbGetReq
 
 func (m *RpbGetReq) SetType(bt []byte) {
 	m.Type = bt
+}
+
+func (m *RpbGetReq) BucketIsRequired() bool {
+	return true
 }
 
 func (m *RpbGetReq) KeyIsRequired() bool {
 	return true
 }
 
-// RpbPutReq "extension" methods
+// RpbPutReq
 
 func (m *RpbPutReq) SetType(bt []byte) {
 	m.Type = bt
+}
+
+func (m *RpbPutReq) BucketIsRequired() bool {
+	return true
 }
 
 func (m *RpbPutReq) KeyIsRequired() bool {
 	return false
 }
 
-// RpbDelReq "extension" methods
+// RpbDelReq
 
 func (m *RpbDelReq) SetType(bt []byte) {
 	m.Type = bt
 }
 
+func (m *RpbDelReq) BucketIsRequired() bool {
+	return true
+}
+
 func (m *RpbDelReq) KeyIsRequired() bool {
 	return true
+}
+
+// RpbListBucketsReq
+
+func (m *RpbListBucketsReq) SetType(bt []byte) {
+	m.Type = bt
+}
+
+func (m *RpbListBucketsReq) BucketIsRequired() bool {
+	return false
+}
+
+func (m *RpbListBucketsReq) GetBucket() []byte {
+	return nil
+}
+
+func (m *RpbListBucketsReq) KeyIsRequired() bool {
+	return false
+}
+
+func (m *RpbListBucketsReq) GetKey() []byte {
+	return nil
 }

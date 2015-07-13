@@ -9,14 +9,15 @@ import (
 type rpbLocatable interface {
 	GetType() []byte
 	SetType(bt []byte) // NB: bt == bucket type
+	BucketIsRequired() bool
 	GetBucket() []byte
-	GetKey() []byte
 	KeyIsRequired() bool
+	GetKey() []byte
 }
 
 func validateLocatable(msg proto.Message) error {
 	if l, ok := msg.(rpbLocatable); ok {
-		if l.GetBucket() == nil {
+		if l.GetBucket() == nil && l.BucketIsRequired() {
 			return ErrBucketRequired
 		}
 		if l.GetKey() == nil && l.KeyIsRequired() {

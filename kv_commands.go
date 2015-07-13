@@ -9,6 +9,8 @@ import (
 )
 
 // FetchValue
+// RpbGetReq
+// RpbGetResp
 
 type ConflictResolver interface {
 	Resolve([]*Object) []*Object
@@ -190,6 +192,8 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 }
 
 // StoreValue
+// RpbPutReq
+// RpbPutResp
 
 type StoreValueCommand struct {
 	CommandImpl
@@ -403,6 +407,8 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 }
 
 // DeleteValue
+// RpbDelReq
+// RpbDelResp
 
 type DeleteValueCommand struct {
 	CommandImpl
@@ -520,4 +526,76 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	return &DeleteValueCommand{protobuf: builder.protobuf}, nil
+}
+
+// ListBuckets
+// RpbListBucketsReq
+// RpbListBucketsResp
+
+type ListBucketsCommand struct {
+	CommandImpl
+	Response bool
+	protobuf *rpbRiakKV.RpbListBucketsReq
+}
+
+func (cmd *ListBucketsCommand) Name() string {
+	return "ListBuckets"
+}
+
+func (cmd *ListBucketsCommand) constructPbRequest() (msg proto.Message, err error) {
+	msg = cmd.protobuf
+	return
+}
+
+func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	cmd.Response = true
+	return nil
+}
+
+func (cmd *ListBucketsCommand) getRequestCode() byte {
+	return rpbCode_RpbListBucketsReq
+}
+
+func (cmd *ListBucketsCommand) getExpectedResponseCode() byte {
+	return rpbCode_RpbListBucketsResp
+}
+
+func (cmd *ListBucketsCommand) getResponseProtobufMessage() proto.Message {
+	return nil
+}
+
+type ListBucketsCommandBuilder struct {
+	protobuf *rpbRiakKV.RpbListBucketsReq
+}
+
+func NewListBucketsCommandBuilder() *ListBucketsCommandBuilder {
+	builder := &ListBucketsCommandBuilder{protobuf: &rpbRiakKV.RpbListBucketsReq{}}
+	return builder
+}
+
+func (builder *ListBucketsCommandBuilder) WithBucketType(bucketType string) *ListBucketsCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *ListBucketsCommandBuilder) WithStreaming(streaming bool) *ListBucketsCommandBuilder {
+	builder.protobuf.Stream = &streaming
+	return builder
+}
+
+func (builder *ListBucketsCommandBuilder) WithTimeout(timeout time.Duration) *ListBucketsCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &ListBucketsCommand{protobuf: builder.protobuf}, nil
 }

@@ -796,3 +796,58 @@ func TestValidationOfRpbDelReqViaBuilder(t *testing.T) {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 }
+
+// ListBuckets
+
+func TestBuildRpbListBucketsReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewListBucketsCommandBuilder().
+		WithBucketType("bucket_type").
+		WithStreaming(true).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if req, ok := protobuf.(*rpbRiakKV.RpbListBucketsReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, req.GetStream(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		expectedTimeoutDuration := 20 * time.Second
+		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
+		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
+	builder := NewListBucketsCommandBuilder()
+	// validate that Bucket and Key are NOT required
+	// and that type is "default"
+	cmd, err := builder.Build()
+	if err == nil {
+		protobuf, err := cmd.constructPbRequest()
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		if req, ok := protobuf.(*rpbRiakKV.RpbListBucketsReq); ok {
+			if expected, actual := "default", string(req.GetType()); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+		} else {
+			t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
+		}
+	} else {
+		t.Fatal("expected nil err")
+	}
+}
