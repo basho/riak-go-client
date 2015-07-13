@@ -86,4 +86,16 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if msg != nil {
 		t.Error("expected nil response protobuf message")
 	}
+	// ListBuckets
+	cmd = &ListBucketsCommand{}
+	if expected, actual := rpbCode_RpbListBucketsReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbListBucketsResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakKV.RpbListBucketsResp); !ok {
+		t.Errorf("error casting %v to RpbListBucketsResp", reflect.TypeOf(msg))
+	}
 }

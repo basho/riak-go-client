@@ -4,6 +4,7 @@ package riak
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -158,6 +159,7 @@ func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
 // ListBuckets
 
 func TestListBucketsInDefaultBucketType(t *testing.T) {
+	bucketPrefix := "listBucketsInDefaultType_"
 	obj := &Object{
 		ContentType:     "text/plain",
 		Charset:         "utf-8",
@@ -165,7 +167,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 		Value:           []byte("value"),
 	}
 	for i := 0; i < 5; i++ {
-		bucket := fmt.Sprintf("%d_lb", i)
+		bucket := bucketPrefix + string(i)
 		store, err := NewStoreValueCommandBuilder().
 			WithBucket(bucket).
 			WithContent(obj).
@@ -190,8 +192,14 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 		if lbc.Response == nil {
 			t.Errorf("expected non-nil Response")
 		}
+		count := 0
 		rsp := lbc.Response
-		if expected, actual := 5, len(rsp.Buckets); expected != actual {
+		for _, b := range rsp.Buckets {
+			if strings.HasPrefix(b, bucketPrefix) {
+				count++
+			}
+		}
+		if expected, actual := 5, count; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {

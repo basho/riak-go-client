@@ -561,7 +561,11 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 		cmd.Response = &ListBucketsResponse{}
 	} else {
 		if rpbListBucketsResp, ok := msg.(*rpbRiakKV.RpbListBucketsResp); ok {
-			cmd.done = rpbListBucketsResp.GetDone()
+			if rpbListBucketsResp.Done == nil {
+				cmd.done = true
+			} else {
+				cmd.done = rpbListBucketsResp.GetDone()
+			}
 
 			response := cmd.Response
 			if response == nil {
@@ -608,7 +612,7 @@ func (cmd *ListBucketsCommand) getResponseCode() byte {
 }
 
 func (cmd *ListBucketsCommand) getResponseProtobufMessage() proto.Message {
-	return nil
+	return &rpbRiakKV.RpbListBucketsResp{}
 }
 
 type ListBucketsResponse struct {
