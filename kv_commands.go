@@ -534,12 +534,18 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 
 type ListBucketsCommand struct {
 	CommandImpl
-	Response bool
+	Callback func(buckets []string) error
+	Response *ListBucketsResponse
 	protobuf *rpbRiakKV.RpbListBucketsReq
+	done     bool
 }
 
 func (cmd *ListBucketsCommand) Name() string {
 	return "ListBuckets"
+}
+
+func (cmd *ListBucketsCommand) Done() bool {
+	return cmd.done
 }
 
 func (cmd *ListBucketsCommand) constructPbRequest() (msg proto.Message, err error) {
@@ -549,7 +555,30 @@ func (cmd *ListBucketsCommand) constructPbRequest() (msg proto.Message, err erro
 
 func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
-	cmd.Response = true
+	if msg == nil {
+		cmd.done = true
+		cmd.Response = &ListBucketsResponse{}
+	} else {
+		if rpbListBucketsResp, ok := msg.(*rpbRiakKV.RpbListBucketsResp); ok {
+			cmd.done = rpbListBucketsResp.GetDone()
+			response := &ListBucketsResponse{}
+			if rpbListBucketsResp.GetBuckets() != nil {
+				buckets := make([]string, len(rpbListBucketsResp.GetBuckets()))
+				for i, bucket := range rpbListBucketsResp.GetBuckets() {
+					buckets[i] = string(bucket)
+				}
+				if cmd.Callback != nil {
+					if err := cmd.Callback(buckets); err != nil {
+						return err
+					}
+				}
+				response.Buckets = buckets
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[StoreValueCommand] could not convert %v to RpbPutResp", reflect.TypeOf(msg))
+		}
+	}
 	return nil
 }
 
@@ -563,6 +592,10 @@ func (cmd *ListBucketsCommand) getExpectedResponseCode() byte {
 
 func (cmd *ListBucketsCommand) getResponseProtobufMessage() proto.Message {
 	return nil
+}
+
+type ListBucketsResponse struct {
+	Buckets []string
 }
 
 type ListBucketsCommandBuilder struct {

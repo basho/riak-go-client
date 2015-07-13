@@ -11,13 +11,17 @@ type CommandBuilder interface {
 	Build() (Command, error)
 }
 
+type StreamingCommand interface {
+	Done() bool
+}
+
 type Command interface {
 	Name() string
 	Successful() bool
 	getRequestCode() byte
 	constructPbRequest() (proto.Message, error)
 	onError(error)
-	onSuccess(proto.Message) error
+	onSuccess(proto.Message) error // NB: important for streaming commands to "do the right thing" here
 	getExpectedResponseCode() byte
 	getResponseProtobufMessage() proto.Message
 }

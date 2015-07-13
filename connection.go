@@ -118,25 +118,39 @@ func (c *connection) execute(cmd Command) (err error) {
 	}
 
 	var response []byte
-	response, err = c.read()
-	if err != nil {
-		return
-	}
-
-	// Maybe translate RpbErrorResp into golang error
-	if err = maybeRiakError(response); err != nil {
-		cmd.onError(err)
-		return
-	}
-
 	var decoded proto.Message
-	if decoded, err = decodeRiakMessage(cmd, response); err != nil {
-		return
+	for {
+		response, err = c.read() // NB: response *will* have entire pb message
+		if err != nil {
+			return
+		}
+
+		// Maybe translate RpbErrorResp into golang error
+		if err = maybeRiakError(response); err != nil {
+			cmd.onError(err)
+			return
+		}
+
+		if decoded, err = decodeRiakMessage(cmd, response); err != nil {
+			return
+		}
+
+		err = cmd.onSuccess(decoded)
+		if err != nil {
+			return
+		}
+
+		if sc, ok := cmd.(StreamingCommand); ok {
+			// Streaming Commands indicate done
+			if sc.Done() {
+				return
+			}
+		} else {
+			// non-streaming command, done at this point
+			return
+		}
 	}
 
-	err = cmd.onSuccess(decoded)
-
-	// TODO streaming responses
 	return
 }
 
@@ -146,6 +160,10 @@ func (c *connection) setReadDeadline() {
 	c.conn.SetReadDeadline(time.Now().Add(c.requestTimeout))
 }
 
+/*
+ * TODO: as coded, this will read one full pb message from Riak, or error in doing so
+ * review for accuracy as well as error conditions
+ */
 func (c *connection) read() (data []byte, err error) {
 	if !c.available() {
 		err = ErrCannotRead
@@ -153,17 +171,19 @@ func (c *connection) read() (data []byte, err error) {
 	}
 	c.setReadDeadline()
 	var count int
+	// TODO error conditions http://golang.org/pkg/io/#ReadFull, like EOF conditions
 	if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
-		size := binary.BigEndian.Uint32(c.sizeBuf)
+		messageLength := binary.BigEndian.Uint32(c.sizeBuf)
 		// TODO: investigate using a bytes.Buffer on c instead of
-		// always making a new byte slice
-		data = make([]byte, size)
+		// always making a new byte slice, more in-line with Node.js client
+		data = make([]byte, messageLength)
 		c.setReadDeadline()
+		// TODO error conditions http://golang.org/pkg/io/#ReadFull, like EOF conditions
 		count, err = io.ReadFull(c.conn, data)
 		if err != nil && err == syscall.EPIPE {
 			c.close()
-		} else if uint32(count) != size {
-			err = fmt.Errorf("[Connection] data length: %d, only read: %d", len(data), count)
+		} else if uint32(count) != messageLength {
+			err = fmt.Errorf("[Connection] message length: %d, only read: %d", messageLength, count)
 		}
 	}
 	if err != nil {
@@ -182,6 +202,7 @@ func (c *connection) write(data []byte) (err error) {
 	// timeout into account
 	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
 	var count int
+	// TODO evaluate/test error conditions
 	count, err = c.conn.Write(data)
 	if err != nil {
 		if err == syscall.EPIPE {
