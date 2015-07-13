@@ -222,23 +222,14 @@ func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
 	trueVal := true
 	uint32val := uint32(9)
 
-	/*
-		rpbModFun := &rpbRiak.RpbModFun{
-			Module:   []byte("module_name"),
-			Function: []byte("function_name"),
-		}
-
-		rpbCommitHook := &rpbRiak.RpbCommitHook{
-			Name:   []byte("hook_name"),
-			Modfun: rpbModFun,
-		}
-
-		rpbBucketProps.Precommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
-		rpbBucketProps.Postcommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
-
-		rpbBucketProps.ChashKeyfun = rpbModFun
-		rpbBucketProps.Linkfun = rpbModFun
-	*/
+	modFun := &ModFun{
+		Module:   "module_name",
+		Function: "function_name",
+	}
+	hook := &CommitHook{
+		Name:   "hook_name",
+		ModFun: modFun,
+	}
 
 	builder := NewStoreBucketPropsCommandBuilder().
 		WithBucketType("bucket_type").
@@ -260,7 +251,10 @@ func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
 		WithNotFoundOk(trueVal).
 		WithSearch(trueVal).
 		WithBackend("backend").
-		WithSearchIndex("index")
+		WithSearchIndex("index").
+		AddPreCommit(hook).
+		AddPostCommit(hook).
+		WithChashKeyFun(modFun)
 
 	cmd, err := builder.Build()
 	if err != nil {
@@ -335,38 +329,30 @@ func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
 		if expected, actual := "index", string(props.GetSearchIndex()); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		/*
-		if expected, actual := "hook_name", props.PreCommit[0].Name; expected != actual {
+		if expected, actual := "module_name", string(props.ChashKeyfun.Module); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "module_name", props.PreCommit[0].ModFun.Module; expected != actual {
+		if expected, actual := "function_name", string(props.ChashKeyfun.Function); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "function_name", props.PreCommit[0].ModFun.Function; expected != actual {
+		if expected, actual := "hook_name", string(props.Precommit[0].Name); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "hook_name", props.PostCommit[0].Name; expected != actual {
+		if expected, actual := "module_name", string(props.Precommit[0].Modfun.Module); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "module_name", props.PostCommit[0].ModFun.Module; expected != actual {
+		if expected, actual := "function_name", string(props.Precommit[0].Modfun.Function); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "function_name", props.PostCommit[0].ModFun.Function; expected != actual {
+		if expected, actual := "hook_name", string(props.Postcommit[0].Name); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "module_name", props.ChashKeyFun.Module; expected != actual {
+		if expected, actual := "module_name", string(props.Postcommit[0].Modfun.Module); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "function_name", props.ChashKeyFun.Function; expected != actual {
+		if expected, actual := "function_name", string(props.Postcommit[0].Modfun.Function); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if expected, actual := "module_name", props.LinkFun.Module; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "function_name", props.LinkFun.Function; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		*/
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbGetBucketReq", ok, reflect.TypeOf(protobuf))
 	}

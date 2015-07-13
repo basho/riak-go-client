@@ -20,7 +20,6 @@ func (m *RpbSetBucketReq) GetKey() []byte {
 	return nil
 }
 
-
 func (m *RpbSetBucketReq) SetType(bt []byte) {
 	m.Type = bt
 }
