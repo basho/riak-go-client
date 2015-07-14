@@ -95,3 +95,17 @@ func (m *RpbGetBucketKeyPreflistReq) BucketIsRequired() bool {
 func (m *RpbGetBucketKeyPreflistReq) KeyIsRequired() bool {
 	return true
 }
+
+// RpbIndexReq
+
+func (m *RpbIndexReq) SetType(bt []byte) {
+	m.Type = bt
+}
+
+func (m *RpbIndexReq) BucketIsRequired() bool {
+	return true
+}
+
+func (m *RpbIndexReq) KeyIsRequired() bool {
+	return false
+}

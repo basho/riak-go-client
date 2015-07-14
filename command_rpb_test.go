@@ -122,4 +122,16 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if _, ok := msg.(*rpbRiakKV.RpbGetBucketKeyPreflistResp); !ok {
 		t.Errorf("error casting %v to RpbGetBucketKeyPreflistResp", reflect.TypeOf(msg))
 	}
+	// SecondaryIndexQuery
+	cmd = &SecondaryIndexQueryCommand{}
+	if expected, actual := rpbCode_RpbIndexReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbIndexResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakKV.RpbIndexResp); !ok {
+		t.Errorf("error casting %v to RpbIndexResp", reflect.TypeOf(msg))
+	}
 }

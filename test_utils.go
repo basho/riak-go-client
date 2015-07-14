@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"testing"
+	"time"
 )
 
 func writePingResp(t *testing.T, c net.Conn) (success bool) {
@@ -29,5 +30,12 @@ func jsonDump(val interface{}) {
 		} else {
 			logDebug("[jsonDump] %s", string(json))
 		}
+	}
+}
+
+func validateTimeout(t *testing.T, e time.Duration, a uint32) {
+	actualDuration := time.Duration(a) * time.Millisecond
+	if expected, actual := e, actualDuration; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }

@@ -72,11 +72,7 @@ func validateRpbGetReq(t *testing.T, protobuf proto.Message) {
 		if expected, actual := true, req.GetDeletedvclock(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		expectedTimeoutDuration := 20 * time.Second
-		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
-		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
 		if expected, actual := true, req.GetSloppyQuorum(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
@@ -447,11 +443,7 @@ func TestBuildRpbPutReqCorrectlyViaBuilder(t *testing.T) {
 		if expected, actual := true, req.GetSloppyQuorum(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		expectedTimeoutDuration := 20 * time.Second
-		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
-		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
 		content := req.GetContent()
 		if content == nil {
 			t.Fatal("expected non-nil content")
@@ -765,11 +757,7 @@ func TestBuildRpbDelReqCorrectlyViaBuilder(t *testing.T) {
 		if expected, actual := true, req.GetSloppyQuorum(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		expectedTimeoutDuration := 20 * time.Second
-		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
-		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
 	}
@@ -822,11 +810,7 @@ func TestBuildRpbListBucketsReqCorrectlyViaBuilder(t *testing.T) {
 		if expected, actual := true, req.GetStream(); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		expectedTimeoutDuration := 20 * time.Second
-		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
-		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
 	}
@@ -957,11 +941,7 @@ func TestBuildRpbListKeysReqCorrectlyViaBuilder(t *testing.T) {
 		if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		expectedTimeoutDuration := 20 * time.Second
-		actualTimeoutDuration := time.Duration(req.GetTimeout()) * time.Millisecond
-		if expected, actual := expectedTimeoutDuration, actualTimeoutDuration; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
 	}
@@ -1121,5 +1101,125 @@ func TestValidationOfRpbGetBucketKeyPreflistReqViaBuilder(t *testing.T) {
 	}
 	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+}
+
+// SecondaryIndexQuery
+
+func TestBuildRpbIndexReqCorrectlyViaBuilder(t *testing.T) {
+	// should error due to no index query data
+	builder := NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name")
+	cmd, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected error")
+	} else {
+		if expected, actual := "either WithIndexKey or WithRange are required", err.Error(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	}
+
+	continuationBytes := bytes.NewBufferString("continuation_1234").Bytes()
+
+	builder = NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithIndexName("email_bin").
+		WithIndexKey("golang@basho.com").
+		WithReturnKeyAndIndex(true).
+		WithStreaming(true).
+		WithPaginationSort(true).
+		WithMaxResults(1024).
+		WithContinuation(continuationBytes).
+		WithTermRegex("^yomama").
+		WithTimeout(time.Second * 20)
+	cmd, err = builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	var protobuf proto.Message
+	protobuf, err = cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if req, ok := protobuf.(*rpbRiakKV.RpbIndexReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "email_bin", string(req.GetIndex()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "golang@basho.com", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, req.GetReturnTerms(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, req.GetStream(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := true, req.GetPaginationSort(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := uint32(1024), req.GetMaxResults(); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := 0, bytes.Compare(continuationBytes, req.GetContinuation()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "^yomama", string(req.GetTermRegex()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbIndexReq", ok, reflect.TypeOf(protobuf))
+	}
+
+	builder = NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithIndexName("email_int").
+		WithIntRange(100, 200)
+	cmd, err = builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err = cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if req, ok := protobuf.(*rpbRiakKV.RpbIndexReq); ok {
+		if expected, actual := "100", string(req.GetRangeMin()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "200", string(req.GetRangeMax()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbIndexReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestValidationOfRpbIndexReqViaBuilder(t *testing.T) {
+	builder := NewSecondaryIndexQueryCommandBuilder()
+	// validate that Bucket is required
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is NOT required
+	builder.WithBucket("bucket_name")
+	builder.WithRange("frazzle", "pop")
+	_, err = builder.Build()
+	if err != nil {
+		t.Fatal("expected nil err")
 	}
 }

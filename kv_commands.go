@@ -6,6 +6,7 @@ import (
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
 	"reflect"
+	"strconv"
 	"time"
 )
 
@@ -237,7 +238,6 @@ func (cmd *StoreValueCommand) constructPbRequest() (msg proto.Message, err error
 func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
 	if msg == nil {
-		// TODO error?
 		cmd.Response = &StoreValueResponse{}
 	} else {
 		if rpbPutResp, ok := msg.(*rpbRiakKV.RpbPutResp); ok {
@@ -898,4 +898,149 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	return &FetchPreflistCommand{protobuf: builder.protobuf}, nil
+}
+
+// SecondaryIndexQuery
+// RpbGetBucketKeyPreflistReq
+// RpbGetBucketKeyPreflistResp
+
+type SecondaryIndexQueryCommand struct {
+	CommandImpl
+	Response *SecondaryIndexQueryResponse
+	protobuf *rpbRiakKV.RpbIndexReq
+}
+
+func (cmd *SecondaryIndexQueryCommand) Name() string {
+	return "SecondaryIndexQuery"
+}
+
+func (cmd *SecondaryIndexQueryCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *SecondaryIndexQueryCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	if msg == nil {
+		cmd.Response = &SecondaryIndexQueryResponse{}
+	} else {
+		if rpbIndexResp, ok := msg.(*rpbRiakKV.RpbIndexResp); ok {
+			// TODO
+			response := &SecondaryIndexQueryResponse{
+				Continuation: rpbIndexResp.GetContinuation(),
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[SecondaryIndexQueryCommand] could not convert %v to RpbIndexResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *SecondaryIndexQueryCommand) getRequestCode() byte {
+	return rpbCode_RpbIndexReq
+}
+
+func (cmd *SecondaryIndexQueryCommand) getResponseCode() byte {
+	return rpbCode_RpbIndexResp
+}
+
+func (cmd *SecondaryIndexQueryCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakKV.RpbIndexResp{}
+}
+
+type SecondaryIndexQueryResponse struct {
+	Keys         []string
+	Results      []*Pair
+	Continuation []byte
+}
+
+type SecondaryIndexQueryCommandBuilder struct {
+	protobuf *rpbRiakKV.RpbIndexReq
+}
+
+func NewSecondaryIndexQueryCommandBuilder() *SecondaryIndexQueryCommandBuilder {
+	builder := &SecondaryIndexQueryCommandBuilder{protobuf: &rpbRiakKV.RpbIndexReq{}}
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithBucketType(bucketType string) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithBucket(bucket string) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithIndexName(indexName string) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.Index = []byte(indexName)
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithRange(min string, max string) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.RangeMin = []byte(min)
+	builder.protobuf.RangeMax = []byte(max)
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithIntRange(min int64, max int64) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.RangeMin = []byte(strconv.FormatInt(min, 10))
+	builder.protobuf.RangeMax = []byte(strconv.FormatInt(max, 10))
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithIndexKey(key string) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithReturnKeyAndIndex(val bool) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.ReturnTerms = &val
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithStreaming(streaming bool) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.Stream = &streaming
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithPaginationSort(paginationSort bool) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.PaginationSort = &paginationSort
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithMaxResults(maxResults uint32) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.MaxResults = &maxResults
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithContinuation(cont []byte) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.Continuation = cont
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithTermRegex(regex string) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.TermRegex = []byte(regex)
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) WithTimeout(timeout time.Duration) *SecondaryIndexQueryCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	if builder.protobuf.GetKey() == nil &&
+		(builder.protobuf.GetRangeMin() == nil || builder.protobuf.GetRangeMax() == nil) {
+		return nil, errors.New("either WithIndexKey or WithRange are required")
+	}
+	return &SecondaryIndexQueryCommand{protobuf: builder.protobuf}, nil
 }
