@@ -9,17 +9,8 @@ import (
 	"time"
 )
 
-var cluster *Cluster
-
 func init() {
-	var err error
-	if cluster, err = integrationTestsBuildCluster(); err != nil {
-		panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
-	} else {
-		if err = cluster.Start(); err != nil {
-			panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
-		}
-	}
+	integrationTestsBuildCluster()
 }
 
 // FetchValue

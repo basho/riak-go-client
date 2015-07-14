@@ -3,6 +3,7 @@ package riak
 import (
 	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
+	rpbRiakYZ "github.com/basho-labs/riak-go-client/rpb/riak_yokozuna"
 	proto "github.com/golang/protobuf/proto"
 	"reflect"
 	"testing"
@@ -140,7 +141,30 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if expected, actual := rpbCode_RpbYokozunaIndexPutReq, cmd.getRequestCode(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	if expected, actual := byte(0), cmd.getResponseCode(); expected != actual {
+	if expected, actual := rpbCode_RpbPutResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if cmd.getResponseProtobufMessage() != nil {
+		t.Error("expected nil response protobuf message")
+	}
+	// FetchIndex
+	cmd = &FetchIndexCommand{}
+	if expected, actual := rpbCode_RpbYokozunaIndexGetReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbYokozunaIndexGetResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakYZ.RpbYokozunaIndexGetResp); !ok {
+		t.Errorf("error casting %v to RpbYokozunaIndexGetResp", reflect.TypeOf(msg))
+	}
+	// DeleteIndex
+	cmd = &DeleteIndexCommand{}
+	if expected, actual := rpbCode_RpbYokozunaIndexDeleteReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbDelResp, cmd.getResponseCode(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if cmd.getResponseProtobufMessage() != nil {

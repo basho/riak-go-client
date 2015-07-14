@@ -81,7 +81,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		setStateFunc = origSetStateFunc
 	}()
 
-	ln, err := net.Listen("tcp", "127.0.0.1:1337")
+	ln, err := net.Listen("tcp", "127.0.0.1:13337")
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,7 +107,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	}()
 
 	opts := &NodeOptions{
-		RemoteAddress:       "127.0.0.1:1337",
+		RemoteAddress:       "127.0.0.1:13337",
 		MinConnections:      0,
 		HealthCheckInterval: time.Second,
 	}

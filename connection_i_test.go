@@ -12,7 +12,7 @@ import (
 )
 
 func TestSuccessfulConnection(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:1337")
+	ln, err := net.Listen("tcp4", "127.0.0.1:1337")
 	if err != nil {
 		t.Error(err)
 	}
@@ -23,10 +23,10 @@ func TestSuccessfulConnection(t *testing.T) {
 	go func() {
 		for {
 			c, err := ln.Accept()
-			if err != nil {
-				break
-			}
 			sawConnection = true
+			if err != nil {
+				t.Error(err.Error())
+			}
 			c.Close()
 		}
 	}()

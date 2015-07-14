@@ -2,11 +2,13 @@ package riak
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
+
+var cluster *Cluster
 
 var riakHost = "riak-test"
 var riakPort uint16 = 10017
@@ -38,26 +40,33 @@ func init() {
 	remoteAddress = fmt.Sprintf("%s:%d", riakHost, riakPort)
 }
 
-func integrationTestsBuildCluster() (*Cluster, error) {
-	nodeOpts := &NodeOptions{
-		RemoteAddress: remoteAddress,
-	}
-
-	var node *Node
+func integrationTestsBuildCluster() {
 	var err error
-	if node, err = NewNode(nodeOpts); err != nil {
-		return nil, err
+	if cluster == nil {
+		nodeOpts := &NodeOptions{
+			RemoteAddress: remoteAddress,
+			RequestTimeout: time.Second * 10,
+		}
+		var node *Node
+		node, err = NewNode(nodeOpts)
+		if err != nil {
+			panic(fmt.Sprintf("error building integration test node object: %s", err.Error()))
+		}
+		if node == nil {
+			panic("NewNode returned nil!")
+		}
+		nodes := []*Node{node}
+		opts := &ClusterOptions{
+			Nodes: nodes,
+		}
+		cluster, err = NewCluster(opts)
+		if err != nil {
+			panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
+		}
+		if err = cluster.Start(); err != nil {
+			panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
+		}
 	}
-	if node == nil {
-		return nil, errors.New("NewNode returned nil!")
-	}
-
-	nodes := []*Node{node}
-	opts := &ClusterOptions{
-		Nodes: nodes,
-	}
-
-	return NewCluster(opts)
 }
 
 func getBasicObject() *Object {
