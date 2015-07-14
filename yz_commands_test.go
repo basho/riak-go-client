@@ -1,6 +1,7 @@
 package riak
 
 import (
+	rpbRiakSCH "github.com/basho-labs/riak-go-client/rpb/riak_search"
 	rpbRiakYZ "github.com/basho-labs/riak-go-client/rpb/riak_yokozuna"
 	"reflect"
 	"testing"
@@ -219,3 +220,103 @@ func TestParseRpbYokozunaSchemaGetRespCorrectly(t *testing.T) {
 		}
 	}
 }
+
+// Search
+// RpbSearchQueryReq
+// RpbSearchQueryResp
+
+func TestBuildRpbSearchQueryReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewSearchCommandBuilder().
+		WithIndexName("indexName").
+		WithQuery("*:*").
+		WithNumRows(128).
+		WithStart(2).
+		WithSortField("sortField").
+		WithFilterQuery("filterQuery").
+		WithDefaultField("defaultField").
+		WithDefaultOperation("and").
+		WithReturnFields("field1", "field2").
+		WithPresort("score")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if req, ok := protobuf.(*rpbRiakSCH.RpbSearchQueryReq); ok {
+		if expected, actual := "indexName", string(req.GetIndex()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "*:*", string(req.GetQ()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(128), req.GetRows(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(2), req.GetStart(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "sortField", string(req.GetSort()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "filterQuery", string(req.GetFilter()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "defaultField", string(req.GetDf()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "and", string(req.GetOp()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		rf := req.GetFl()
+		if expected, actual := 2, len(rf); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "field1", string(rf[0]); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "field2", string(rf[1]); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "score", string(req.GetPresort()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbSearchQueryReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+/*
+func TestParseRpbYokozunaSchemaGetRespCorrectly(t *testing.T) {
+	schema := &rpbRiakYZ.RpbYokozunaSchema{
+		Name:    []byte("schemaName"),
+		Content: []byte("schema_xml"),
+	}
+	resp := &rpbRiakYZ.RpbYokozunaSchemaGetResp{Schema: schema}
+	builder := NewFetchSchemaCommandBuilder().WithSchemaName("schemaName")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cmd.onSuccess(resp); err != nil {
+		t.Fatal(err.Error())
+	} else {
+		if fcmd, ok := cmd.(*FetchSchemaCommand); ok {
+			schema := fcmd.Response
+			if expected, actual := "schemaName", schema.Name; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "schema_xml", schema.Content; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		} else {
+			t.Errorf("ok: %v - could not convert %v to FetchSchemaCommand", ok, reflect.TypeOf(cmd))
+		}
+	}
+}
+*/

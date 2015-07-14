@@ -3,6 +3,7 @@ package riak
 import (
 	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
+	rpbRiakSCH "github.com/basho-labs/riak-go-client/rpb/riak_search"
 	rpbRiakYZ "github.com/basho-labs/riak-go-client/rpb/riak_yokozuna"
 	proto "github.com/golang/protobuf/proto"
 	"reflect"
@@ -192,5 +193,17 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakYZ.RpbYokozunaSchemaGetResp); !ok {
 		t.Errorf("error casting %v to RpbYokozunaSchemaGetResp", reflect.TypeOf(msg))
+	}
+	// Search
+	cmd = &SearchCommand{}
+	if expected, actual := rpbCode_RpbSearchQueryReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbSearchQueryResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakSCH.RpbSearchQueryResp); !ok {
+		t.Errorf("error casting %v to RpbSearchQueryResp", reflect.TypeOf(msg))
 	}
 }

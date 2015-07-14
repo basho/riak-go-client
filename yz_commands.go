@@ -2,6 +2,7 @@ package riak
 
 import (
 	"fmt"
+	rpbRiakSCH "github.com/basho-labs/riak-go-client/rpb/riak_search"
 	rpbRiakYZ "github.com/basho-labs/riak-go-client/rpb/riak_yokozuna"
 	proto "github.com/golang/protobuf/proto"
 	"reflect"
@@ -358,4 +359,125 @@ func (builder *FetchSchemaCommandBuilder) Build() (Command, error) {
 		panic("builder.protobuf must not be nil")
 	}
 	return &FetchSchemaCommand{protobuf: builder.protobuf}, nil
+}
+
+// Search
+// RpbSearchQueryReq
+// RpbSearchQueryResp
+
+type SearchCommand struct {
+	CommandImpl
+	Response *SearchResponse
+	protobuf *rpbRiakSCH.RpbSearchQueryReq
+}
+
+func (cmd *SearchCommand) Name() string {
+	return "Search"
+}
+
+func (cmd *SearchCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *SearchCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	cmd.Response = &SearchResponse{} // TODO
+	if msg != nil {
+		if _, ok := msg.(*rpbRiakSCH.RpbSearchQueryResp); ok {
+		} else {
+			return fmt.Errorf("[SearchCommand] could not convert %v to RpbSearchQueryResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *SearchCommand) getRequestCode() byte {
+	return rpbCode_RpbSearchQueryReq
+}
+
+func (cmd *SearchCommand) getResponseCode() byte {
+	return rpbCode_RpbSearchQueryResp
+}
+
+func (cmd *SearchCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakSCH.RpbSearchQueryResp{}
+}
+
+type SearchDoc struct {
+	Fields []*Pair
+}
+
+type SearchResponse struct {
+	Docs     []*SearchDoc
+	MaxScore float32
+	NumFound uint32
+}
+
+type SearchCommandBuilder struct {
+	protobuf *rpbRiakSCH.RpbSearchQueryReq
+}
+
+func NewSearchCommandBuilder() *SearchCommandBuilder {
+	builder := &SearchCommandBuilder{protobuf: &rpbRiakSCH.RpbSearchQueryReq{}}
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithIndexName(index string) *SearchCommandBuilder {
+	builder.protobuf.Index = []byte(index)
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithQuery(query string) *SearchCommandBuilder {
+	builder.protobuf.Q = []byte(query)
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithNumRows(numRows uint32) *SearchCommandBuilder {
+	builder.protobuf.Rows = &numRows
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithStart(start uint32) *SearchCommandBuilder {
+	builder.protobuf.Start = &start
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithSortField(sortField string) *SearchCommandBuilder {
+	builder.protobuf.Sort = []byte(sortField)
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithFilterQuery(filterQuery string) *SearchCommandBuilder {
+	builder.protobuf.Filter = []byte(filterQuery)
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithDefaultField(defaultField string) *SearchCommandBuilder {
+	builder.protobuf.Df = []byte(defaultField)
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithDefaultOperation(op string) *SearchCommandBuilder {
+	builder.protobuf.Op = []byte(op)
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithReturnFields(fields ...string) *SearchCommandBuilder {
+	builder.protobuf.Fl = make([][]byte, len(fields))
+	for i, f := range fields {
+		builder.protobuf.Fl[i] = []byte(f)
+	}
+	return builder
+}
+
+func (builder *SearchCommandBuilder) WithPresort(presort string) *SearchCommandBuilder {
+	builder.protobuf.Presort = []byte(presort)
+	return builder
+}
+
+func (builder *SearchCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	return &SearchCommand{protobuf: builder.protobuf}, nil
 }
