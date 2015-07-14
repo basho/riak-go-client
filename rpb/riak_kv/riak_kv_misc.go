@@ -64,16 +64,6 @@ func (m *RpbListBucketsReq) GetKey() []byte {
 	return nil
 }
 
-// RpbListBucketsResp
-
-func (m *RpbListBucketsResp) StreamingDone() bool {
-	if m.Done == nil {
-		return true
-	} else {
-		return m.GetDone()
-	}
-}
-
 // RpbListKeysReq
 
 func (m *RpbListKeysReq) SetType(bt []byte) {
@@ -90,10 +80,4 @@ func (m *RpbListKeysReq) KeyIsRequired() bool {
 
 func (m *RpbListKeysReq) GetKey() []byte {
 	return nil
-}
-
-// RpbListKeysResp
-
-func (m *RpbListKeysResp) StreamingDone() bool {
-	return m.GetDone()
 }

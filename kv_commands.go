@@ -546,7 +546,11 @@ func (cmd *ListBucketsCommand) Name() string {
 }
 
 func (cmd *ListBucketsCommand) Done() bool {
-	return cmd.done
+	if cmd.protobuf.GetStream() {
+		return cmd.done
+	} else {
+		return true
+	}
 }
 
 func (cmd *ListBucketsCommand) constructPbRequest() (msg proto.Message, err error) {
@@ -561,7 +565,7 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 		cmd.Response = &ListBucketsResponse{}
 	} else {
 		if rpbListBucketsResp, ok := msg.(*rpbRiakKV.RpbListBucketsResp); ok {
-			cmd.done = rpbListBucketsResp.StreamingDone()
+			cmd.done = rpbListBucketsResp.GetDone()
 			response := cmd.Response
 			if response == nil {
 				response = &ListBucketsResponse{}
@@ -572,6 +576,7 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 				for i, bucket := range rpbListBucketsResp.GetBuckets() {
 					buckets[i] = string(bucket)
 				}
+				logDebug("[ListBucketsCommand] got %d buckets", len(buckets))
 				if cmd.protobuf.GetStream() {
 					if cmd.callback == nil {
 						panic("ListBucketsCommand requires a callback when streaming.")
@@ -662,11 +667,11 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 
 type ListKeysCommand struct {
 	CommandImpl
-	Response *ListKeysResponse
-	protobuf *rpbRiakKV.RpbListKeysReq
+	Response  *ListKeysResponse
+	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
-	callback func(keys []string) error
-	done     bool
+	callback  func(keys []string) error
+	done      bool
 }
 
 func (cmd *ListKeysCommand) Name() string {
@@ -674,6 +679,8 @@ func (cmd *ListKeysCommand) Name() string {
 }
 
 func (cmd *ListKeysCommand) Done() bool {
+	// NB: RpbListKeysReq is *always* streaming so no need to take
+	// cmd.streaming into account here, unlike RpbListBucketsReq
 	return cmd.done
 }
 
@@ -689,7 +696,7 @@ func (cmd *ListKeysCommand) onSuccess(msg proto.Message) error {
 		cmd.Response = &ListKeysResponse{}
 	} else {
 		if rpbListKeysResp, ok := msg.(*rpbRiakKV.RpbListKeysResp); ok {
-			cmd.done = rpbListKeysResp.StreamingDone()
+			cmd.done = rpbListKeysResp.GetDone()
 			response := cmd.Response
 			if response == nil {
 				response = &ListKeysResponse{}
@@ -741,9 +748,9 @@ type ListKeysResponse struct {
 }
 
 type ListKeysCommandBuilder struct {
-	protobuf *rpbRiakKV.RpbListKeysReq
+	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
-	callback func(buckets []string) error
+	callback  func(buckets []string) error
 }
 
 func NewListKeysCommandBuilder() *ListKeysCommandBuilder {
@@ -788,8 +795,8 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 		return nil, errors.New("ListKeysCommand requires a callback when streaming.")
 	}
 	return &ListKeysCommand{
-		protobuf: builder.protobuf,
+		protobuf:  builder.protobuf,
 		streaming: builder.streaming,
-		callback: builder.callback,
+		callback:  builder.callback,
 	}, nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 )
 
 var cluster *Cluster
@@ -159,15 +160,17 @@ func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
 // ListBuckets
 
 func TestListBucketsInDefaultBucketType(t *testing.T) {
-	bucketPrefix := "listBucketsInDefaultType_"
+	totalCount := 50
+	bucketPrefix := fmt.Sprintf("LBDT_%d", time.Now().Unix())
+
 	obj := &Object{
 		ContentType:     "text/plain",
 		Charset:         "utf-8",
 		ContentEncoding: "utf-8",
 		Value:           []byte("value"),
 	}
-	for i := 0; i < 50; i++ {
-		bucket := fmt.Sprintf("%s%d", bucketPrefix, i)
+	for i := 0; i < totalCount; i++ {
+		bucket := fmt.Sprintf("%s_%d", bucketPrefix, i)
 		store, err := NewStoreValueCommandBuilder().
 			WithBucket(bucket).
 			WithContent(obj).
@@ -179,8 +182,10 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 			t.Fatalf("error storing test objects: %s", err.Error())
 		}
 	}
+
 	var err error
 	var cmd Command
+
 	// non-streaming
 	builder := NewListBucketsCommandBuilder()
 	if cmd, err = builder.WithBucketType(defaultBucketType).WithStreaming(false).Build(); err != nil {
@@ -200,7 +205,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 				count++
 			}
 		}
-		if expected, actual := 50, count; expected != actual {
+		if expected, actual := totalCount, count; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -210,7 +215,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 	// streaming
 	builder = NewListBucketsCommandBuilder()
 	count := 0
-	cb := func (buckets []string) error {
+	cb := func(buckets []string) error {
 		for _, b := range buckets {
 			if strings.HasPrefix(b, bucketPrefix) {
 				count++
@@ -228,7 +233,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 		if lbc.Response == nil {
 			t.Errorf("expected non-nil Response")
 		}
-		if expected, actual := 50, count; expected != actual {
+		if expected, actual := totalCount, count; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -239,15 +244,16 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 // ListKeys
 
 func TestListKeysInDefaultBucketType(t *testing.T) {
-	keyPrefix := "listKeysInDefaultType_"
+	totalCount := 50
+	keyPrefix := fmt.Sprintf("LKDT_%d", time.Now().Unix())
 	obj := &Object{
 		ContentType:     "text/plain",
 		Charset:         "utf-8",
 		ContentEncoding: "utf-8",
 		Value:           []byte("value"),
 	}
-	for i := 0; i < 50; i++ {
-		key := fmt.Sprintf("%s%d", keyPrefix, i)
+	for i := 0; i < totalCount; i++ {
+		key := fmt.Sprintf("%s_%d", keyPrefix, i)
 		store, err := NewStoreValueCommandBuilder().
 			WithBucket(testBucketName).
 			WithKey(key).
@@ -281,7 +287,7 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 				count++
 			}
 		}
-		if expected, actual := 50, count; expected != actual {
+		if expected, actual := totalCount, count; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -291,7 +297,7 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 	// streaming
 	builder = NewListKeysCommandBuilder()
 	count := 0
-	cb := func (keys []string) error {
+	cb := func(keys []string) error {
 		for _, k := range keys {
 			if strings.HasPrefix(k, keyPrefix) {
 				count++
@@ -309,7 +315,7 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 		if lbc.Response == nil {
 			t.Errorf("expected non-nil Response")
 		}
-		if expected, actual := 50, count; expected != actual {
+		if expected, actual := totalCount, count; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
