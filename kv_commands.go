@@ -831,8 +831,8 @@ func (cmd *FetchPreflistCommand) onSuccess(msg proto.Message) error {
 				for i, rpbItem := range rpbPreflist {
 					response.Preflist[i] = &PreflistItem{
 						Partition: rpbItem.GetPartition(),
-						Node: string(rpbItem.GetNode()),
-						Primary: rpbItem.GetPrimary(),
+						Node:      string(rpbItem.GetNode()),
+						Primary:   rpbItem.GetPrimary(),
 					}
 				}
 			}
@@ -858,8 +858,8 @@ func (cmd *FetchPreflistCommand) getResponseProtobufMessage() proto.Message {
 
 type PreflistItem struct {
 	Partition int64
-	Node string
-	Primary bool
+	Node      string
+	Primary   bool
 }
 
 type FetchPreflistResponse struct {
@@ -899,4 +899,3 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 	}
 	return &FetchPreflistCommand{protobuf: builder.protobuf}, nil
 }
-

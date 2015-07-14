@@ -60,12 +60,7 @@ func TestFetchANotFoundFromRiakUsingDefaultBucketType(t *testing.T) {
 }
 
 func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
-	obj := &Object{
-		ContentType:     "text/plain",
-		Charset:         "utf-8",
-		ContentEncoding: "utf-8",
-		Value:           []byte("this is a value in Riak"),
-	}
+	obj := getBasicObject()
 	store, err := NewStoreValueCommandBuilder().
 		WithBucket(testBucketName).
 		WithKey("my_key1").
@@ -126,12 +121,7 @@ func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
 
 // StoreValue
 func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
-	obj := &Object{
-		ContentType:     "text/plain",
-		Charset:         "utf-8",
-		ContentEncoding: "utf-8",
-		Value:           []byte("value"),
-	}
+	obj := getBasicObject()
 	cmd, err := NewStoreValueCommandBuilder().
 		WithBucket(testBucketName).
 		WithContent(obj).
@@ -162,13 +152,7 @@ func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
 func TestListBucketsInDefaultBucketType(t *testing.T) {
 	totalCount := 50
 	bucketPrefix := fmt.Sprintf("LBDT_%d", time.Now().Unix())
-
-	obj := &Object{
-		ContentType:     "text/plain",
-		Charset:         "utf-8",
-		ContentEncoding: "utf-8",
-		Value:           []byte("value"),
-	}
+	obj := getBasicObject()
 	for i := 0; i < totalCount; i++ {
 		bucket := fmt.Sprintf("%s_%d", bucketPrefix, i)
 		store, err := NewStoreValueCommandBuilder().
@@ -246,12 +230,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 func TestListKeysInDefaultBucketType(t *testing.T) {
 	totalCount := 50
 	keyPrefix := fmt.Sprintf("LKDT_%d", time.Now().Unix())
-	obj := &Object{
-		ContentType:     "text/plain",
-		Charset:         "utf-8",
-		ContentEncoding: "utf-8",
-		Value:           []byte("value"),
-	}
+	obj := getBasicObject()
 	for i := 0; i < totalCount; i++ {
 		key := fmt.Sprintf("%s_%d", keyPrefix, i)
 		store, err := NewStoreValueCommandBuilder().
@@ -316,6 +295,47 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 			t.Errorf("expected non-nil Response")
 		}
 		if expected, actual := totalCount, count; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
+}
+
+// FetchPreflist
+
+func TestFetchPreflistForAValue(t *testing.T) {
+	key := fmt.Sprintf("FetchPreflist_%d", time.Now().Unix())
+	obj := getBasicObject()
+	store, err := NewStoreValueCommandBuilder().
+		WithBucket(testBucketName).
+		WithKey(key).
+		WithContent(obj).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(store); err != nil {
+		t.Fatalf("error storing test object: %s", err.Error())
+	}
+
+	var cmd Command
+	builder := NewFetchPreflistCommandBuilder()
+	if cmd, err = builder.WithBucket(testBucketName).WithKey(key).Build(); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if fpc, ok := cmd.(*FetchPreflistCommand); ok {
+		if fpc.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		rsp := fpc.Response
+		if rsp.Preflist == nil {
+			t.Errorf("expected non-nil Preflist")
+		}
+		if expected, actual := 3, len(rsp.Preflist); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {

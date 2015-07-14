@@ -59,3 +59,12 @@ func integrationTestsBuildCluster() (*Cluster, error) {
 
 	return NewCluster(opts)
 }
+
+func getBasicObject() *Object {
+	return &Object{
+		ContentType:     "text/plain",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           []byte("this is a value in Riak"),
+	}
+}
