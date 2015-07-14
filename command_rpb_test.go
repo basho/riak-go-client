@@ -20,8 +20,7 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if expected, actual := rpbCode_RpbPingResp, cmd.getResponseCode(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	msg = cmd.getResponseProtobufMessage()
-	if msg != nil {
+	if cmd.getResponseProtobufMessage() != nil {
 		t.Error("expected nil response protobuf message")
 	}
 	// FetchBucketProps
@@ -133,5 +132,18 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbIndexResp); !ok {
 		t.Errorf("error casting %v to RpbIndexResp", reflect.TypeOf(msg))
+	}
+
+	// YZ commands
+	// StoreIndex
+	cmd = &StoreIndexCommand{}
+	if expected, actual := rpbCode_RpbYokozunaIndexPutReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := byte(0), cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if cmd.getResponseProtobufMessage() != nil {
+		t.Error("expected nil response protobuf message")
 	}
 }

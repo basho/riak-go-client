@@ -50,8 +50,6 @@ func TestAllowedState(t *testing.T) {
 
 	if err := data.stateCheck(STATE_ONE, STATE_THREE); err == nil {
 		t.Errorf("expected non-nil error, got %v", err)
-	} else {
-		t.Logf("stateCheck err: %v", err)
 	}
 }
 
