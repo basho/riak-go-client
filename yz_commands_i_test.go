@@ -76,3 +76,51 @@ func TestStoreFetchAndDeleteAYokozunaIndex(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+// FetchSchema
+// StoreSchema
+
+func TestStoreFetchAndDeleteAYokozunaSchema(t *testing.T) {
+	var err error
+	var cmd Command
+	defaultSchemaName := "_yz_default"
+	schemaName := "schemaName"
+	schemaXml := "dummy"
+
+	fbuilder := NewFetchSchemaCommandBuilder()
+	cmd, err = fbuilder.WithSchemaName(defaultSchemaName).Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if fcmd, ok := cmd.(*FetchSchemaCommand); ok {
+		if fcmd.Response == nil {
+			t.Errorf("expected non-nil Response")
+		}
+		sch := fcmd.Response
+		if expected, actual := defaultSchemaName, sch.Name; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		schemaXml = sch.Content
+	} else {
+		t.FailNow()
+	}
+
+	sbuilder := NewStoreSchemaCommandBuilder()
+	cmd, err = sbuilder.WithSchemaName(schemaName).WithSchema(schemaXml).Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if scmd, ok := cmd.(*StoreSchemaCommand); ok {
+		if expected, actual := true, scmd.Response; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
+}

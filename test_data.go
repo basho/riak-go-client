@@ -44,7 +44,7 @@ func integrationTestsBuildCluster() {
 	var err error
 	if cluster == nil {
 		nodeOpts := &NodeOptions{
-			RemoteAddress: remoteAddress,
+			RemoteAddress:  remoteAddress,
 			RequestTimeout: time.Second * 10,
 		}
 		var node *Node
