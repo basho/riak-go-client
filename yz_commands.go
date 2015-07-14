@@ -14,6 +14,11 @@ type SearchIndex struct {
 	NVal   uint32
 }
 
+type Schema struct {
+	Name    string
+	Content string
+}
+
 // StoreIndex
 // RpbYokozunaIndexPutReq
 // RpbPutResp
@@ -219,4 +224,138 @@ func (builder *DeleteIndexCommandBuilder) Build() (Command, error) {
 		panic("builder.protobuf must not be nil")
 	}
 	return &DeleteIndexCommand{protobuf: builder.protobuf}, nil
+}
+
+// StoreSchema
+// RpbYokozunaSchemaPutReq
+// RpbPutResp
+
+type StoreSchemaCommand struct {
+	CommandImpl
+	Response bool
+	protobuf *rpbRiakYZ.RpbYokozunaSchemaPutReq
+}
+
+func (cmd *StoreSchemaCommand) Name() string {
+	return "StoreSchema"
+}
+
+func (cmd *StoreSchemaCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *StoreSchemaCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	cmd.Response = true
+	return nil
+}
+
+func (cmd *StoreSchemaCommand) getRequestCode() byte {
+	return rpbCode_RpbYokozunaSchemaPutReq
+}
+
+func (cmd *StoreSchemaCommand) getResponseCode() byte {
+	return rpbCode_RpbPutResp
+}
+
+func (cmd *StoreSchemaCommand) getResponseProtobufMessage() proto.Message {
+	return nil
+}
+
+type StoreSchemaCommandBuilder struct {
+	protobuf *rpbRiakYZ.RpbYokozunaSchemaPutReq
+}
+
+func NewStoreSchemaCommandBuilder() *StoreSchemaCommandBuilder {
+	protobuf := &rpbRiakYZ.RpbYokozunaSchemaPutReq{
+		Schema: &rpbRiakYZ.RpbYokozunaSchema{},
+	}
+	builder := &StoreSchemaCommandBuilder{protobuf: protobuf}
+	return builder
+}
+
+func (builder *StoreSchemaCommandBuilder) WithSchemaName(schemaName string) *StoreSchemaCommandBuilder {
+	builder.protobuf.Schema.Name = []byte(schemaName)
+	return builder
+}
+
+func (builder *StoreSchemaCommandBuilder) WithSchema(schema string) *StoreSchemaCommandBuilder {
+	builder.protobuf.Schema.Content = []byte(schema)
+	return builder
+}
+
+func (builder *StoreSchemaCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	return &StoreSchemaCommand{protobuf: builder.protobuf}, nil
+}
+
+// FetchSchema
+// RpbYokozunaSchemaPutReq
+// RpbPutResp
+
+type FetchSchemaCommand struct {
+	CommandImpl
+	Response *Schema
+	protobuf *rpbRiakYZ.RpbYokozunaSchemaGetReq
+}
+
+func (cmd *FetchSchemaCommand) Name() string {
+	return "FetchSchema"
+}
+
+func (cmd *FetchSchemaCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *FetchSchemaCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	if msg != nil {
+		if rpbYokozunaSchemaGetResp, ok := msg.(*rpbRiakYZ.RpbYokozunaSchemaGetResp); ok {
+			rpbSchema := rpbYokozunaSchemaGetResp.GetSchema()
+			if rpbSchema != nil {
+				cmd.Response = &Schema{
+					Name:    string(rpbSchema.GetName()),
+					Content: string(rpbSchema.GetContent()),
+				}
+			}
+		} else {
+			return fmt.Errorf("[FetchSchemaCommand] could not convert %v to RpbYokozunaSchemaGetResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *FetchSchemaCommand) getRequestCode() byte {
+	return rpbCode_RpbYokozunaSchemaGetReq
+}
+
+func (cmd *FetchSchemaCommand) getResponseCode() byte {
+	return rpbCode_RpbYokozunaSchemaGetResp
+}
+
+func (cmd *FetchSchemaCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakYZ.RpbYokozunaSchemaGetResp{}
+}
+
+type FetchSchemaCommandBuilder struct {
+	protobuf *rpbRiakYZ.RpbYokozunaSchemaGetReq
+}
+
+func NewFetchSchemaCommandBuilder() *FetchSchemaCommandBuilder {
+	builder := &FetchSchemaCommandBuilder{protobuf: &rpbRiakYZ.RpbYokozunaSchemaGetReq{}}
+	return builder
+}
+
+func (builder *FetchSchemaCommandBuilder) WithSchemaName(schemaName string) *FetchSchemaCommandBuilder {
+	builder.protobuf.Name = []byte(schemaName)
+	return builder
+}
+
+func (builder *FetchSchemaCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	return &FetchSchemaCommand{protobuf: builder.protobuf}, nil
 }

@@ -170,4 +170,27 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if cmd.getResponseProtobufMessage() != nil {
 		t.Error("expected nil response protobuf message")
 	}
+	// StoreSchema
+	cmd = &StoreSchemaCommand{}
+	if expected, actual := rpbCode_RpbYokozunaSchemaPutReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbPutResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if cmd.getResponseProtobufMessage() != nil {
+		t.Error("expected nil response protobuf message")
+	}
+	// FetchSchema
+	cmd = &FetchSchemaCommand{}
+	if expected, actual := rpbCode_RpbYokozunaSchemaGetReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbYokozunaSchemaGetResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakYZ.RpbYokozunaSchemaGetResp); !ok {
+		t.Errorf("error casting %v to RpbYokozunaSchemaGetResp", reflect.TypeOf(msg))
+	}
 }

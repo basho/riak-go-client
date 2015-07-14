@@ -133,3 +133,89 @@ func TestBuildRpbYokozunaIndexDeleteReqCorrectlyViaBuilder(t *testing.T) {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbYokozunaIndexDeleteReq", ok, reflect.TypeOf(protobuf))
 	}
 }
+
+// StoreSchema
+// RpbYokozunaSchemaPutReq
+
+func TestBuildRpbYokozunaSchemaPutReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewStoreSchemaCommandBuilder().
+		WithSchemaName("schemaName").
+		WithSchema("schema_xml")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if req, ok := protobuf.(*rpbRiakYZ.RpbYokozunaSchemaPutReq); ok {
+		schema := req.Schema
+		if expected, actual := "schemaName", string(schema.GetName()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "schema_xml", string(schema.GetContent()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbYokozunaSchemaPutReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+// FetchSchema
+// RpbYokozunaSchemaGetReq
+// RpbYokozunaSchemaGetResp
+
+func TestBuildRpbYokozunaSchemaGetReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewFetchSchemaCommandBuilder().
+		WithSchemaName("schemaName")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if req, ok := protobuf.(*rpbRiakYZ.RpbYokozunaSchemaGetReq); ok {
+		if expected, actual := "schemaName", string(req.GetName()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbYokozunaSchemaGetReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestParseRpbYokozunaSchemaGetRespCorrectly(t *testing.T) {
+	schema := &rpbRiakYZ.RpbYokozunaSchema{
+		Name:    []byte("schemaName"),
+		Content: []byte("schema_xml"),
+	}
+	resp := &rpbRiakYZ.RpbYokozunaSchemaGetResp{Schema: schema}
+	builder := NewFetchSchemaCommandBuilder().WithSchemaName("schemaName")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cmd.onSuccess(resp); err != nil {
+		t.Fatal(err.Error())
+	} else {
+		if fcmd, ok := cmd.(*FetchSchemaCommand); ok {
+			schema := fcmd.Response
+			if expected, actual := "schemaName", schema.Name; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "schema_xml", schema.Content; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		} else {
+			t.Errorf("ok: %v - could not convert %v to FetchSchemaCommand", ok, reflect.TypeOf(cmd))
+		}
+	}
+}
