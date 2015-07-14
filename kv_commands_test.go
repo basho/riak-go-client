@@ -1070,3 +1070,57 @@ func TestValidationOfRpbListKeysReqViaBuilder(t *testing.T) {
 		t.Fatal("expected nil err")
 	}
 }
+
+// FetchPreflist
+
+func TestBuildRpbGetBucketKeyPreflistReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewFetchPreflistCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("key")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if req, ok := protobuf.(*rpbRiakKV.RpbGetBucketKeyPreflistReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbDelReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestValidationOfRpbGetBucketKeyPreflistReqViaBuilder(t *testing.T) {
+	builder := NewFetchPreflistCommandBuilder()
+	// validate that Bucket is required
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is required
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+}
+

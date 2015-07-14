@@ -576,7 +576,6 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 				for i, bucket := range rpbListBucketsResp.GetBuckets() {
 					buckets[i] = string(bucket)
 				}
-				logDebug("[ListBucketsCommand] got %d buckets", len(buckets))
 				if cmd.protobuf.GetStream() {
 					if cmd.callback == nil {
 						panic("ListBucketsCommand requires a callback when streaming.")
@@ -800,3 +799,104 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 		callback:  builder.callback,
 	}, nil
 }
+
+// FetchPreflist
+// RpbGetBucketKeyPreflistReq
+// RpbGetBucketKeyPreflistResp
+
+type FetchPreflistCommand struct {
+	CommandImpl
+	Response *FetchPreflistResponse
+	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
+}
+
+func (cmd *FetchPreflistCommand) Name() string {
+	return "FetchPreflist"
+}
+
+func (cmd *FetchPreflistCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *FetchPreflistCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	if msg == nil {
+		cmd.Response = &FetchPreflistResponse{}
+	} else {
+		if rpbGetBucketKeyPreflistResp, ok := msg.(*rpbRiakKV.RpbGetBucketKeyPreflistResp); ok {
+			response := &FetchPreflistResponse{}
+			if rpbGetBucketKeyPreflistResp.GetPreflist() != nil {
+				rpbPreflist := rpbGetBucketKeyPreflistResp.GetPreflist()
+				response.Preflist = make([]*PreflistItem, len(rpbPreflist))
+				for i, rpbItem := range rpbPreflist {
+					response.Preflist[i] = &PreflistItem{
+						Partition: rpbItem.GetPartition(),
+						Node: string(rpbItem.GetNode()),
+						Primary: rpbItem.GetPrimary(),
+					}
+				}
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[FetchPreflistCommand] could not convert %v to RpbGetBucketKeyPreflistResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *FetchPreflistCommand) getRequestCode() byte {
+	return rpbCode_RpbGetBucketKeyPreflistReq
+}
+
+func (cmd *FetchPreflistCommand) getResponseCode() byte {
+	return rpbCode_RpbGetBucketKeyPreflistResp
+}
+
+func (cmd *FetchPreflistCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakKV.RpbGetBucketKeyPreflistResp{}
+}
+
+type PreflistItem struct {
+	Partition int64
+	Node string
+	Primary bool
+}
+
+type FetchPreflistResponse struct {
+	Preflist []*PreflistItem
+}
+
+type FetchPreflistCommandBuilder struct {
+	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
+}
+
+func NewFetchPreflistCommandBuilder() *FetchPreflistCommandBuilder {
+	builder := &FetchPreflistCommandBuilder{protobuf: &rpbRiakKV.RpbGetBucketKeyPreflistReq{}}
+	return builder
+}
+
+func (builder *FetchPreflistCommandBuilder) WithBucketType(bucketType string) *FetchPreflistCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *FetchPreflistCommandBuilder) WithBucket(bucket string) *FetchPreflistCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *FetchPreflistCommandBuilder) WithKey(key string) *FetchPreflistCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &FetchPreflistCommand{protobuf: builder.protobuf}, nil
+}
+
