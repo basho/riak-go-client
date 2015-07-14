@@ -24,10 +24,11 @@ func TestSuccessfulConnection(t *testing.T) {
 		for {
 			c, err := ln.Accept()
 			sawConnection = true
-			if err != nil {
+			if err == nil {
+				c.Close()
+			} else {
 				t.Error(err.Error())
 			}
-			c.Close()
 		}
 	}()
 
