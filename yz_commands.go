@@ -381,9 +381,50 @@ func (cmd *SearchCommand) constructPbRequest() (proto.Message, error) {
 
 func (cmd *SearchCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
-	cmd.Response = &SearchResponse{} // TODO
+	cmd.Response = &SearchResponse{}
 	if msg != nil {
-		if _, ok := msg.(*rpbRiakSCH.RpbSearchQueryResp); ok {
+		if rpbResp, ok := msg.(*rpbRiakSCH.RpbSearchQueryResp); ok {
+			resp := &SearchResponse{
+				MaxScore: rpbResp.GetMaxScore(),
+				NumFound: rpbResp.GetNumFound(),
+			}
+			rpbDocs := rpbResp.GetDocs()
+			if rpbDocs != nil {
+				resp.Docs = make([]*SearchDoc, len(rpbDocs))
+				for i, rpbDoc := range rpbDocs {
+					doc := &SearchDoc{}
+					rpbFields := rpbDoc.GetFields()
+					if rpbFields != nil {
+						doc.Fields = make(map[string][]string)
+						for _, rpbDocFld := range rpbFields {
+							key := string(rpbDocFld.Key)
+							val := string(rpbDocFld.Value)
+
+							if doc.Fields[key] == nil {
+								doc.Fields[key] = make([]string, 1)
+								doc.Fields[key][0] = val
+							} else {
+								doc.Fields[key] = append(doc.Fields[key], val)
+							}
+
+							switch key {
+							case yzBucketTypeFld:
+								doc.BucketType = val
+							case yzBucketFld:
+								doc.Bucket = val
+							case yzKeyFld:
+								doc.Key = val
+							case yzIdFld:
+								doc.Id = val
+							case yzScoreFld:
+								doc.Score = val
+							}
+						}
+					}
+					resp.Docs[i] = doc
+				}
+			}
+			cmd.Response = resp
 		} else {
 			return fmt.Errorf("[SearchCommand] could not convert %v to RpbSearchQueryResp", reflect.TypeOf(msg))
 		}
@@ -403,8 +444,19 @@ func (cmd *SearchCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakSCH.RpbSearchQueryResp{}
 }
 
+const yzBucketTypeFld = "_yz_rt"
+const yzBucketFld = "_yz_rb"
+const yzKeyFld = "_yz_rk"
+const yzIdFld = "_yz_id"
+const yzScoreFld = "score"
+
 type SearchDoc struct {
-	Fields []*Pair
+	BucketType string
+	Bucket     string
+	Key        string
+	Id         string
+	Score      string
+	Fields     map[string][]string
 }
 
 type SearchResponse struct {

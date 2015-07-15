@@ -1,6 +1,7 @@
 package riak
 
 import (
+	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
 	rpbRiakSCH "github.com/basho-labs/riak-go-client/rpb/riak_search"
 	rpbRiakYZ "github.com/basho-labs/riak-go-client/rpb/riak_yokozuna"
 	"reflect"
@@ -222,7 +223,7 @@ func TestParseRpbYokozunaSchemaGetRespCorrectly(t *testing.T) {
 }
 
 // Search
-// RpbSearchQueryReq
+// pbSearchQueryReq
 // RpbSearchQueryResp
 
 func TestBuildRpbSearchQueryReqCorrectlyViaBuilder(t *testing.T) {
@@ -291,14 +292,61 @@ func TestBuildRpbSearchQueryReqCorrectlyViaBuilder(t *testing.T) {
 	}
 }
 
-/*
-func TestParseRpbYokozunaSchemaGetRespCorrectly(t *testing.T) {
-	schema := &rpbRiakYZ.RpbYokozunaSchema{
-		Name:    []byte("schemaName"),
-		Content: []byte("schema_xml"),
+func TestParseRpbSearchQueryRespCorrectly(t *testing.T) {
+	resp := &rpbRiakSCH.RpbSearchQueryResp{
+		Docs: make([]*rpbRiakSCH.RpbSearchDoc, 1),
 	}
-	resp := &rpbRiakYZ.RpbYokozunaSchemaGetResp{Schema: schema}
-	builder := NewFetchSchemaCommandBuilder().WithSchemaName("schemaName")
+
+	p1 := &rpbRiak.RpbPair{
+		Key:   []byte("leader_b"),
+		Value: []byte("true"),
+	}
+	p2 := &rpbRiak.RpbPair{
+		Key:   []byte("age_i"),
+		Value: []byte("30"),
+	}
+	p3 := &rpbRiak.RpbPair{
+		Key:   []byte("_yz_id"),
+		Value: []byte("id"),
+	}
+	p4 := &rpbRiak.RpbPair{
+		Key:   []byte("nullValue"),
+		Value: []byte("null"),
+	}
+	p5 := &rpbRiak.RpbPair{
+		Key:   []byte("array"),
+		Value: []byte("val_0"),
+	}
+	p6 := &rpbRiak.RpbPair{
+		Key:   []byte("array"),
+		Value: []byte("val_1"),
+	}
+	p7 := &rpbRiak.RpbPair{
+		Key:   []byte("_yz_rk"),
+		Value: []byte("key"),
+	}
+	p8 := &rpbRiak.RpbPair{
+		Key:   []byte("_yz_rt"),
+		Value: []byte("bucket_type"),
+	}
+	p9 := &rpbRiak.RpbPair{
+		Key:   []byte("_yz_rb"),
+		Value: []byte("bucket"),
+	}
+	p10 := &rpbRiak.RpbPair{
+		Key:   []byte("score"),
+		Value: []byte("2.23"),
+	}
+	doc := &rpbRiakSCH.RpbSearchDoc{
+		Fields: []*rpbRiak.RpbPair{p1, p2, p3, p4, p5, p6, p7, p8, p9, p10},
+	}
+	maxScore := float32(1.123)
+	numFound := uint32(1)
+	resp.Docs[0] = doc
+	resp.MaxScore = &maxScore
+	resp.NumFound = &numFound
+
+	builder := NewSearchCommandBuilder().WithIndexName("index").WithQuery("some solr query")
 	cmd, err := builder.Build()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -306,17 +354,65 @@ func TestParseRpbYokozunaSchemaGetRespCorrectly(t *testing.T) {
 	if err = cmd.onSuccess(resp); err != nil {
 		t.Fatal(err.Error())
 	} else {
-		if fcmd, ok := cmd.(*FetchSchemaCommand); ok {
-			schema := fcmd.Response
-			if expected, actual := "schemaName", schema.Name; expected != actual {
+		if scmd, ok := cmd.(*SearchCommand); ok {
+			r := scmd.Response // SearchResponse
+			if expected, actual := uint32(1), r.NumFound; expected != actual {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
-			if expected, actual := "schema_xml", schema.Content; expected != actual {
+			if expected, actual := float32(1.123), r.MaxScore; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := 1, len(r.Docs); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			doc := r.Docs[0]
+			if expected, actual := "true", doc.Fields["leader_b"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "30", doc.Fields["age_i"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "null", doc.Fields["nullValue"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "id", doc.Fields["_yz_id"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "id", doc.Id; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "key", doc.Fields["_yz_rk"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "key", doc.Key; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "bucket", doc.Fields["_yz_rb"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "bucket", doc.Bucket; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "bucket_type", doc.Fields["_yz_rt"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "bucket_type", doc.BucketType; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "val_0", doc.Fields["array"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "val_1", doc.Fields["array"][1]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "2.23", doc.Fields["score"][0]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "2.23", doc.Score; expected != actual {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
 		} else {
-			t.Errorf("ok: %v - could not convert %v to FetchSchemaCommand", ok, reflect.TypeOf(cmd))
+			t.Errorf("ok: %v - could not convert %v to SearchCommand", ok, reflect.TypeOf(cmd))
 		}
 	}
 }
-*/
