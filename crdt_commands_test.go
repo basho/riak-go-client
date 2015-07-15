@@ -64,6 +64,46 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateCounterCommandBuilder(t *testing.T) {
 	}
 }
 
+func TestUpdateCounterParsesDtUpdateRespCorrectly(t *testing.T) {
+	counterValue := int64(1234)
+	generatedKey := "generated_key"
+	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
+		CounterValue: &counterValue,
+		Key: []byte(generatedKey),
+	}
+
+	builder := NewUpdateCounterCommandBuilder().
+		WithBucketType("counters").
+		WithBucket("myBucket").
+		WithKey("counter_1").
+		WithIncrement(100)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+
+	cmd.onSuccess(dtUpdateResp)
+
+	if uc, ok := cmd.(*UpdateCounterCommand); ok {
+		rsp := uc.Response
+		if expected, actual := int64(1234), rsp.CounterValue; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "generated_key", rsp.GeneratedKey; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *UpdateCounterCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
 func TestValidationOfUpdateCounterViaBuilder(t *testing.T) {
 	// validate that Bucket is required
 	builder := NewUpdateCounterCommandBuilder()

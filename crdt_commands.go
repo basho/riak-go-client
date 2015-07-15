@@ -1,6 +1,8 @@
 package riak
 
 import (
+	"fmt"
+	"reflect"
 	rpbRiakDT "github.com/basho-labs/riak-go-client/rpb/riak_dt"
 	proto "github.com/golang/protobuf/proto"
 	"time"
@@ -12,7 +14,7 @@ import (
 
 type UpdateCounterCommand struct {
 	CommandImpl
-	Response bool // TODO
+	Response *UpdateCounterResponse
 	protobuf *rpbRiakDT.DtUpdateReq
 }
 
@@ -26,7 +28,16 @@ func (cmd *UpdateCounterCommand) constructPbRequest() (proto.Message, error) {
 
 func (cmd *UpdateCounterCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
-	cmd.Response = true // TODO
+	if msg != nil {
+		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
+			cmd.Response = &UpdateCounterResponse{
+				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
+				CounterValue: rpbDtUpdateResp.GetCounterValue(),
+			}
+		} else {
+			return fmt.Errorf("[UpdateCounterCommand] could not convert %v to DtUpdateResp", reflect.TypeOf(msg))
+		}
+	}
 	return nil
 }
 
@@ -40,6 +51,11 @@ func (cmd *UpdateCounterCommand) getResponseCode() byte {
 
 func (cmd *UpdateCounterCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtUpdateResp{}
+}
+
+type UpdateCounterResponse struct {
+	GeneratedKey string
+	CounterValue int64
 }
 
 type UpdateCounterCommandBuilder struct {
