@@ -2,6 +2,7 @@ package riak
 
 import (
 	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
+	rpbRiakDT "github.com/basho-labs/riak-go-client/rpb/riak_dt"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	rpbRiakSCH "github.com/basho-labs/riak-go-client/rpb/riak_search"
 	rpbRiakYZ "github.com/basho-labs/riak-go-client/rpb/riak_yokozuna"
@@ -205,5 +206,19 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakSCH.RpbSearchQueryResp); !ok {
 		t.Errorf("error casting %v to RpbSearchQueryResp", reflect.TypeOf(msg))
+	}
+
+	// CRDT commands
+	// UpdateCounter
+	cmd = &UpdateCounterCommand{}
+	if expected, actual := rpbCode_DtUpdateReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_DtUpdateResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakDT.DtUpdateResp); !ok {
+		t.Errorf("error casting %v to DtUpdateResp", reflect.TypeOf(msg))
 	}
 }

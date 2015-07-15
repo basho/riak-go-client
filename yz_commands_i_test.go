@@ -198,11 +198,6 @@ func TestSearchViaYokozunaIndex(t *testing.T) {
 				} else {
 					t.Errorf("expected %v, got %v - DONE", expected, actual)
 				}
-			} else {
-				EnableDebugLogging = true
-				jsonDump(resp.Docs)
-				EnableDebugLogging = false
-				break
 			}
 		} else {
 			t.FailNow()

@@ -1,6 +1,6 @@
 package riak
 
-// RpbGetBucketReq "extension" methods
+// RpbGetBucketReq
 
 func (m *RpbGetBucketReq) GetKey() []byte {
 	return nil
@@ -18,7 +18,7 @@ func (m *RpbGetBucketReq) KeyIsRequired() bool {
 	return false
 }
 
-// RpbSetBucketReq "extension" methods
+// RpbSetBucketReq
 
 func (m *RpbSetBucketReq) GetKey() []byte {
 	return nil
