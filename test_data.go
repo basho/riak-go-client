@@ -22,12 +22,16 @@ var crdtContextBytes = crdtContext.Bytes()
 
 // riak-admin bucket-type create leveldb_type '{"props":{"backend":"leveldb_backend"}}'
 // riak-admin bucket-type activate leveldb_type
-var testBucketType = "leveldb_type"
-var testBucketName = "riak_index_tests"
+const testBucketType = "leveldb_type"
+const testBucketName = "riak_index_tests"
 
 // riak_admin bucket-type create counters '{"props":{"datatype":"counter"}}'
-// riak-admin bucket-type activate leveldb_type
-var testCounterBucketType = "counters"
+// riak-admin bucket-type activate counters
+const testCounterBucketType = "counters"
+
+// riak_admin bucket-type create sets '{"props":{"datatype":"set"}}'
+// riak-admin bucket-type activate sets
+const testSetBucketType = "sets"
 
 func init() {
 	if hostEnvVar := os.ExpandEnv("$RIAK_HOST"); hostEnvVar != "" {

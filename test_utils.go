@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"bytes"
 	"encoding/json"
 	"net"
 	"testing"
@@ -42,4 +43,15 @@ func validateTimeout(t *testing.T, e time.Duration, a uint32) {
 	if expected, actual := e, actualDuration; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
+}
+
+func sliceIncludes(slice [][]byte, term []byte) (rv bool) {
+	rv = false
+	for _, t := range slice {
+		if bytes.Compare(t, term) == 0 {
+			rv = true
+			break
+		}
+	}
+	return
 }

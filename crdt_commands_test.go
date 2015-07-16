@@ -269,17 +269,6 @@ func TestValidationOfFetchCounterViaBuilder(t *testing.T) {
 	}
 }
 
-func sliceIncludes(slice [][]byte, term []byte) (rv bool) {
-	rv = false
-	for _, t := range slice {
-		if bytes.Compare(t, term) == 0 {
-			rv = true
-			break
-		}
-	}
-	return
-}
-
 // UpdateSet
 // DtUpdateReq
 // DtUpdateResp
