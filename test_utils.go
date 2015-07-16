@@ -22,6 +22,10 @@ func writePingResp(t *testing.T, c net.Conn) (success bool) {
 }
 
 func jsonDump(val interface{}) {
+	EnableDebugLogging = true
+	defer func() {
+		EnableDebugLogging = false
+	}()
 	if val == nil {
 		logDebug("[jsonDump] NIL VAL")
 	} else {

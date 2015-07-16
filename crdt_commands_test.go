@@ -69,7 +69,7 @@ func TestUpdateCounterParsesDtUpdateRespCorrectly(t *testing.T) {
 	generatedKey := "generated_key"
 	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
 		CounterValue: &counterValue,
-		Key: []byte(generatedKey),
+		Key:          []byte(generatedKey),
 	}
 
 	builder := NewUpdateCounterCommandBuilder().
@@ -117,6 +117,118 @@ func TestValidationOfUpdateCounterViaBuilder(t *testing.T) {
 
 	// validate that Key is required
 	builder = NewUpdateCounterCommandBuilder()
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+}
+
+// FetchCounter
+// DtFetchReq
+
+func TestBuildDtFetchReqCorrectlyViaFetchCounterCommandBuilder(t *testing.T) {
+	builder := NewFetchCounterCommandBuilder().
+		WithBucketType("counters").
+		WithBucket("myBucket").
+		WithKey("counter_1").
+		WithR(3).
+		WithPr(1).
+		WithNotFoundOk(true).
+		WithBasicQuorum(true).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if req, ok := protobuf.(*rpbRiakDT.DtFetchReq); ok {
+		if expected, actual := "counters", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "myBucket", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "counter_1", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(3), req.GetR(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(1), req.GetPr(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetNotfoundOk(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetBasicQuorum(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakDT.DtFetchReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestFetchCounterParsesDtFetchRespCorrectly(t *testing.T) {
+	counterValue := int64(1234)
+	dtValue := &rpbRiakDT.DtValue{
+		CounterValue: &counterValue,
+	}
+	dtFetchResp := &rpbRiakDT.DtFetchResp{
+		Value: dtValue,
+	}
+
+	builder := NewFetchCounterCommandBuilder().
+		WithBucketType("counters").
+		WithBucket("myBucket").
+		WithKey("counter_1")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+
+	cmd.onSuccess(dtFetchResp)
+
+	if uc, ok := cmd.(*FetchCounterCommand); ok {
+		rsp := uc.Response
+		if expected, actual := counterValue, rsp.CounterValue; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchCounterCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestValidationOfFetchCounterViaBuilder(t *testing.T) {
+	// validate that Bucket is required
+	builder := NewFetchCounterCommandBuilder()
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is required
+	builder = NewFetchCounterCommandBuilder()
 	builder.WithBucket("bucket_name")
 	_, err = builder.Build()
 	if err == nil {

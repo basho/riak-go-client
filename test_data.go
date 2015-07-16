@@ -17,16 +17,14 @@ var remoteAddress = "riak-test:10017"
 var vclock = bytes.NewBufferString("vclock123456789")
 var vclockBytes = vclock.Bytes()
 
-/*
- * Test bucket type
- *
- * Please create the type 'leveldb_type' to use this:
- *
- * riak-admin bucket-type create leveldb_type '{"props":{"backend":"leveldb_backend"}}'
- * riak-admin bucket-type activate leveldb_type
- */
+// riak-admin bucket-type create leveldb_type '{"props":{"backend":"leveldb_backend"}}'
+// riak-admin bucket-type activate leveldb_type
 var testBucketType = "leveldb_type"
 var testBucketName = "riak_index_tests"
+
+// riak_admin bucket-type create counters '{"props":{"datatype":"counter"}}'
+// riak-admin bucket-type activate leveldb_type
+var testCounterBucketType = "counters"
 
 func init() {
 	if hostEnvVar := os.ExpandEnv("$RIAK_HOST"); hostEnvVar != "" {
