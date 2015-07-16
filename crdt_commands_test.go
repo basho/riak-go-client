@@ -213,6 +213,35 @@ func TestFetchCounterParsesDtFetchRespCorrectly(t *testing.T) {
 	}
 }
 
+func TestFetchCounterParsesDtFetchRespWithoutValueCorrectly(t *testing.T) {
+	builder := NewFetchCounterCommandBuilder().
+		WithBucketType("counters").
+		WithBucket("myBucket").
+		WithKey("counter_1")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+
+	dtFetchResp := &rpbRiakDT.DtFetchResp{}
+	cmd.onSuccess(dtFetchResp)
+
+	if uc, ok := cmd.(*FetchCounterCommand); ok {
+		if expected, actual := true, uc.Response.IsNotFound; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchCounterCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
 func TestValidationOfFetchCounterViaBuilder(t *testing.T) {
 	// validate that Bucket is required
 	builder := NewFetchCounterCommandBuilder()

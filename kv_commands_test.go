@@ -164,8 +164,7 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 
 	if fetchValueCommand, ok := cmd.(*FetchValueCommand); ok {
 		if fetchValueCommand.Response == nil {
-			t.Error("unexpected nil object")
-			t.FailNow()
+			t.Fatal("unexpected nil object")
 		}
 		if expected, actual := true, fetchValueCommand.Success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
@@ -175,8 +174,7 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 		}
 		riakObject := fetchValueCommand.Response.Values[0]
 		if riakObject == nil {
-			t.Error("unexpected nil object")
-			t.FailNow()
+			t.Fatal("unexpected nil object")
 		}
 		if expected, actual := "bucket_type", riakObject.BucketType; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
@@ -245,6 +243,32 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := "vclock123456789", string(riakObject.VClock); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestParseRpbGetRespWithoutContentCorrectly(t *testing.T) {
+	builder := NewFetchValueCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("key").
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	cmd.onSuccess(nil)
+	if expected, actual := true, cmd.Successful(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+	if fetchValueCommand, ok := cmd.(*FetchValueCommand); ok {
+		if fetchValueCommand.Response == nil {
+			t.Fatal("unexpected nil object")
+		}
+		if expected, actual := true, fetchValueCommand.Response.IsNotFound; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 	} else {
@@ -607,8 +631,7 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 
 	if storeValueCommand, ok := cmd.(*StoreValueCommand); ok {
 		if storeValueCommand.Response == nil {
-			t.Error("unexpected nil object")
-			t.FailNow()
+			t.Fatal("unexpected nil object")
 		}
 		if expected, actual := true, storeValueCommand.Success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
@@ -618,8 +641,7 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 		}
 		ro := storeValueCommand.Response.Values[0]
 		if ro == nil {
-			t.Error("unexpected nil object")
-			t.FailNow()
+			t.Fatal("unexpected nil object")
 		}
 		if expected, actual := "bucket_type", ro.BucketType; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
