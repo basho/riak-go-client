@@ -115,15 +115,12 @@ func TestValidationOfUpdateCounterViaBuilder(t *testing.T) {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 
-	// validate that Key is required
+	// validate that Key is NOT required
 	builder = NewUpdateCounterCommandBuilder()
 	builder.WithBucket("bucket_name")
 	_, err = builder.Build()
-	if err == nil {
-		t.Fatal("expected non-nil err")
-	}
-	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
-		t.Errorf("expected %v, actual %v", expected, actual)
+	if err != nil {
+		t.Fatal("expected nil err")
 	}
 }
 
