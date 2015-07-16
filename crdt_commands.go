@@ -265,7 +265,7 @@ func (cmd *UpdateSetCommand) onSuccess(msg proto.Message) error {
 		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
 			response := &UpdateSetResponse{
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
-				SetValue: rpbDtUpdateResp.GetSetValue(),
+				SetValue:     rpbDtUpdateResp.GetSetValue(),
 			}
 			cmd.Response = response
 		} else {
@@ -289,7 +289,7 @@ func (cmd *UpdateSetCommand) getResponseProtobufMessage() proto.Message {
 
 type UpdateSetResponse struct {
 	GeneratedKey string
-	SetValue [][]byte
+	SetValue     [][]byte
 }
 
 type UpdateSetCommandBuilder struct {
@@ -440,8 +440,8 @@ func (cmd *FetchSetCommand) getResponseProtobufMessage() proto.Message {
 }
 
 type FetchSetResponse struct {
-	IsNotFound   bool
-	SetValue [][]byte
+	IsNotFound bool
+	SetValue   [][]byte
 }
 
 type FetchSetCommandBuilder struct {

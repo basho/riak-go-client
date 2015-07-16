@@ -11,6 +11,7 @@ import (
 
 // UpdateCounter
 // DtUpdateReq
+// DtUpdateResp
 
 func TestBuildDtUpdateReqCorrectlyViaUpdateCounterCommandBuilder(t *testing.T) {
 	builder := NewUpdateCounterCommandBuilder().
@@ -128,6 +129,7 @@ func TestValidationOfUpdateCounterViaBuilder(t *testing.T) {
 
 // FetchCounter
 // DtFetchReq
+// DtFetchResp
 
 func TestBuildDtFetchReqCorrectlyViaFetchCounterCommandBuilder(t *testing.T) {
 	builder := NewFetchCounterCommandBuilder().
@@ -280,6 +282,7 @@ func sliceIncludes(slice [][]byte, term []byte) (rv bool) {
 
 // UpdateSet
 // DtUpdateReq
+// DtUpdateResp
 
 func TestBuildDtUpdateReqCorrectlyViaUpdateSetCommandBuilder(t *testing.T) {
 	builder := NewUpdateSetCommandBuilder().
@@ -349,20 +352,23 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateSetCommandBuilder(t *testing.T) {
 	}
 }
 
-/*
 func TestUpdateSetParsesDtUpdateRespCorrectly(t *testing.T) {
-	counterValue := int64(1234)
+	setValue := [][]byte{
+		[]byte("v1"),
+		[]byte("v2"),
+		[]byte("v3"),
+		[]byte("v4"),
+	}
 	generatedKey := "generated_key"
 	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
-		SetValue: &counterValue,
-		Key:          []byte(generatedKey),
+		SetValue: setValue,
+		Key:      []byte(generatedKey),
 	}
 
 	builder := NewUpdateSetCommandBuilder().
-		WithBucketType("counters").
-		WithBucket("myBucket").
-		WithKey("counter_1").
-		WithIncrement(100)
+		WithBucketType("sets").
+		WithBucket("bucket").
+		WithKey("key")
 	cmd, err := builder.Build()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -379,8 +385,11 @@ func TestUpdateSetParsesDtUpdateRespCorrectly(t *testing.T) {
 
 	if uc, ok := cmd.(*UpdateSetCommand); ok {
 		rsp := uc.Response
-		if expected, actual := int64(1234), rsp.SetValue; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		for i := 1; i <= 4; i++ {
+			sitem := fmt.Sprintf("v%d", i)
+			if expected, actual := true, sliceIncludes(rsp.SetValue, []byte(sitem)); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
 		}
 		if expected, actual := "generated_key", rsp.GeneratedKey; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
@@ -389,7 +398,6 @@ func TestUpdateSetParsesDtUpdateRespCorrectly(t *testing.T) {
 		t.Errorf("ok: %v - could not convert %v to *UpdateSetCommand", ok, reflect.TypeOf(cmd))
 	}
 }
-*/
 
 func TestValidationOfUpdateSetViaBuilder(t *testing.T) {
 	// validate that Bucket is required
@@ -411,17 +419,17 @@ func TestValidationOfUpdateSetViaBuilder(t *testing.T) {
 	}
 }
 
-/*
 // FetchSet
 // DtFetchReq
+// DtFetchResp
 
 func TestBuildDtFetchReqCorrectlyViaFetchSetCommandBuilder(t *testing.T) {
 	builder := NewFetchSetCommandBuilder().
-		WithBucketType("counters").
-		WithBucket("myBucket").
-		WithKey("counter_1").
-		WithR(3).
-		WithPr(1).
+		WithBucketType("sets").
+		WithBucket("bucket").
+		WithKey("key").
+		WithR(1).
+		WithPr(2).
 		WithNotFoundOk(true).
 		WithBasicQuorum(true).
 		WithTimeout(time.Second * 20)
@@ -437,19 +445,19 @@ func TestBuildDtFetchReqCorrectlyViaFetchSetCommandBuilder(t *testing.T) {
 		t.FailNow()
 	}
 	if req, ok := protobuf.(*rpbRiakDT.DtFetchReq); ok {
-		if expected, actual := "counters", string(req.GetType()); expected != actual {
+		if expected, actual := "sets", string(req.GetType()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := "myBucket", string(req.GetBucket()); expected != actual {
+		if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := "counter_1", string(req.GetKey()); expected != actual {
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := uint32(3), req.GetR(); expected != actual {
+		if expected, actual := uint32(1), req.GetR(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		if expected, actual := uint32(1), req.GetPr(); expected != actual {
+		if expected, actual := uint32(2), req.GetPr(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 		if expected, actual := true, req.GetNotfoundOk(); expected != actual {
@@ -465,18 +473,21 @@ func TestBuildDtFetchReqCorrectlyViaFetchSetCommandBuilder(t *testing.T) {
 }
 
 func TestFetchSetParsesDtFetchRespCorrectly(t *testing.T) {
-	counterValue := int64(1234)
 	dtValue := &rpbRiakDT.DtValue{
-		SetValue: &counterValue,
+		SetValue: [][]byte{
+			[]byte("v1"),
+			[]byte("v2"),
+			[]byte("v3"),
+			[]byte("v4"),
+		},
 	}
 	dtFetchResp := &rpbRiakDT.DtFetchResp{
 		Value: dtValue,
 	}
-
 	builder := NewFetchSetCommandBuilder().
-		WithBucketType("counters").
-		WithBucket("myBucket").
-		WithKey("counter_1")
+		WithBucketType("sets").
+		WithBucket("bucket").
+		WithKey("key")
 	cmd, err := builder.Build()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -491,10 +502,13 @@ func TestFetchSetParsesDtFetchRespCorrectly(t *testing.T) {
 
 	cmd.onSuccess(dtFetchResp)
 
-	if uc, ok := cmd.(*FetchSetCommand); ok {
-		rsp := uc.Response
-		if expected, actual := counterValue, rsp.SetValue; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+	if fc, ok := cmd.(*FetchSetCommand); ok {
+		rsp := fc.Response
+		for i := 1; i <= 4; i++ {
+			sitem := fmt.Sprintf("v%d", i)
+			if expected, actual := true, sliceIncludes(rsp.SetValue, []byte(sitem)); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *FetchSetCommand", ok, reflect.TypeOf(cmd))
@@ -552,4 +566,3 @@ func TestValidationOfFetchSetViaBuilder(t *testing.T) {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 }
-*/
