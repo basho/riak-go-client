@@ -233,4 +233,28 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if _, ok := msg.(*rpbRiakDT.DtFetchResp); !ok {
 		t.Errorf("error casting %v to DtFetchResp", reflect.TypeOf(msg))
 	}
+	// UpdateSet
+	cmd = &UpdateSetCommand{}
+	if expected, actual := rpbCode_DtUpdateReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_DtUpdateResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakDT.DtUpdateResp); !ok {
+		t.Errorf("error casting %v to DtUpdateResp", reflect.TypeOf(msg))
+	}
+	// FetchSet
+	cmd = &FetchSetCommand{}
+	if expected, actual := rpbCode_DtFetchReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_DtFetchResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakDT.DtFetchResp); !ok {
+		t.Errorf("error casting %v to DtFetchResp", reflect.TypeOf(msg))
+	}
 }

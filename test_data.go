@@ -17,6 +17,9 @@ var remoteAddress = "riak-test:10017"
 var vclock = bytes.NewBufferString("vclock123456789")
 var vclockBytes = vclock.Bytes()
 
+var crdtContext = bytes.NewBufferString("crdt_context")
+var crdtContextBytes = crdtContext.Bytes()
+
 // riak-admin bucket-type create leveldb_type '{"props":{"backend":"leveldb_backend"}}'
 // riak-admin bucket-type activate leveldb_type
 var testBucketType = "leveldb_type"
