@@ -333,3 +333,25 @@ func TestFetchPreflistForAValue(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+// SecondaryIndexQueryCommand
+
+func TestIntQueryAgainstDefaultType(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestIntQueryAgainstNonDefaultType(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestBinQueryAgainstDefaultType(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestBinQueryAgainstNonDefaultType(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestSetContinuationOnPaginatedQuery(t *testing.T) {
+	t.Fatal("TODO")
+}
