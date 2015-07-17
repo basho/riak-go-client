@@ -846,6 +846,7 @@ func TestValidationOfUpdateMapViaBuilder(t *testing.T) {
 	// validate that Key is NOT required
 	builder = NewUpdateMapCommandBuilder()
 	builder.WithBucket("bucket_name")
+	builder.WithMapOperation(&MapOperation{})
 	_, err = builder.Build()
 	if err != nil {
 		t.Fatal("expected nil err")
