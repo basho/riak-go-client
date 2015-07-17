@@ -782,25 +782,73 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateMapCommandBuilder(t *testing.T) {
 	}
 }
 
-/*
-TODO
 func TestUpdateMapParsesDtUpdateRespCorrectly(t *testing.T) {
-	setValue := [][]byte{
-		[]byte("v1"),
-		[]byte("v2"),
-		[]byte("v3"),
-		[]byte("v4"),
+	var createMapEntries = func() []*rpbRiakDT.MapEntry {
+		counterValue := int64(50)
+		setValue := [][]byte{
+			[]byte("value_1"),
+			[]byte("value_2"),
+		}
+		flagValue := true
+
+		mapEntries := []*rpbRiakDT.MapEntry{
+			{
+				Field: &rpbRiakDT.MapField{
+					Type: rpbRiakDT.MapField_COUNTER.Enum(),
+					Name: []byte("counter_1"),
+				},
+				CounterValue: &counterValue,
+			},
+			{
+				Field: &rpbRiakDT.MapField{
+					Type: rpbRiakDT.MapField_SET.Enum(),
+					Name: []byte("set_1"),
+				},
+				SetValue: setValue,
+			},
+			{
+				Field: &rpbRiakDT.MapField{
+					Type: rpbRiakDT.MapField_REGISTER.Enum(),
+					Name: []byte("register_1"),
+				},
+				RegisterValue: []byte("1234"),
+			},
+			{
+				Field: &rpbRiakDT.MapField{
+					Type: rpbRiakDT.MapField_FLAG.Enum(),
+					Name: []byte("flag_1"),
+				},
+				FlagValue: &flagValue,
+			},
+		}
+
+		return mapEntries
 	}
+
 	generatedKey := "generated_key"
 	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
-		SetValue: setValue,
+		Context:  crdtContextBytes,
 		Key:      []byte(generatedKey),
+		MapValue: make([]*rpbRiakDT.MapEntry, 0, 5),
 	}
+	dtUpdateResp.MapValue = append(dtUpdateResp.MapValue, createMapEntries()...)
+
+	mapEntry := &rpbRiakDT.MapEntry{
+		Field: &rpbRiakDT.MapField{
+			Type: rpbRiakDT.MapField_MAP.Enum(),
+			Name: []byte("map_1"),
+		},
+		MapValue: make([]*rpbRiakDT.MapEntry, 0, 4),
+	}
+	mapEntry.MapValue = append(mapEntry.MapValue, createMapEntries()...)
+
+	dtUpdateResp.MapValue = append(dtUpdateResp.MapValue, mapEntry)
 
 	builder := NewUpdateMapCommandBuilder().
 		WithBucketType("sets").
 		WithBucket("bucket").
-		WithKey("key")
+		WithKey("key").
+		WithMapOperation(&MapOperation{})
 	cmd, err := builder.Build()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -817,20 +865,51 @@ func TestUpdateMapParsesDtUpdateRespCorrectly(t *testing.T) {
 
 	if uc, ok := cmd.(*UpdateMapCommand); ok {
 		rsp := uc.Response
-		for i := 1; i <= 4; i++ {
-			sitem := fmt.Sprintf("v%d", i)
-			if expected, actual := true, sliceIncludes(rsp.SetValue, []byte(sitem)); expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-		}
 		if expected, actual := "generated_key", rsp.GeneratedKey; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *UpdateMapCommand", ok, reflect.TypeOf(cmd))
 	}
+
+	/*
+
+		var callback = function(err, resp) {
+			assert(resp !== null);
+			assert.equal(resp.generatedKey.toString('utf8'), 'riak_generated_key');
+			assert.equal(resp.context.toString('utf8'), '1234');
+
+			var verifyMap = function(map) {
+				assert.equal(map.counters.counter_1, 50);
+				assert.equal(map.sets.set_1[0], 'value_1');
+				assert.equal(map.sets.set_1[1], 'value_2');
+				assert.equal(map.registers.register_1.toString('utf8'), '1234');
+				assert.equal(map.flags.flag_1, true);
+			};
+
+			verifyMap(resp.map);
+			verifyMap(resp.map.maps.map_1);
+			done();
+
+		};
+
+		var mapOp = new UpdateMap.MapOperation();
+
+
+		var update = new UpdateMap.Builder()
+			.withBucketType('maps')
+			.withBucket('myBucket')
+			.withKey('map_1')
+			.withMapOperation(mapOp)
+			.withCallback(callback)
+			.build();
+
+		update.onSuccess(dtUpdateResp);
+	*/
 }
-*/
 
 func TestValidationOfUpdateMapViaBuilder(t *testing.T) {
 	// validate that Bucket is required

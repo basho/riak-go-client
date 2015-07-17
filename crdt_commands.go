@@ -535,7 +535,7 @@ func (cmd *UpdateMapCommand) onSuccess(msg proto.Message) error {
 		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
 			response := &UpdateMapResponse{
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
-				SetValue:     rpbDtUpdateResp.GetSetValue(),
+				Context:      rpbDtUpdateResp.GetContext(),
 			}
 			cmd.Response = response
 		} else {
@@ -751,12 +751,7 @@ func (mapOp *MapOperation) AddToSet(key string, value []byte) *MapOperation {
 	if mapOp.addToSets == nil {
 		mapOp.addToSets = make(map[string][][]byte)
 	}
-	if set, ok := mapOp.addToSets[key]; !ok {
-		mapOp.addToSets[key] = make([][]byte, 1)
-		mapOp.addToSets[key][0] = value
-	} else {
-		mapOp.addToSets[key] = append(set, value)
-	}
+	mapOp.addToSets[key] = append(mapOp.addToSets[key], value)
 	return mapOp
 }
 
@@ -767,12 +762,7 @@ func (mapOp *MapOperation) RemoveFromSet(key string, value []byte) *MapOperation
 	if mapOp.removeFromSets == nil {
 		mapOp.removeFromSets = make(map[string][][]byte)
 	}
-	if set, ok := mapOp.removeFromSets[key]; !ok {
-		mapOp.removeFromSets[key] = make([][]byte, 1)
-		mapOp.removeFromSets[key][0] = value
-	} else {
-		mapOp.removeFromSets[key] = append(set, value)
-	}
+	mapOp.removeFromSets[key] = append(mapOp.removeFromSets[key], value)
 	return mapOp
 }
 
@@ -841,11 +831,13 @@ func (mapOp *MapOperation) Map(key string) *MapOperation {
 	if mapOp.maps == nil {
 		mapOp.maps = make(map[string]*MapOperation)
 	}
-	if innerMapOp, ok := mapOp.maps[key]; !ok {
+	if innerMapOp, ok := mapOp.maps[key]; ok {
+		return innerMapOp
+	} else {
 		innerMapOp = &MapOperation{}
 		mapOp.maps[key] = innerMapOp
+		return innerMapOp
 	}
-	return mapOp.maps[key]
 }
 
 func (mapOp *MapOperation) RemoveMap(key string) *MapOperation {
@@ -882,9 +874,18 @@ func (mapOp *MapOperation) hasRemoves(includeRemoveFromSets bool) bool {
 	return rv
 }
 
+type Map struct {
+	Counters  map[string]int64
+	Sets      map[string][][]byte
+	Registers map[string][]byte
+	Flags     map[string]bool
+	Maps      map[string]*Map
+}
+
 type UpdateMapResponse struct {
 	GeneratedKey string
-	SetValue     [][]byte
+	Context      []byte
+	Map          *Map
 }
 
 type UpdateMapCommandBuilder struct {
