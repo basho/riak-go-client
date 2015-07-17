@@ -1001,6 +1001,9 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 	if builder.mapOperation == nil {
 		return nil, errors.New("UpdateMapCommandBuilder requires non-nil MapOperation. Use WithMapOperation()")
 	}
+	if builder.mapOperation.hasRemoves(true) && builder.protobuf.GetContext() == nil {
+		return nil, errors.New("When doing any removes a context must be provided.")
+	}
 	return &UpdateMapCommand{protobuf: builder.protobuf, op: builder.mapOperation}, nil
 }
 

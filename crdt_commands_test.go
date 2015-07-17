@@ -928,6 +928,17 @@ func TestValidationOfUpdateMapViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal("expected nil err")
 	}
+
+	// validate that context is required when removes are present
+	op := &MapOperation{}
+	op.RemoveSet("set_1")
+	builder = NewUpdateMapCommandBuilder()
+	builder.WithBucket("bucket_name")
+	builder.WithMapOperation(op)
+	_, err = builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
 }
 
 // FetchMap
