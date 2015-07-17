@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"errors"
 	"fmt"
 	rpbRiakDT "github.com/basho-labs/riak-go-client/rpb/riak_dt"
 	proto "github.com/golang/protobuf/proto"
@@ -501,4 +502,460 @@ func (builder *FetchSetCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	return &FetchSetCommand{protobuf: builder.protobuf}, nil
+}
+
+// UpdateMap
+// DtUpdateReq
+// DtUpdateResp
+
+type UpdateMapCommand struct {
+	CommandImpl
+	Response *UpdateMapResponse
+	op       *MapOperation
+	protobuf *rpbRiakDT.DtUpdateReq
+}
+
+func (cmd *UpdateMapCommand) Name() string {
+	return "UpdateMap"
+}
+
+func (cmd *UpdateMapCommand) constructPbRequest() (proto.Message, error) {
+	pbMapOp := &rpbRiakDT.MapOp{}
+	populate(cmd.op, pbMapOp)
+
+	cmd.protobuf.Op = &rpbRiakDT.DtOp{
+		MapOp: pbMapOp,
+	}
+	return cmd.protobuf, nil
+}
+
+func (cmd *UpdateMapCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	if msg != nil {
+		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
+			response := &UpdateMapResponse{
+				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
+				SetValue:     rpbDtUpdateResp.GetSetValue(),
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[UpdateMapCommand] could not convert %v to DtUpdateResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *UpdateMapCommand) getRequestCode() byte {
+	return rpbCode_DtUpdateReq
+}
+
+func (cmd *UpdateMapCommand) getResponseCode() byte {
+	return rpbCode_DtUpdateResp
+}
+
+func (cmd *UpdateMapCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakDT.DtUpdateResp{}
+}
+
+func addMapUpdate(pbMapOp *rpbRiakDT.MapOp, update *rpbRiakDT.MapUpdate) {
+	if pbMapOp.Updates == nil {
+		pbMapOp.Updates = make([]*rpbRiakDT.MapUpdate, 1)
+		pbMapOp.Updates[0] = update
+	} else {
+		pbMapOp.Updates = append(pbMapOp.Updates, update)
+	}
+}
+
+func addMapRemove(pbMapOp *rpbRiakDT.MapOp, field *rpbRiakDT.MapField) {
+	if pbMapOp.Removes == nil {
+		pbMapOp.Removes = make([]*rpbRiakDT.MapField, 1)
+		pbMapOp.Removes[0] = field
+	} else {
+		pbMapOp.Removes = append(pbMapOp.Removes, field)
+	}
+}
+func populate(mapOp *MapOperation, pbMapOp *rpbRiakDT.MapOp) {
+	if mapOp.hasRemoves(false) {
+		for name := range mapOp.removeCounters {
+			field := &rpbRiakDT.MapField{
+				Name: []byte(name),
+				Type: rpbRiakDT.MapField_COUNTER.Enum(),
+			}
+			addMapRemove(pbMapOp, field)
+		}
+		for name := range mapOp.removeSets {
+			field := &rpbRiakDT.MapField{
+				Name: []byte(name),
+				Type: rpbRiakDT.MapField_SET.Enum(),
+			}
+			addMapRemove(pbMapOp, field)
+		}
+		for name := range mapOp.removeMaps {
+			field := &rpbRiakDT.MapField{
+				Name: []byte(name),
+				Type: rpbRiakDT.MapField_MAP.Enum(),
+			}
+			addMapRemove(pbMapOp, field)
+		}
+		for name := range mapOp.removeRegisters {
+			field := &rpbRiakDT.MapField{
+				Name: []byte(name),
+				Type: rpbRiakDT.MapField_REGISTER.Enum(),
+			}
+			addMapRemove(pbMapOp, field)
+		}
+		for name := range mapOp.removeFlags {
+			field := &rpbRiakDT.MapField{
+				Name: []byte(name),
+				Type: rpbRiakDT.MapField_FLAG.Enum(),
+			}
+			addMapRemove(pbMapOp, field)
+		}
+	}
+
+	for name, increment := range mapOp.incrementCounters {
+		field := &rpbRiakDT.MapField{
+			Name: []byte(name),
+			Type: rpbRiakDT.MapField_COUNTER.Enum(),
+		}
+		counterOp := &rpbRiakDT.CounterOp{
+			Increment: &increment,
+		}
+		update := &rpbRiakDT.MapUpdate{
+			Field:     field,
+			CounterOp: counterOp,
+		}
+		addMapUpdate(pbMapOp, update)
+	}
+	for name, adds := range mapOp.addToSets {
+		field := &rpbRiakDT.MapField{
+			Name: []byte(name),
+			Type: rpbRiakDT.MapField_SET.Enum(),
+		}
+		setOp := &rpbRiakDT.SetOp{
+			Adds: make([][]byte, len(adds)),
+		}
+		for i, add := range adds {
+			setOp.Adds[i] = add
+		}
+		update := &rpbRiakDT.MapUpdate{
+			Field: field,
+			SetOp: setOp,
+		}
+		addMapUpdate(pbMapOp, update)
+	}
+	for name, removes := range mapOp.removeFromSets {
+		field := &rpbRiakDT.MapField{
+			Name: []byte(name),
+			Type: rpbRiakDT.MapField_SET.Enum(),
+		}
+		setOp := &rpbRiakDT.SetOp{
+			Removes: make([][]byte, len(removes)),
+		}
+		for i, remove := range removes {
+			setOp.Removes[i] = remove
+		}
+		update := &rpbRiakDT.MapUpdate{
+			Field: field,
+			SetOp: setOp,
+		}
+		addMapUpdate(pbMapOp, update)
+	}
+	for name, register := range mapOp.registersToSet {
+		field := &rpbRiakDT.MapField{
+			Name: []byte(name),
+			Type: rpbRiakDT.MapField_REGISTER.Enum(),
+		}
+		update := &rpbRiakDT.MapUpdate{
+			Field:      field,
+			RegisterOp: register,
+		}
+		addMapUpdate(pbMapOp, update)
+	}
+	for name, flag := range mapOp.flagsToSet {
+		field := &rpbRiakDT.MapField{
+			Name: []byte(name),
+			Type: rpbRiakDT.MapField_FLAG.Enum(),
+		}
+		var flagOp rpbRiakDT.MapUpdate_FlagOp
+		if flag {
+			flagOp = rpbRiakDT.MapUpdate_ENABLE
+		} else {
+			flagOp = rpbRiakDT.MapUpdate_DISABLE
+		}
+		update := &rpbRiakDT.MapUpdate{
+			Field:  field,
+			FlagOp: flagOp.Enum(),
+		}
+		addMapUpdate(pbMapOp, update)
+	}
+	for name, mapOp := range mapOp.maps {
+		field := &rpbRiakDT.MapField{
+			Name: []byte(name),
+			Type: rpbRiakDT.MapField_MAP.Enum(),
+		}
+		nestedMapOp := &rpbRiakDT.MapOp{}
+		populate(mapOp, nestedMapOp)
+		update := &rpbRiakDT.MapUpdate{
+			Field: field,
+			MapOp: nestedMapOp,
+		}
+		addMapUpdate(pbMapOp, update)
+	}
+}
+
+type MapOperation struct {
+	incrementCounters map[string]int64
+	removeCounters    map[string]bool
+
+	addToSets      map[string][][]byte
+	removeFromSets map[string][][]byte
+	removeSets     map[string]bool
+
+	registersToSet  map[string][]byte
+	removeRegisters map[string]bool
+
+	flagsToSet  map[string]bool
+	removeFlags map[string]bool
+
+	maps       map[string]*MapOperation
+	removeMaps map[string]bool
+}
+
+func (mapOp *MapOperation) IncrementCounter(key string, increment int64) *MapOperation {
+	if mapOp.removeCounters != nil {
+		delete(mapOp.removeCounters, key)
+	}
+	if mapOp.incrementCounters == nil {
+		mapOp.incrementCounters = make(map[string]int64)
+	}
+	mapOp.incrementCounters[key] += increment
+	return mapOp
+}
+
+func (mapOp *MapOperation) RemoveCounter(key string) *MapOperation {
+	if mapOp.incrementCounters != nil {
+		delete(mapOp.incrementCounters, key)
+	}
+	if mapOp.removeCounters == nil {
+		mapOp.removeCounters = make(map[string]bool)
+	}
+	mapOp.removeCounters[key] = true
+	return mapOp
+}
+
+func (mapOp *MapOperation) AddToSet(key string, value []byte) *MapOperation {
+	if mapOp.removeSets != nil {
+		delete(mapOp.removeSets, key)
+	}
+	if mapOp.addToSets == nil {
+		mapOp.addToSets = make(map[string][][]byte)
+	}
+	if set, ok := mapOp.addToSets[key]; !ok {
+		mapOp.addToSets[key] = make([][]byte, 1)
+		mapOp.addToSets[key][0] = value
+	} else {
+		mapOp.addToSets[key] = append(set, value)
+	}
+	return mapOp
+}
+
+func (mapOp *MapOperation) RemoveFromSet(key string, value []byte) *MapOperation {
+	if mapOp.removeSets != nil {
+		delete(mapOp.removeSets, key)
+	}
+	if mapOp.removeFromSets == nil {
+		mapOp.removeFromSets = make(map[string][][]byte)
+	}
+	if set, ok := mapOp.removeFromSets[key]; !ok {
+		mapOp.removeFromSets[key] = make([][]byte, 1)
+		mapOp.removeFromSets[key][0] = value
+	} else {
+		mapOp.removeFromSets[key] = append(set, value)
+	}
+	return mapOp
+}
+
+func (mapOp *MapOperation) RemoveSet(key string) *MapOperation {
+	if mapOp.addToSets != nil {
+		delete(mapOp.addToSets, key)
+	}
+	if mapOp.removeFromSets != nil {
+		delete(mapOp.removeFromSets, key)
+	}
+	if mapOp.removeSets == nil {
+		mapOp.removeSets = make(map[string]bool)
+	}
+	mapOp.removeSets[key] = true
+	return mapOp
+}
+
+func (mapOp *MapOperation) SetRegister(key string, value []byte) *MapOperation {
+	if mapOp.removeRegisters != nil {
+		delete(mapOp.removeRegisters, key)
+	}
+	if mapOp.registersToSet == nil {
+		mapOp.registersToSet = make(map[string][]byte)
+	}
+	mapOp.registersToSet[key] = value
+	return mapOp
+}
+
+func (mapOp *MapOperation) RemoveRegister(key string) *MapOperation {
+	if mapOp.registersToSet != nil {
+		delete(mapOp.registersToSet, key)
+	}
+	if mapOp.removeRegisters == nil {
+		mapOp.removeRegisters = make(map[string]bool)
+	}
+	mapOp.removeRegisters[key] = true
+	return mapOp
+}
+
+func (mapOp *MapOperation) SetFlag(key string, value bool) *MapOperation {
+	if mapOp.removeFlags != nil {
+		delete(mapOp.removeFlags, key)
+	}
+	if mapOp.flagsToSet == nil {
+		mapOp.flagsToSet = make(map[string]bool)
+	}
+	mapOp.flagsToSet[key] = value
+	return mapOp
+}
+
+func (mapOp *MapOperation) RemoveFlag(key string) *MapOperation {
+	if mapOp.flagsToSet != nil {
+		delete(mapOp.flagsToSet, key)
+	}
+	if mapOp.removeFlags == nil {
+		mapOp.removeFlags = make(map[string]bool)
+	}
+	mapOp.removeFlags[key] = true
+	return mapOp
+}
+
+func (mapOp *MapOperation) Map(key string) *MapOperation {
+	if mapOp.removeMaps != nil {
+		delete(mapOp.removeMaps, key)
+	}
+	if mapOp.maps == nil {
+		mapOp.maps = make(map[string]*MapOperation)
+	}
+	if innerMapOp, ok := mapOp.maps[key]; !ok {
+		innerMapOp = &MapOperation{}
+		mapOp.maps[key] = innerMapOp
+	}
+	return mapOp.maps[key]
+}
+
+func (mapOp *MapOperation) RemoveMap(key string) *MapOperation {
+	if mapOp.maps != nil {
+		delete(mapOp.maps, key)
+	}
+	if mapOp.removeMaps == nil {
+		mapOp.removeMaps = make(map[string]bool)
+	}
+	mapOp.removeMaps[key] = true
+	return mapOp
+}
+
+func (mapOp *MapOperation) hasRemoves(includeRemoveFromSets bool) bool {
+	nestedHaveRemoves := false
+	for _, m := range mapOp.maps {
+		if m.hasRemoves(false) {
+			nestedHaveRemoves = true
+			break
+		}
+	}
+
+	rv := nestedHaveRemoves ||
+		len(mapOp.removeCounters) > 0 ||
+		len(mapOp.removeSets) > 0 ||
+		len(mapOp.removeRegisters) > 0 ||
+		len(mapOp.removeFlags) > 0 ||
+		len(mapOp.removeMaps) > 0
+
+	if includeRemoveFromSets {
+		rv = rv || len(mapOp.removeFromSets) > 0
+	}
+
+	return rv
+}
+
+type UpdateMapResponse struct {
+	GeneratedKey string
+	SetValue     [][]byte
+}
+
+type UpdateMapCommandBuilder struct {
+	mapOperation *MapOperation
+	protobuf     *rpbRiakDT.DtUpdateReq
+}
+
+func NewUpdateMapCommandBuilder() *UpdateMapCommandBuilder {
+	return &UpdateMapCommandBuilder{protobuf: &rpbRiakDT.DtUpdateReq{}}
+}
+
+func (builder *UpdateMapCommandBuilder) WithBucketType(bucketType string) *UpdateMapCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithBucket(bucket string) *UpdateMapCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithKey(key string) *UpdateMapCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithContext(context []byte) *UpdateMapCommandBuilder {
+	builder.protobuf.Context = context
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithMapOperation(mapOperation *MapOperation) *UpdateMapCommandBuilder {
+	builder.mapOperation = mapOperation
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithW(w uint32) *UpdateMapCommandBuilder {
+	builder.protobuf.W = &w
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithPw(pw uint32) *UpdateMapCommandBuilder {
+	builder.protobuf.Pw = &pw
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithDw(dw uint32) *UpdateMapCommandBuilder {
+	builder.protobuf.Dw = &dw
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithReturnBody(returnBody bool) *UpdateMapCommandBuilder {
+	builder.protobuf.ReturnBody = &returnBody
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) WithTimeout(timeout time.Duration) *UpdateMapCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	if builder.mapOperation == nil {
+		return nil, errors.New("UpdateMapCommandBuilder requires non-nil MapOperation. Use WithMapOperation()")
+	}
+	return &UpdateMapCommand{protobuf: builder.protobuf, op: builder.mapOperation}, nil
 }
