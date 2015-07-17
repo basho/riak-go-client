@@ -5,6 +5,7 @@ package riak
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func init() {
@@ -134,6 +135,118 @@ func TestUpdateAndFetchSet(t *testing.T) {
 			if expected, actual := true, sliceIncludes(rsp.SetValue, []byte(sitem)); expected != actual {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
+		}
+	} else {
+		t.FailNow()
+	}
+}
+
+// UpdateMap
+
+func TestUpdateAndFetchMap(t *testing.T) {
+	var err error
+	var cmd Command
+
+	mapOp := &MapOperation{}
+	mapOp.IncrementCounter("counter_1", 50).
+		AddToSet("set_1", []byte("value_1")).
+		SetRegister("register_1", []byte("register_value_1")).
+		SetFlag("flag_1", true)
+	mapOp.Map("map_2").IncrementCounter("counter_1", 50).
+		AddToSet("set_1", []byte("value_1")).
+		SetRegister("register_1", []byte("register_value_1")).
+		SetFlag("flag_1", true).
+		Map("map_3")
+	b1 := NewUpdateMapCommandBuilder()
+	cmd, err = b1.WithBucketType(testMapBucketType).
+		WithBucket(testBucketName).
+		WithMapOperation(mapOp).
+		WithReturnBody(true).
+		WithTimeout(time.Second * 20).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	key := "unknown"
+	if uc, ok := cmd.(*UpdateMapCommand); ok {
+		if uc.Response == nil {
+			t.Fatal("expected non-nil Response")
+		}
+		rsp := uc.Response
+		if rsp.GeneratedKey == "" {
+			t.Errorf("expected non-empty generated key")
+		} else {
+			key = rsp.GeneratedKey
+		}
+	} else {
+		t.FailNow()
+	}
+
+	var context []byte
+	b2 := NewFetchMapCommandBuilder()
+	cmd, err = b2.WithBucketType(testMapBucketType).
+		WithBucket(testBucketName).
+		WithKey(key).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if fc, ok := cmd.(*FetchMapCommand); ok {
+		if fc.Response == nil {
+			t.Fatal("expected non-nil Response")
+		}
+		rsp := fc.Response
+		var vmap = func(m *Map) {
+			if expected, actual := int64(50), m.Counters["counter_1"]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "value_1", string(m.Sets["set_1"][0]); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "register_value_1", string(m.Registers["register_1"]); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := true, m.Flags["flag_1"]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		}
+		vmap(rsp.Map)
+		vmap(rsp.Map.Maps["map_2"])
+		context = rsp.Context
+	} else {
+		t.FailNow()
+	}
+
+	mapOp = &MapOperation{}
+	mapOp.RemoveCounter("counter_1")
+	b3 := NewUpdateMapCommandBuilder()
+	cmd, err = b3.WithBucketType(testMapBucketType).
+		WithBucket(testBucketName).
+		WithKey(key).
+		WithMapOperation(mapOp).
+		WithContext(context).
+		WithReturnBody(true).
+		WithTimeout(time.Second * 20).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if uc, ok := cmd.(*UpdateMapCommand); ok {
+		if uc.Response == nil {
+			t.Fatal("expected non-nil Response")
+		}
+		rsp := uc.Response
+		if _, ok := rsp.Map.Counters["counter_1"]; ok {
+			t.Error("counter_1 should have been removed")
 		}
 	} else {
 		t.FailNow()

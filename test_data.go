@@ -33,6 +33,10 @@ const testCounterBucketType = "counters"
 // riak-admin bucket-type activate sets
 const testSetBucketType = "sets"
 
+// riak_admin bucket-type create maps '{"props":{"datatype":"map"}}'
+// riak-admin bucket-type activate maps
+const testMapBucketType = "maps"
+
 func init() {
 	if hostEnvVar := os.ExpandEnv("$RIAK_HOST"); hostEnvVar != "" {
 		riakHost = hostEnvVar
