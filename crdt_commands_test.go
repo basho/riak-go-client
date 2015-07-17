@@ -871,44 +871,28 @@ func TestUpdateMapParsesDtUpdateRespCorrectly(t *testing.T) {
 		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
+		var verifyMap = func(m *Map) {
+			if expected, actual := int64(50), m.Counters["counter_1"]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "value_1", string(m.Sets["set_1"][0]); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "value_2", string(m.Sets["set_1"][1]); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := "1234", string(m.Registers["register_1"]); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+			if expected, actual := true, m.Flags["flag_1"]; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		}
+		verifyMap(rsp.Map)
+		verifyMap(rsp.Map.Maps["map_1"])
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *UpdateMapCommand", ok, reflect.TypeOf(cmd))
 	}
-
-	/*
-
-		var callback = function(err, resp) {
-			assert(resp !== null);
-			assert.equal(resp.generatedKey.toString('utf8'), 'riak_generated_key');
-			assert.equal(resp.context.toString('utf8'), '1234');
-
-			var verifyMap = function(map) {
-				assert.equal(map.counters.counter_1, 50);
-				assert.equal(map.sets.set_1[0], 'value_1');
-				assert.equal(map.sets.set_1[1], 'value_2');
-				assert.equal(map.registers.register_1.toString('utf8'), '1234');
-				assert.equal(map.flags.flag_1, true);
-			};
-
-			verifyMap(resp.map);
-			verifyMap(resp.map.maps.map_1);
-			done();
-
-		};
-
-		var mapOp = new UpdateMap.MapOperation();
-
-
-		var update = new UpdateMap.Builder()
-			.withBucketType('maps')
-			.withBucket('myBucket')
-			.withKey('map_1')
-			.withMapOperation(mapOp)
-			.withCallback(callback)
-			.build();
-
-		update.onSuccess(dtUpdateResp);
-	*/
 }
 
 func TestValidationOfUpdateMapViaBuilder(t *testing.T) {

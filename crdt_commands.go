@@ -536,6 +536,7 @@ func (cmd *UpdateMapCommand) onSuccess(msg proto.Message) error {
 			response := &UpdateMapResponse{
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
 				Context:      rpbDtUpdateResp.GetContext(),
+				Map:          parsePbResponse(rpbDtUpdateResp.MapValue),
 			}
 			cmd.Response = response
 		} else {
@@ -574,6 +575,7 @@ func addMapRemove(pbMapOp *rpbRiakDT.MapOp, field *rpbRiakDT.MapField) {
 		pbMapOp.Removes = append(pbMapOp.Removes, field)
 	}
 }
+
 func populate(mapOp *MapOperation, pbMapOp *rpbRiakDT.MapOp) {
 	if mapOp.hasRemoves(false) {
 		for name := range mapOp.removeCounters {
@@ -872,6 +874,42 @@ func (mapOp *MapOperation) hasRemoves(includeRemoveFromSets bool) bool {
 	}
 
 	return rv
+}
+
+func parsePbResponse(pbMapEntries []*rpbRiakDT.MapEntry) *Map {
+	m := &Map{}
+	for _, mapEntry := range pbMapEntries {
+		mapField := mapEntry.GetField()
+		key := string(mapField.GetName())
+		switch mapField.GetType() {
+		case rpbRiakDT.MapField_COUNTER:
+			if m.Counters == nil {
+				m.Counters = make(map[string]int64)
+			}
+			m.Counters[key] = mapEntry.GetCounterValue()
+		case rpbRiakDT.MapField_SET:
+			if m.Sets == nil {
+				m.Sets = make(map[string][][]byte)
+			}
+			m.Sets[key] = mapEntry.SetValue
+		case rpbRiakDT.MapField_REGISTER:
+			if m.Registers == nil {
+				m.Registers = make(map[string][]byte)
+			}
+			m.Registers[key] = mapEntry.GetRegisterValue()
+		case rpbRiakDT.MapField_FLAG:
+			if m.Flags == nil {
+				m.Flags = make(map[string]bool)
+			}
+			m.Flags[key] = mapEntry.GetFlagValue()
+		case rpbRiakDT.MapField_MAP:
+			if m.Maps == nil {
+				m.Maps = make(map[string]*Map)
+			}
+			m.Maps[key] = parsePbResponse(mapEntry.MapValue)
+		}
+	}
+	return m
 }
 
 type Map struct {
