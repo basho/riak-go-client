@@ -1143,6 +1143,9 @@ func TestBuildRpbIndexReqCorrectlyViaBuilder(t *testing.T) {
 	}
 
 	continuationBytes := bytes.NewBufferString("continuation_1234").Bytes()
+	var cb = func(results []*SecondaryIndexQueryResult) error {
+		return nil
+	}
 
 	builder = NewSecondaryIndexQueryCommandBuilder().
 		WithBucketType("bucket_type").
@@ -1150,6 +1153,7 @@ func TestBuildRpbIndexReqCorrectlyViaBuilder(t *testing.T) {
 		WithIndexName("email_bin").
 		WithIndexKey("golang@basho.com").
 		WithReturnKeyAndIndex(true).
+		WithCallback(cb).
 		WithStreaming(true).
 		WithPaginationSort(true).
 		WithMaxResults(1024).
@@ -1362,6 +1366,72 @@ func TestMultipleRpbIndexRespWithObjectKeysCorrectlyStreams(t *testing.T) {
 		}
 		for j := 0; j < 5; j++ {
 			rpbIndexResp.Keys[j] = []byte("object_key")
+		}
+		if i == 19 {
+			rpbIndexResp.Done = &done
+			rpbIndexResp.Continuation = []byte("1234")
+		}
+		cmd.onSuccess(rpbIndexResp)
+	}
+
+	if expected, actual := 20, timesCalled; expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+	if expected, actual := 100, count; expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+	if siq, ok := cmd.(*SecondaryIndexQueryCommand); ok {
+		if expected, actual := true, siq.done; expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		rsp := siq.Response
+		if rsp == nil {
+			t.Fatal("expected non-nil Response")
+		}
+		if expected, actual := "1234", string(rsp.Continuation); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *SecondaryIndexQueryCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestMultipleRpbIndexRespWithTermKeyPairsCorrectlyStreams(t *testing.T) {
+	count := 0
+	timesCalled := 0
+	var cb = func(results []*SecondaryIndexQueryResult) error {
+		timesCalled++
+		count += len(results)
+		if expected, actual := "index_key", string(results[0].IndexKey); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		if expected, actual := "object_key", string(results[0].ObjectKey); expected != actual {
+			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+		return nil
+	}
+
+	builder := NewSecondaryIndexQueryCommandBuilder().
+		WithBucket("bucket").
+		WithIndexName("id_int").
+		WithCallback(cb).
+		WithStreaming(true).
+		WithReturnKeyAndIndex(true).
+		WithIntRange(0, 50)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	done := true
+	for i := 0; i < 20; i++ {
+		rpbIndexResp := &rpbRiakKV.RpbIndexResp{}
+		for j := 0; j < 5; j++ {
+			pair := &rpbRiak.RpbPair{
+				Key:   []byte("index_key"),
+				Value: []byte("object_key"),
+			}
+			rpbIndexResp.Results = append(rpbIndexResp.Results, pair)
 		}
 		if i == 19 {
 			rpbIndexResp.Done = &done
