@@ -186,6 +186,7 @@ func TestFetchCounterParsesDtFetchRespCorrectly(t *testing.T) {
 		CounterValue: &counterValue,
 	}
 	dtFetchResp := &rpbRiakDT.DtFetchResp{
+		Type:  rpbRiakDT.DtFetchResp_COUNTER.Enum(),
 		Value: dtValue,
 	}
 
@@ -352,6 +353,7 @@ func TestUpdateSetParsesDtUpdateRespCorrectly(t *testing.T) {
 	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
 		SetValue: setValue,
 		Key:      []byte(generatedKey),
+		Context:  crdtContextBytes,
 	}
 
 	builder := NewUpdateSetCommandBuilder().
@@ -374,6 +376,9 @@ func TestUpdateSetParsesDtUpdateRespCorrectly(t *testing.T) {
 
 	if uc, ok := cmd.(*UpdateSetCommand); ok {
 		rsp := uc.Response
+		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
 		for i := 1; i <= 4; i++ {
 			sitem := fmt.Sprintf("v%d", i)
 			if expected, actual := true, sliceIncludes(rsp.SetValue, []byte(sitem)); expected != actual {
@@ -471,7 +476,9 @@ func TestFetchSetParsesDtFetchRespCorrectly(t *testing.T) {
 		},
 	}
 	dtFetchResp := &rpbRiakDT.DtFetchResp{
-		Value: dtValue,
+		Type:    rpbRiakDT.DtFetchResp_SET.Enum(),
+		Value:   dtValue,
+		Context: crdtContextBytes,
 	}
 	builder := NewFetchSetCommandBuilder().
 		WithBucketType("sets").
@@ -493,6 +500,9 @@ func TestFetchSetParsesDtFetchRespCorrectly(t *testing.T) {
 
 	if fc, ok := cmd.(*FetchSetCommand); ok {
 		rsp := fc.Response
+		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
 		for i := 1; i <= 4; i++ {
 			sitem := fmt.Sprintf("v%d", i)
 			if expected, actual := true, sliceIncludes(rsp.SetValue, []byte(sitem)); expected != actual {
@@ -559,6 +569,63 @@ func TestValidationOfFetchSetViaBuilder(t *testing.T) {
 // UpdateMap
 // DtUpdateReq
 // DtUpdateResp
+
+func createMapValue() []*rpbRiakDT.MapEntry {
+	mapEntries := createMapEntries()
+	innerMapEntries := createMapEntries()
+
+	mapEntry := &rpbRiakDT.MapEntry{
+		Field: &rpbRiakDT.MapField{
+			Type: rpbRiakDT.MapField_MAP.Enum(),
+			Name: []byte("map_1"),
+		},
+		MapValue: innerMapEntries,
+	}
+
+	return append(mapEntries, mapEntry)
+}
+
+func createMapEntries() []*rpbRiakDT.MapEntry {
+	counterValue := int64(50)
+	setValue := [][]byte{
+		[]byte("value_1"),
+		[]byte("value_2"),
+	}
+	flagValue := true
+
+	mapEntries := []*rpbRiakDT.MapEntry{
+		{
+			Field: &rpbRiakDT.MapField{
+				Type: rpbRiakDT.MapField_COUNTER.Enum(),
+				Name: []byte("counter_1"),
+			},
+			CounterValue: &counterValue,
+		},
+		{
+			Field: &rpbRiakDT.MapField{
+				Type: rpbRiakDT.MapField_SET.Enum(),
+				Name: []byte("set_1"),
+			},
+			SetValue: setValue,
+		},
+		{
+			Field: &rpbRiakDT.MapField{
+				Type: rpbRiakDT.MapField_REGISTER.Enum(),
+				Name: []byte("register_1"),
+			},
+			RegisterValue: []byte("1234"),
+		},
+		{
+			Field: &rpbRiakDT.MapField{
+				Type: rpbRiakDT.MapField_FLAG.Enum(),
+				Name: []byte("flag_1"),
+			},
+			FlagValue: &flagValue,
+		},
+	}
+
+	return mapEntries
+}
 
 func TestBuildDtUpdateReqCorrectlyViaUpdateMapCommandBuilder(t *testing.T) {
 	mapOp := &MapOperation{}
@@ -782,67 +849,31 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateMapCommandBuilder(t *testing.T) {
 	}
 }
 
-func TestUpdateMapParsesDtUpdateRespCorrectly(t *testing.T) {
-	var createMapEntries = func() []*rpbRiakDT.MapEntry {
-		counterValue := int64(50)
-		setValue := [][]byte{
-			[]byte("value_1"),
-			[]byte("value_2"),
-		}
-		flagValue := true
-
-		mapEntries := []*rpbRiakDT.MapEntry{
-			{
-				Field: &rpbRiakDT.MapField{
-					Type: rpbRiakDT.MapField_COUNTER.Enum(),
-					Name: []byte("counter_1"),
-				},
-				CounterValue: &counterValue,
-			},
-			{
-				Field: &rpbRiakDT.MapField{
-					Type: rpbRiakDT.MapField_SET.Enum(),
-					Name: []byte("set_1"),
-				},
-				SetValue: setValue,
-			},
-			{
-				Field: &rpbRiakDT.MapField{
-					Type: rpbRiakDT.MapField_REGISTER.Enum(),
-					Name: []byte("register_1"),
-				},
-				RegisterValue: []byte("1234"),
-			},
-			{
-				Field: &rpbRiakDT.MapField{
-					Type: rpbRiakDT.MapField_FLAG.Enum(),
-					Name: []byte("flag_1"),
-				},
-				FlagValue: &flagValue,
-			},
-		}
-
-		return mapEntries
+func verifyMap(t *testing.T, m *Map) {
+	if expected, actual := int64(50), m.Counters["counter_1"]; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
 	}
+	if expected, actual := "value_1", string(m.Sets["set_1"][0]); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := "value_2", string(m.Sets["set_1"][1]); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := "1234", string(m.Registers["register_1"]); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := true, m.Flags["flag_1"]; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
 
+func TestUpdateMapParsesDtUpdateRespCorrectly(t *testing.T) {
 	generatedKey := "generated_key"
 	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
 		Context:  crdtContextBytes,
 		Key:      []byte(generatedKey),
-		MapValue: make([]*rpbRiakDT.MapEntry, 0, 5),
+		MapValue: createMapValue(),
 	}
-	dtUpdateResp.MapValue = append(dtUpdateResp.MapValue, createMapEntries()...)
-
-	mapEntry := &rpbRiakDT.MapEntry{
-		Field: &rpbRiakDT.MapField{
-			Type: rpbRiakDT.MapField_MAP.Enum(),
-			Name: []byte("map_1"),
-		},
-		MapValue: make([]*rpbRiakDT.MapEntry, 0, 4),
-	}
-	mapEntry.MapValue = append(mapEntry.MapValue, createMapEntries()...)
-
-	dtUpdateResp.MapValue = append(dtUpdateResp.MapValue, mapEntry)
 
 	builder := NewUpdateMapCommandBuilder().
 		WithBucketType("sets").
@@ -871,25 +902,8 @@ func TestUpdateMapParsesDtUpdateRespCorrectly(t *testing.T) {
 		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-		var verifyMap = func(m *Map) {
-			if expected, actual := int64(50), m.Counters["counter_1"]; expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-			if expected, actual := "value_1", string(m.Sets["set_1"][0]); expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-			if expected, actual := "value_2", string(m.Sets["set_1"][1]); expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-			if expected, actual := "1234", string(m.Registers["register_1"]); expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-			if expected, actual := true, m.Flags["flag_1"]; expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-		}
-		verifyMap(rsp.Map)
-		verifyMap(rsp.Map.Maps["map_1"])
+		verifyMap(t, rsp.Map)
+		verifyMap(t, rsp.Map.Maps["map_1"])
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *UpdateMapCommand", ok, reflect.TypeOf(cmd))
 	}
@@ -913,5 +927,149 @@ func TestValidationOfUpdateMapViaBuilder(t *testing.T) {
 	_, err = builder.Build()
 	if err != nil {
 		t.Fatal("expected nil err")
+	}
+}
+
+// FetchMap
+// DtFetchReq
+// DtFetchResp
+
+func TestBuildDtFetchReqCorrectlyViaFetchMapCommandBuilder(t *testing.T) {
+	builder := NewFetchMapCommandBuilder().
+		WithBucketType("maps").
+		WithBucket("bucket").
+		WithKey("key").
+		WithR(1).
+		WithPr(2).
+		WithNotFoundOk(true).
+		WithBasicQuorum(true).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if req, ok := protobuf.(*rpbRiakDT.DtFetchReq); ok {
+		if expected, actual := "maps", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(1), req.GetR(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(2), req.GetPr(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetNotfoundOk(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetBasicQuorum(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakDT.DtFetchReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestFetchMapParsesDtFetchRespCorrectly(t *testing.T) {
+	dtFetchResp := &rpbRiakDT.DtFetchResp{
+		Type:    rpbRiakDT.DtFetchResp_MAP.Enum(),
+		Context: crdtContextBytes,
+		Value: &rpbRiakDT.DtValue{
+			MapValue: createMapValue(),
+		},
+	}
+
+	builder := NewFetchMapCommandBuilder().
+		WithBucketType("sets").
+		WithBucket("bucket").
+		WithKey("key")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+
+	cmd.onSuccess(dtFetchResp)
+
+	if fc, ok := cmd.(*FetchMapCommand); ok {
+		rsp := fc.Response
+		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		verifyMap(t, rsp.Map)
+		verifyMap(t, rsp.Map.Maps["map_1"])
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchMapCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestFetchMapParsesDtFetchRespWithoutValueCorrectly(t *testing.T) {
+	builder := NewFetchMapCommandBuilder().
+		WithBucketType("maps").
+		WithBucket("bucket").
+		WithKey("map_1")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+
+	dtFetchResp := &rpbRiakDT.DtFetchResp{}
+	cmd.onSuccess(dtFetchResp)
+
+	if uc, ok := cmd.(*FetchMapCommand); ok {
+		if expected, actual := true, uc.Response.IsNotFound; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchMapCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestValidationOfFetchMapViaBuilder(t *testing.T) {
+	// validate that Bucket is required
+	builder := NewFetchMapCommandBuilder()
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is required
+	builder = NewFetchMapCommandBuilder()
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 }

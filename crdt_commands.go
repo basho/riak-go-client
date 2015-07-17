@@ -266,6 +266,7 @@ func (cmd *UpdateSetCommand) onSuccess(msg proto.Message) error {
 		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
 			response := &UpdateSetResponse{
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
+				Context:      rpbDtUpdateResp.GetContext(),
 				SetValue:     rpbDtUpdateResp.GetSetValue(),
 			}
 			cmd.Response = response
@@ -290,6 +291,7 @@ func (cmd *UpdateSetCommand) getResponseProtobufMessage() proto.Message {
 
 type UpdateSetResponse struct {
 	GeneratedKey string
+	Context      []byte
 	SetValue     [][]byte
 }
 
@@ -413,7 +415,9 @@ func (cmd *FetchSetCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
 	if msg != nil {
 		if rpbDtFetchResp, ok := msg.(*rpbRiakDT.DtFetchResp); ok {
-			response := &FetchSetResponse{}
+			response := &FetchSetResponse{
+				Context: rpbDtFetchResp.GetContext(),
+			}
 			rpbValue := rpbDtFetchResp.GetValue()
 			if rpbValue == nil {
 				response.IsNotFound = true
@@ -442,6 +446,7 @@ func (cmd *FetchSetCommand) getResponseProtobufMessage() proto.Message {
 
 type FetchSetResponse struct {
 	IsNotFound bool
+	Context    []byte
 	SetValue   [][]byte
 }
 
@@ -536,7 +541,7 @@ func (cmd *UpdateMapCommand) onSuccess(msg proto.Message) error {
 			response := &UpdateMapResponse{
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
 				Context:      rpbDtUpdateResp.GetContext(),
-				Map:          parsePbResponse(rpbDtUpdateResp.MapValue),
+				Map:          parsePbResponse(rpbDtUpdateResp.GetMapValue()),
 			}
 			cmd.Response = response
 		} else {
@@ -997,4 +1002,125 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 		return nil, errors.New("UpdateMapCommandBuilder requires non-nil MapOperation. Use WithMapOperation()")
 	}
 	return &UpdateMapCommand{protobuf: builder.protobuf, op: builder.mapOperation}, nil
+}
+
+// FetchMap
+// DtFetchReq
+// DtFetchResp
+
+type FetchMapCommand struct {
+	CommandImpl
+	Response *FetchMapResponse
+	protobuf *rpbRiakDT.DtFetchReq
+}
+
+func (cmd *FetchMapCommand) Name() string {
+	return "FetchMap"
+}
+
+func (cmd *FetchMapCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *FetchMapCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	if msg != nil {
+		if rpbDtFetchResp, ok := msg.(*rpbRiakDT.DtFetchResp); ok {
+			response := &FetchMapResponse{
+				Context: rpbDtFetchResp.GetContext(),
+			}
+			rpbValue := rpbDtFetchResp.GetValue()
+			if rpbValue == nil {
+				response.IsNotFound = true
+			} else {
+				rpbMapValue := rpbValue.GetMapValue()
+				if rpbMapValue == nil {
+					response.IsNotFound = true
+				} else {
+					response.Map = parsePbResponse(rpbMapValue)
+				}
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[FetchMapCommand] could not convert %v to DtFetchResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *FetchMapCommand) getRequestCode() byte {
+	return rpbCode_DtFetchReq
+}
+
+func (cmd *FetchMapCommand) getResponseCode() byte {
+	return rpbCode_DtFetchResp
+}
+
+func (cmd *FetchMapCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakDT.DtFetchResp{}
+}
+
+type FetchMapResponse struct {
+	IsNotFound bool
+	Context    []byte
+	Map        *Map
+}
+
+type FetchMapCommandBuilder struct {
+	protobuf *rpbRiakDT.DtFetchReq
+}
+
+func NewFetchMapCommandBuilder() *FetchMapCommandBuilder {
+	return &FetchMapCommandBuilder{protobuf: &rpbRiakDT.DtFetchReq{}}
+}
+
+func (builder *FetchMapCommandBuilder) WithBucketType(bucketType string) *FetchMapCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) WithBucket(bucket string) *FetchMapCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) WithKey(key string) *FetchMapCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) WithR(r uint32) *FetchMapCommandBuilder {
+	builder.protobuf.R = &r
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) WithPr(pr uint32) *FetchMapCommandBuilder {
+	builder.protobuf.Pr = &pr
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchMapCommandBuilder {
+	builder.protobuf.NotfoundOk = &notFoundOk
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchMapCommandBuilder {
+	builder.protobuf.BasicQuorum = &basicQuorum
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) WithTimeout(timeout time.Duration) *FetchMapCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+func (builder *FetchMapCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &FetchMapCommand{protobuf: builder.protobuf}, nil
 }
