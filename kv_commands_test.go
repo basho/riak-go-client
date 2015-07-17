@@ -1245,3 +1245,25 @@ func TestValidationOfRpbIndexReqViaBuilder(t *testing.T) {
 		t.Fatal("expected nil err")
 	}
 }
+
+// MapReduce
+
+func TestBuildRpbMapRedReqCorrectlyViaBuilder(t *testing.T) {
+	query := "{\"inputs\":\"goog\",\"query\":[{\"map\":{\"language\":\"javascript\",\"source\":\"function(value, keyData, arg) { var data = Riak.mapValuesJson(value)[0]; if(data.High && parseFloat(data.High) > 600.00) return [value.key];else return [];}\",\"keep\":true}}]}"
+
+	mr := NewMapReduceCommand(query)
+	if protobuf, err := mr.constructPbRequest(); err == nil {
+		if req, ok := protobuf.(*rpbRiakKV.RpbMapRedReq); ok {
+			if expected, actual := query, string(req.GetRequest()); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+			if expected, actual := "application/json", string(req.GetContentType()); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+		} else {
+			t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbMapRedReq", ok, reflect.TypeOf(protobuf))
+		}
+	} else {
+		t.Error(err.Error())
+	}
+}

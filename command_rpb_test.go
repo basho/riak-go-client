@@ -136,6 +136,18 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if _, ok := msg.(*rpbRiakKV.RpbIndexResp); !ok {
 		t.Errorf("error casting %v to RpbIndexResp", reflect.TypeOf(msg))
 	}
+	// MapReduce
+	cmd = &MapReduceCommand{}
+	if expected, actual := rpbCode_RpbMapRedReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbMapRedResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiakKV.RpbMapRedResp); !ok {
+		t.Errorf("error casting %v to RpbMapRedResp", reflect.TypeOf(msg))
+	}
 
 	// YZ commands
 	// StoreIndex

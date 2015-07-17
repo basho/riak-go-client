@@ -1044,3 +1044,49 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 	}
 	return &SecondaryIndexQueryCommand{protobuf: builder.protobuf}, nil
 }
+
+// MapReduce
+// RpbMapRedReq
+// RpbMapRedResp
+
+type MapReduceCommand struct {
+	CommandImpl
+	Response bool
+	protobuf *rpbRiakKV.RpbMapRedReq
+}
+
+func NewMapReduceCommand(query string) *MapReduceCommand {
+	return &MapReduceCommand{
+		protobuf: &rpbRiakKV.RpbMapRedReq{
+			Request: []byte(query),
+			ContentType: []byte("application/json"),
+		},
+	}
+}
+
+func (cmd *MapReduceCommand) Name() string {
+	return "MapReduce"
+}
+
+func (cmd *MapReduceCommand) constructPbRequest() (msg proto.Message, err error) {
+	msg = cmd.protobuf
+	return
+}
+
+func (cmd *MapReduceCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	cmd.Response = true // TODO
+	return nil
+}
+
+func (cmd *MapReduceCommand) getRequestCode() byte {
+	return rpbCode_RpbMapRedReq
+}
+
+func (cmd *MapReduceCommand) getResponseCode() byte {
+	return rpbCode_RpbMapRedResp
+}
+
+func (cmd *MapReduceCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakKV.RpbMapRedResp{}
+}
