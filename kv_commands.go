@@ -906,8 +906,19 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 
 type SecondaryIndexQueryCommand struct {
 	CommandImpl
-	Response *SecondaryIndexQueryResponse
-	protobuf *rpbRiakKV.RpbIndexReq
+	Response  *SecondaryIndexQueryResponse
+	protobuf  *rpbRiakKV.RpbIndexReq
+	streaming bool
+	callback  func([]*SecondaryIndexQueryResult) error
+	done      bool
+}
+
+func (cmd *SecondaryIndexQueryCommand) Done() bool {
+	if cmd.protobuf.GetStream() {
+		return cmd.done
+	} else {
+		return true
+	}
 }
 
 func (cmd *SecondaryIndexQueryCommand) Name() string {
@@ -924,11 +935,59 @@ func (cmd *SecondaryIndexQueryCommand) onSuccess(msg proto.Message) error {
 		cmd.Response = &SecondaryIndexQueryResponse{}
 	} else {
 		if rpbIndexResp, ok := msg.(*rpbRiakKV.RpbIndexResp); ok {
-			// TODO
-			response := &SecondaryIndexQueryResponse{
-				Continuation: rpbIndexResp.GetContinuation(),
+			cmd.done = rpbIndexResp.GetDone()
+			response := cmd.Response
+			if response == nil {
+				response = &SecondaryIndexQueryResponse{
+					Continuation: rpbIndexResp.GetContinuation(),
+				}
+				cmd.Response = response
 			}
-			cmd.Response = response
+
+			var results []*SecondaryIndexQueryResult
+			rpbIndexRespResultsLen := len(rpbIndexResp.GetResults())
+			if rpbIndexRespResultsLen > 0 {
+				// Index keys and object keys were returned
+				results = make([]*SecondaryIndexQueryResult, rpbIndexRespResultsLen)
+				for i, rpbIndexResult := range rpbIndexResp.GetResults() {
+					results[i] = &SecondaryIndexQueryResult{
+						IndexKey:  rpbIndexResult.Key,
+						ObjectKey: rpbIndexResult.Value,
+					}
+				}
+			} else {
+				// Only object keys were returned
+				var key []byte
+				if cmd.protobuf.GetReturnTerms() {
+					// this is only possible if this was a single key query
+					key = cmd.protobuf.GetKey()
+				}
+				rpbIndexRespKeys := rpbIndexResp.GetKeys()
+				results = make([]*SecondaryIndexQueryResult, len(rpbIndexRespKeys))
+				for i, rpbIndexKey := range rpbIndexRespKeys {
+					results[i] = &SecondaryIndexQueryResult{
+						IndexKey:  key,
+						ObjectKey: rpbIndexKey,
+					}
+				}
+			}
+
+			if cmd.streaming {
+				if cmd.callback == nil {
+					panic("SecondaryIndexQueryCommand requires a callback when streaming.")
+				} else {
+					if err := cmd.callback(results); err != nil {
+						cmd.Response = nil
+						return err
+					}
+				}
+			} else {
+				if response.Results == nil {
+					response.Results = results
+				} else {
+					response.Results = append(response.Results, results...)
+				}
+			}
 		} else {
 			return fmt.Errorf("[SecondaryIndexQueryCommand] could not convert %v to RpbIndexResp", reflect.TypeOf(msg))
 		}
@@ -948,14 +1007,20 @@ func (cmd *SecondaryIndexQueryCommand) getResponseProtobufMessage() proto.Messag
 	return &rpbRiakKV.RpbIndexResp{}
 }
 
+type SecondaryIndexQueryResult struct {
+	IndexKey  []byte
+	ObjectKey []byte
+}
+
 type SecondaryIndexQueryResponse struct {
-	Keys         []string
-	Results      []*Pair
+	Results      []*SecondaryIndexQueryResult
 	Continuation []byte
 }
 
 type SecondaryIndexQueryCommandBuilder struct {
-	protobuf *rpbRiakKV.RpbIndexReq
+	protobuf  *rpbRiakKV.RpbIndexReq
+	streaming bool
+	callback  func([]*SecondaryIndexQueryResult) error
 }
 
 func NewSecondaryIndexQueryCommandBuilder() *SecondaryIndexQueryCommandBuilder {
@@ -1005,6 +1070,11 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithStreaming(streaming bool) 
 	return builder
 }
 
+func (builder *SecondaryIndexQueryCommandBuilder) WithCallback(callback func([]*SecondaryIndexQueryResult) error) *SecondaryIndexQueryCommandBuilder {
+	builder.callback = callback
+	return builder
+}
+
 func (builder *SecondaryIndexQueryCommandBuilder) WithPaginationSort(paginationSort bool) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.PaginationSort = &paginationSort
 	return builder
@@ -1042,7 +1112,14 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 		(builder.protobuf.GetRangeMin() == nil || builder.protobuf.GetRangeMax() == nil) {
 		return nil, errors.New("either WithIndexKey or WithRange are required")
 	}
-	return &SecondaryIndexQueryCommand{protobuf: builder.protobuf}, nil
+	if builder.streaming && builder.callback == nil {
+		return nil, errors.New("SecondaryIndexQueryCommand requires a callback when streaming.")
+	}
+	return &SecondaryIndexQueryCommand{
+		protobuf:  builder.protobuf,
+		streaming: builder.streaming,
+		callback:  builder.callback,
+	}, nil
 }
 
 // MapReduce
@@ -1058,7 +1135,7 @@ type MapReduceCommand struct {
 func NewMapReduceCommand(query string) *MapReduceCommand {
 	return &MapReduceCommand{
 		protobuf: &rpbRiakKV.RpbMapRedReq{
-			Request: []byte(query),
+			Request:     []byte(query),
 			ContentType: []byte("application/json"),
 		},
 	}
