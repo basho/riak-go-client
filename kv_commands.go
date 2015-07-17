@@ -906,11 +906,10 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 
 type SecondaryIndexQueryCommand struct {
 	CommandImpl
-	Response  *SecondaryIndexQueryResponse
-	protobuf  *rpbRiakKV.RpbIndexReq
-	streaming bool
-	callback  func([]*SecondaryIndexQueryResult) error
-	done      bool
+	Response *SecondaryIndexQueryResponse
+	protobuf *rpbRiakKV.RpbIndexReq
+	callback func([]*SecondaryIndexQueryResult) error
+	done     bool
 }
 
 func (cmd *SecondaryIndexQueryCommand) Done() bool {
@@ -933,16 +932,17 @@ func (cmd *SecondaryIndexQueryCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
 	if msg == nil {
 		cmd.Response = &SecondaryIndexQueryResponse{}
+		cmd.done = true
 	} else {
 		if rpbIndexResp, ok := msg.(*rpbRiakKV.RpbIndexResp); ok {
 			cmd.done = rpbIndexResp.GetDone()
 			response := cmd.Response
 			if response == nil {
-				response = &SecondaryIndexQueryResponse{
-					Continuation: rpbIndexResp.GetContinuation(),
-				}
+				response = &SecondaryIndexQueryResponse{}
 				cmd.Response = response
 			}
+
+			response.Continuation = rpbIndexResp.GetContinuation()
 
 			var results []*SecondaryIndexQueryResult
 			rpbIndexRespResultsLen := len(rpbIndexResp.GetResults())
@@ -972,7 +972,7 @@ func (cmd *SecondaryIndexQueryCommand) onSuccess(msg proto.Message) error {
 				}
 			}
 
-			if cmd.streaming {
+			if cmd.protobuf.GetStream() {
 				if cmd.callback == nil {
 					panic("SecondaryIndexQueryCommand requires a callback when streaming.")
 				} else {
@@ -1018,9 +1018,8 @@ type SecondaryIndexQueryResponse struct {
 }
 
 type SecondaryIndexQueryCommandBuilder struct {
-	protobuf  *rpbRiakKV.RpbIndexReq
-	streaming bool
-	callback  func([]*SecondaryIndexQueryResult) error
+	protobuf *rpbRiakKV.RpbIndexReq
+	callback func([]*SecondaryIndexQueryResult) error
 }
 
 func NewSecondaryIndexQueryCommandBuilder() *SecondaryIndexQueryCommandBuilder {
@@ -1112,13 +1111,12 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 		(builder.protobuf.GetRangeMin() == nil || builder.protobuf.GetRangeMax() == nil) {
 		return nil, errors.New("either WithIndexKey or WithRange are required")
 	}
-	if builder.streaming && builder.callback == nil {
+	if builder.protobuf.GetStream() && builder.callback == nil {
 		return nil, errors.New("SecondaryIndexQueryCommand requires a callback when streaming.")
 	}
 	return &SecondaryIndexQueryCommand{
-		protobuf:  builder.protobuf,
-		streaming: builder.streaming,
-		callback:  builder.callback,
+		protobuf: builder.protobuf,
+		callback: builder.callback,
 	}, nil
 }
 
