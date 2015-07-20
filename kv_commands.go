@@ -925,6 +925,12 @@ func (cmd *SecondaryIndexQueryCommand) Name() string {
 }
 
 func (cmd *SecondaryIndexQueryCommand) constructPbRequest() (proto.Message, error) {
+	if cmd.protobuf.GetKey() != nil {
+		cmd.protobuf.Key = []byte(cmd.protobuf.GetKey())
+		cmd.protobuf.Qtype = rpbRiakKV.RpbIndexReq_eq.Enum()
+	} else {
+		cmd.protobuf.Qtype = rpbRiakKV.RpbIndexReq_range.Enum()
+	}
 	return cmd.protobuf, nil
 }
 

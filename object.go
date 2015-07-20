@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"fmt"
 	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
 	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
 	"time"
@@ -46,6 +47,10 @@ func (o *Object) HasLinks() bool {
 	return len(o.Links) > 0
 }
 
+func (o *Object) AddToIntIndex(indexName string, indexValue int) {
+	o.AddToIndex(indexName, fmt.Sprintf("%v", indexValue))
+}
+
 func (o *Object) AddToIndex(indexName string, indexValue string) {
 	if o.Indexes == nil {
 		o.Indexes = make(map[string][]string)
@@ -67,15 +72,7 @@ func fromRpbContent(rpbContent *rpbRiakKV.RpbContent) (ro *Object, err error) {
 	if ro.IsTombstone {
 		ro.Value = nil
 	} else {
-		/* TODO deserialization?
-				value := rpbContent.GetValue()
-		        // ReturnHead will only retun metadata
-		        if (convertToJs && value) {
-		            ro.value = JSON.parse(value.toString('utf8'));
-		        } else if (value) {
-					ro.value = value.toBuffer();
-		        }
-		*/
+		// TODO deserialization?
 		ro.Value = rpbContent.GetValue()
 	}
 

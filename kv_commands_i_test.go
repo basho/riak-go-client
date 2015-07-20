@@ -4,6 +4,7 @@ package riak
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 func init() {
 	integrationTestsBuildCluster()
+	addDataToIndexes()
 }
 
 // FetchValue
@@ -46,7 +48,7 @@ func TestFetchANotFoundFromRiakUsingDefaultBucketType(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
-		t.FailNow()
+		t.Errorf("Could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
 	}
 }
 
@@ -106,7 +108,7 @@ func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
-		t.FailNow()
+		t.Errorf("Could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
 	}
 }
 
@@ -134,7 +136,7 @@ func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
 			t.Logf("GeneratedKey: %s", rsp.GeneratedKey)
 		}
 	} else {
-		t.FailNow()
+		t.Errorf("Could not convert %v to *StoreValueCommand", ok, reflect.TypeOf(cmd))
 	}
 }
 
@@ -212,7 +214,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
-		t.FailNow()
+		t.Errorf("Could not convert %v to *ListBucketsCommand", ok, reflect.TypeOf(cmd))
 	}
 }
 
@@ -261,7 +263,7 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
-		t.FailNow()
+		t.Errorf("Could not convert %v to *ListKeysCommand", ok, reflect.TypeOf(cmd))
 	}
 
 	// streaming
@@ -289,7 +291,7 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
-		t.FailNow()
+		t.Errorf("Could not convert %v to *ListKeysCommand", ok, reflect.TypeOf(cmd))
 	}
 }
 
@@ -330,28 +332,190 @@ func TestFetchPreflistForAValue(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
-		t.FailNow()
+		t.Errorf("Could not convert %v to *FetchPreflistCommand", ok, reflect.TypeOf(cmd))
 	}
 }
 
 // SecondaryIndexQueryCommand
 
+func addDataToIndexes() {
+	var store Command
+	var err error
+	for i := 0; i < 25; i++ {
+		key := fmt.Sprintf("key_%d", i)
+		ro := &Object{
+			ContentType: "text/plain",
+			Value:       []byte("this is a value"),
+		}
+		idxVal := fmt.Sprintf("email%d", i)
+		ro.AddToIndex("email_bin", idxVal)
+		ro.AddToIntIndex("id_int", i)
+		store, err = NewStoreValueCommandBuilder().
+			WithBucket(testBucketName).
+			WithKey(key).
+			WithContent(ro).
+			Build()
+		if err != nil {
+			panic(err.Error())
+		}
+		if err = cluster.Execute(store); err != nil {
+			panic(err.Error())
+		}
+
+		ro = &Object{
+			ContentType: "text/plain",
+			Value:       []byte("this is a value"),
+		}
+		ro.AddToIndex("email_bin", idxVal)
+		ro.AddToIntIndex("id_int", i)
+		store, err := NewStoreValueCommandBuilder().
+			WithBucketType(testBucketType).
+			WithBucket(testBucketName).
+			WithKey(key).
+			WithContent(ro).
+			Build()
+		if err != nil {
+			panic(err.Error())
+		}
+		if err = cluster.Execute(store); err != nil {
+			panic(err.Error())
+		}
+	}
+}
+
 func TestIntQueryAgainstDefaultType(t *testing.T) {
-	t.Fatal("TODO")
+	var cmd Command
+	var err error
+	cmd, err = NewSecondaryIndexQueryCommandBuilder().
+		WithBucket(testBucketName).
+		WithIndexName("id_int").
+		WithIntRange(0, 10000).
+		WithReturnKeyAndIndex(true).
+		WithStreaming(false).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if q, ok := cmd.(*SecondaryIndexQueryCommand); ok {
+		rsp := q.Response
+		if expected, actual := 25, len(rsp.Results); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("Could not convert %v to *SecondaryIndexQueryCommand", ok, reflect.TypeOf(cmd))
+	}
 }
 
 func TestIntQueryAgainstNonDefaultType(t *testing.T) {
-	t.Fatal("TODO")
+	var cmd Command
+	var err error
+	cmd, err = NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType(testBucketType).
+		WithBucket(testBucketName).
+		WithIndexName("id_int").
+		WithIntRange(0, 10000).
+		WithReturnKeyAndIndex(true).
+		WithStreaming(false).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if q, ok := cmd.(*SecondaryIndexQueryCommand); ok {
+		rsp := q.Response
+		if expected, actual := 25, len(rsp.Results); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("Could not convert %v to *SecondaryIndexQueryCommand", ok, reflect.TypeOf(cmd))
+	}
 }
 
 func TestBinQueryAgainstDefaultType(t *testing.T) {
-	t.Fatal("TODO")
+	var cmd Command
+	var err error
+	cmd, err = NewSecondaryIndexQueryCommandBuilder().
+		WithBucket(testBucketName).
+		WithIndexName("email_bin").
+		WithRange("a", "z").
+		WithReturnKeyAndIndex(true).
+		WithStreaming(false).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if q, ok := cmd.(*SecondaryIndexQueryCommand); ok {
+		rsp := q.Response
+		if expected, actual := 25, len(rsp.Results); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("Could not convert %v to *SecondaryIndexQueryCommand", ok, reflect.TypeOf(cmd))
+	}
 }
 
 func TestBinQueryAgainstNonDefaultType(t *testing.T) {
-	t.Fatal("TODO")
+	var cmd Command
+	var err error
+	cmd, err = NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType(testBucketType).
+		WithBucket(testBucketName).
+		WithIndexName("email_bin").
+		WithRange("a", "z").
+		WithReturnKeyAndIndex(true).
+		WithStreaming(false).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if q, ok := cmd.(*SecondaryIndexQueryCommand); ok {
+		rsp := q.Response
+		if expected, actual := 25, len(rsp.Results); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("Could not convert %v to *SecondaryIndexQueryCommand", ok, reflect.TypeOf(cmd))
+	}
 }
 
 func TestSetContinuationOnPaginatedQuery(t *testing.T) {
-	t.Fatal("TODO")
+	var cmd Command
+	var err error
+	cmd, err = NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType(testBucketType).
+		WithBucket(testBucketName).
+		WithIndexName("email_bin").
+		WithRange("a", "z").
+		WithMaxResults(10).
+		WithReturnKeyAndIndex(true).
+		WithStreaming(false).
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if q, ok := cmd.(*SecondaryIndexQueryCommand); ok {
+		rsp := q.Response
+		if expected, actual := 10, len(rsp.Results); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if rsp.Continuation == nil {
+			t.Error("expected non-nil continuation.")
+		}
+	} else {
+		t.Errorf("Could not convert %v to *SecondaryIndexQueryCommand", ok, reflect.TypeOf(cmd))
+	}
 }
