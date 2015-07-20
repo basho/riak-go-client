@@ -1486,18 +1486,52 @@ func TestValidationOfRpbIndexReqViaBuilder(t *testing.T) {
 
 func TestBuildRpbMapRedReqCorrectlyViaBuilder(t *testing.T) {
 	query := "{\"inputs\":\"goog\",\"query\":[{\"map\":{\"language\":\"javascript\",\"source\":\"function(value, keyData, arg) { var data = Riak.mapValuesJson(value)[0]; if(data.High && parseFloat(data.High) > 600.00) return [value.key];else return [];}\",\"keep\":true}}]}"
-
-	mr := NewMapReduceCommand(query)
-	if protobuf, err := mr.constructPbRequest(); err == nil {
-		if req, ok := protobuf.(*rpbRiakKV.RpbMapRedReq); ok {
-			if expected, actual := query, string(req.GetRequest()); expected != actual {
-				t.Errorf("expected %v, actual %v", expected, actual)
-			}
-			if expected, actual := "application/json", string(req.GetContentType()); expected != actual {
-				t.Errorf("expected %v, actual %v", expected, actual)
+	if mr, err := NewMapReduceCommandBuilder().WithQuery(query).WithStreaming(false).Build(); err == nil {
+		if protobuf, err := mr.constructPbRequest(); err == nil {
+			if req, ok := protobuf.(*rpbRiakKV.RpbMapRedReq); ok {
+				if expected, actual := query, string(req.GetRequest()); expected != actual {
+					t.Errorf("expected %v, actual %v", expected, actual)
+				}
+				if expected, actual := "application/json", string(req.GetContentType()); expected != actual {
+					t.Errorf("expected %v, actual %v", expected, actual)
+				}
+			} else {
+				t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbMapRedReq", ok, reflect.TypeOf(protobuf))
 			}
 		} else {
-			t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbMapRedReq", ok, reflect.TypeOf(protobuf))
+			t.Error(err.Error())
+		}
+	} else {
+		t.Error(err.Error())
+	}
+}
+
+func TestParseRpbMapRedRespCorrectly(t *testing.T) {
+	done := true
+	rspJSON := "[{\"the\": 8}]"
+	rpbResponse := []byte(rspJSON)
+	if cmd, err := NewMapReduceCommandBuilder().WithQuery("some query").Build(); err == nil {
+		for i := 1; i <= 10; i++ {
+			phase := uint32(i)
+			rpbMapRedResp := &rpbRiakKV.RpbMapRedResp{
+				Phase:    &phase,
+				Response: rpbResponse,
+			}
+			if i == 10 {
+				rpbMapRedResp.Done = &done
+			}
+			cmd.onSuccess(rpbMapRedResp)
+		}
+		if mr, ok := cmd.(*MapReduceCommand); ok {
+			rsp := mr.Response
+			if expected, actual := 10, len(rsp); expected != actual {
+				t.Errorf("expected %v, actual %v", expected, actual)
+			}
+			if expected, actual := 0, bytes.Compare(rpbResponse, rsp[0]); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		} else {
+			t.Errorf("Could not convert %v to *MapReduceCommand", ok, reflect.TypeOf(cmd))
 		}
 	} else {
 		t.Error(err.Error())

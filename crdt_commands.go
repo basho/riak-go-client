@@ -331,28 +331,14 @@ func (builder *UpdateSetCommandBuilder) WithContext(context []byte) *UpdateSetCo
 
 func (builder *UpdateSetCommandBuilder) WithAdditions(adds ...[]byte) *UpdateSetCommandBuilder {
 	opAdds := builder.protobuf.Op.SetOp.Adds
-	if opAdds == nil {
-		opAdds = make([][]byte, len(adds))
-		for i, add := range adds {
-			opAdds[i] = add
-		}
-	} else {
-		opAdds = append(opAdds, adds...)
-	}
+	opAdds = append(opAdds, adds...)
 	builder.protobuf.Op.SetOp.Adds = opAdds
 	return builder
 }
 
 func (builder *UpdateSetCommandBuilder) WithRemovals(removals ...[]byte) *UpdateSetCommandBuilder {
 	opRemoves := builder.protobuf.Op.SetOp.Removes
-	if opRemoves == nil {
-		opRemoves = make([][]byte, len(removals))
-		for i, rem := range removals {
-			opRemoves[i] = rem
-		}
-	} else {
-		opRemoves = append(opRemoves, removals...)
-	}
+	opRemoves = append(opRemoves, removals...)
 	builder.protobuf.Op.SetOp.Removes = opRemoves
 	return builder
 }
@@ -564,21 +550,11 @@ func (cmd *UpdateMapCommand) getResponseProtobufMessage() proto.Message {
 }
 
 func addMapUpdate(pbMapOp *rpbRiakDT.MapOp, update *rpbRiakDT.MapUpdate) {
-	if pbMapOp.Updates == nil {
-		pbMapOp.Updates = make([]*rpbRiakDT.MapUpdate, 1)
-		pbMapOp.Updates[0] = update
-	} else {
-		pbMapOp.Updates = append(pbMapOp.Updates, update)
-	}
+	pbMapOp.Updates = append(pbMapOp.Updates, update)
 }
 
 func addMapRemove(pbMapOp *rpbRiakDT.MapOp, field *rpbRiakDT.MapField) {
-	if pbMapOp.Removes == nil {
-		pbMapOp.Removes = make([]*rpbRiakDT.MapField, 1)
-		pbMapOp.Removes[0] = field
-	} else {
-		pbMapOp.Removes = append(pbMapOp.Removes, field)
-	}
+	pbMapOp.Removes = append(pbMapOp.Removes, field)
 }
 
 func populate(mapOp *MapOperation, pbMapOp *rpbRiakDT.MapOp) {

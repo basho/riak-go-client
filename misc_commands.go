@@ -412,14 +412,7 @@ func (builder *StoreBucketPropsCommandBuilder) Build() (Command, error) {
 }
 
 func addCommitHookTo(rpbHooks []*rpbRiak.RpbCommitHook, rpbCommitHook *rpbRiak.RpbCommitHook) []*rpbRiak.RpbCommitHook {
-	var rvRpbHooks []*rpbRiak.RpbCommitHook
-	if rpbHooks == nil {
-		rvRpbHooks = make([]*rpbRiak.RpbCommitHook, 1)
-		rvRpbHooks[0] = rpbCommitHook
-	} else {
-		rvRpbHooks = append(rpbHooks, rpbCommitHook)
-	}
-	return rvRpbHooks
+	return append(rpbHooks, rpbCommitHook)
 }
 
 func toRpbCommitHook(commitHook *CommitHook) *rpbRiak.RpbCommitHook {

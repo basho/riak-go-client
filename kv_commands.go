@@ -586,14 +586,11 @@ func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
 						}
 					}
 				} else {
-					if response.Buckets == nil {
-						response.Buckets = buckets
-					} else {
-						response.Buckets = append(response.Buckets, buckets...)
-					}
+					response.Buckets = append(response.Buckets, buckets...)
 				}
 			}
 		} else {
+			cmd.done = true
 			return fmt.Errorf("[ListBucketsCommand] could not convert %v to RpbListBucketsResp", reflect.TypeOf(msg))
 		}
 	}
@@ -716,14 +713,11 @@ func (cmd *ListKeysCommand) onSuccess(msg proto.Message) error {
 						}
 					}
 				} else {
-					if response.Keys == nil {
-						response.Keys = keys
-					} else {
-						response.Keys = append(response.Keys, keys...)
-					}
+					response.Keys = append(response.Keys, keys...)
 				}
 			}
 		} else {
+			cmd.done = true
 			return fmt.Errorf("[ListKeysCommand] could not convert %v to RpbListKeysResp", reflect.TypeOf(msg))
 		}
 	}
@@ -988,13 +982,10 @@ func (cmd *SecondaryIndexQueryCommand) onSuccess(msg proto.Message) error {
 					}
 				}
 			} else {
-				if response.Results == nil {
-					response.Results = results
-				} else {
-					response.Results = append(response.Results, results...)
-				}
+				response.Results = append(response.Results, results...)
 			}
 		} else {
+			cmd.done = true
 			return fmt.Errorf("[SecondaryIndexQueryCommand] could not convert %v to RpbIndexResp", reflect.TypeOf(msg))
 		}
 	}
@@ -1132,21 +1123,21 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 
 type MapReduceCommand struct {
 	CommandImpl
-	Response bool
-	protobuf *rpbRiakKV.RpbMapRedReq
-}
-
-func NewMapReduceCommand(query string) *MapReduceCommand {
-	return &MapReduceCommand{
-		protobuf: &rpbRiakKV.RpbMapRedReq{
-			Request:     []byte(query),
-			ContentType: []byte("application/json"),
-		},
-	}
+	Response  [][]byte
+	protobuf  *rpbRiakKV.RpbMapRedReq
+	streaming bool
+	callback  func(response []byte) error
+	done      bool
 }
 
 func (cmd *MapReduceCommand) Name() string {
 	return "MapReduce"
+}
+
+func (cmd *MapReduceCommand) Done() bool {
+	// NB: RpbMapRedReq is *always* streaming so no need to take
+	// cmd.streaming into account here, unlike RpbListBucketsReq
+	return cmd.done
 }
 
 func (cmd *MapReduceCommand) constructPbRequest() (msg proto.Message, err error) {
@@ -1156,7 +1147,29 @@ func (cmd *MapReduceCommand) constructPbRequest() (msg proto.Message, err error)
 
 func (cmd *MapReduceCommand) onSuccess(msg proto.Message) error {
 	cmd.Success = true
-	cmd.Response = true // TODO
+	if msg == nil {
+		cmd.done = true
+	} else {
+		if rpbMapRedResp, ok := msg.(*rpbRiakKV.RpbMapRedResp); ok {
+			cmd.done = rpbMapRedResp.GetDone()
+			rpbMapRedRespData := rpbMapRedResp.GetResponse()
+			if cmd.streaming {
+				if cmd.callback == nil {
+					panic("MapReduceCommand requires a callback when streaming.")
+				} else {
+					if err := cmd.callback(rpbMapRedRespData); err != nil {
+						cmd.Response = nil
+						return err
+					}
+				}
+			} else {
+				cmd.Response = append(cmd.Response, rpbMapRedRespData)
+			}
+		} else {
+			cmd.done = true
+			return fmt.Errorf("[MapReduceCommand] could not convert %v to RpbMapRedResp", reflect.TypeOf(msg))
+		}
+	}
 	return nil
 }
 
@@ -1170,4 +1183,47 @@ func (cmd *MapReduceCommand) getResponseCode() byte {
 
 func (cmd *MapReduceCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbMapRedResp{}
+}
+
+type MapReduceCommandBuilder struct {
+	protobuf  *rpbRiakKV.RpbMapRedReq
+	streaming bool
+	callback  func(response []byte) error
+}
+
+func NewMapReduceCommandBuilder() *MapReduceCommandBuilder {
+	return &MapReduceCommandBuilder{
+		protobuf: &rpbRiakKV.RpbMapRedReq{
+			ContentType: []byte("application/json"),
+		},
+	}
+}
+
+func (builder *MapReduceCommandBuilder) WithQuery(query string) *MapReduceCommandBuilder {
+	builder.protobuf.Request = []byte(query)
+	return builder
+}
+
+func (builder *MapReduceCommandBuilder) WithStreaming(streaming bool) *MapReduceCommandBuilder {
+	builder.streaming = streaming
+	return builder
+}
+
+func (builder *MapReduceCommandBuilder) WithCallback(callback func([]byte) error) *MapReduceCommandBuilder {
+	builder.callback = callback
+	return builder
+}
+
+func (builder *MapReduceCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if builder.streaming && builder.callback == nil {
+		return nil, errors.New("MapReduceCommand requires a callback when streaming.")
+	}
+	return &MapReduceCommand{
+		protobuf:  builder.protobuf,
+		streaming: builder.streaming,
+		callback:  builder.callback,
+	}, nil
 }
