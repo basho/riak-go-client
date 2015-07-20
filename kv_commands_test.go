@@ -1537,3 +1537,48 @@ func TestParseRpbMapRedRespCorrectly(t *testing.T) {
 		t.Error(err.Error())
 	}
 }
+
+func TestParseRpbMapRedRespCorrectlyWithStreaming(t *testing.T) {
+	done := true
+	rspJSON := "[{\"the\": 8}]"
+	rpbResponse := []byte(rspJSON)
+
+	count := 0
+	var cb = func(response []byte) error {
+		count++
+		if expected, actual := 0, bytes.Compare(rpbResponse, response); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		return nil
+	}
+
+	if cmd, err := NewMapReduceCommandBuilder().
+		WithQuery("some query").
+		WithCallback(cb).
+		WithStreaming(true).
+		Build(); err == nil {
+		for i := 1; i <= 10; i++ {
+			phase := uint32(i)
+			rpbMapRedResp := &rpbRiakKV.RpbMapRedResp{
+				Phase:    &phase,
+				Response: rpbResponse,
+			}
+			if i == 10 {
+				rpbMapRedResp.Done = &done
+			}
+			cmd.onSuccess(rpbMapRedResp)
+			if mr, ok := cmd.(*MapReduceCommand); ok {
+				if mr.Response != nil {
+					t.Error("expected nil results")
+				}
+			} else {
+				t.Errorf("Could not convert %v to *MapReduceCommand", ok, reflect.TypeOf(cmd))
+			}
+		}
+		if expected, actual := 10, count; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Error(err.Error())
+	}
+}
