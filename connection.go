@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	proto "github.com/golang/protobuf/proto"
@@ -10,11 +11,18 @@ import (
 	"time"
 )
 
+type AuthOptions struct {
+	User      string
+	Password  string
+	TlsConfig *tls.Config
+}
+
 type connectionOptions struct {
 	remoteAddress  *net.TCPAddr
 	connectTimeout time.Duration
 	requestTimeout time.Duration
 	healthCheck    Command
+	authOptions    *AuthOptions
 }
 
 // TODO authentication
@@ -24,6 +32,7 @@ type connection struct {
 	connectTimeout time.Duration
 	requestTimeout time.Duration
 	healthCheck    Command
+	authOptions    *AuthOptions
 	sizeBuf        []byte
 	active         bool
 	inFlight       bool
@@ -48,6 +57,7 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		connectTimeout: options.connectTimeout,
 		requestTimeout: options.requestTimeout,
 		healthCheck:    options.healthCheck,
+		authOptions:    options.authOptions,
 		sizeBuf:        make([]byte, 4),
 		active:         false,
 		// TODO may not be a necessary check
@@ -67,6 +77,9 @@ func (c *connection) connect() (err error) {
 		c.close()
 	} else {
 		logDebug("[Connection] connected to: %s", c.addr)
+		if err = c.startTls(); err != nil {
+			return
+		}
 		c.active = true
 		if c.healthCheck != nil {
 			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Successful() {
@@ -78,6 +91,36 @@ func (c *connection) connect() (err error) {
 			}
 		}
 	}
+	return
+}
+
+func (c *connection) startTls() (err error) {
+	if c.authOptions == nil {
+		return nil
+	}
+	startTlsCmd := &StartTlsCommand{}
+	if err = c.execute(startTlsCmd); err != nil {
+		return
+	}
+	if c.authOptions.TlsConfig == nil {
+		return ErrAuthMissingConfig
+	}
+	var tlsConn *tls.Conn
+	if tlsConn = tls.Client(c.conn, c.authOptions.TlsConfig); tlsConn == nil {
+		err = ErrAuthTLSUpgradeFailed
+		return
+	}
+	if err = tlsConn.Handshake(); err != nil {
+		return
+	}
+	authCmd := &AuthCommand{
+		User:     c.authOptions.User,
+		Password: c.authOptions.Password,
+	}
+	if err = c.execute(authCmd); err != nil {
+		return
+	}
+	c.conn = tlsConn
 	return
 }
 

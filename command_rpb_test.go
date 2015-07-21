@@ -26,6 +26,28 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if cmd.getResponseProtobufMessage() != nil {
 		t.Error("expected nil response protobuf message")
 	}
+	// StartTls
+	cmd = &StartTlsCommand{}
+	if expected, actual := rpbCode_RpbStartTls, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbStartTls, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if cmd.getResponseProtobufMessage() != nil {
+		t.Error("expected nil response protobuf message")
+	}
+	// Auth
+	cmd = &AuthCommand{}
+	if expected, actual := rpbCode_RpbAuthReq, cmd.getRequestCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := rpbCode_RpbAuthResp, cmd.getResponseCode(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if cmd.getResponseProtobufMessage() != nil {
+		t.Error("expected nil response protobuf message")
+	}
 	// FetchBucketProps
 	cmd = &FetchBucketPropsCommand{}
 	if expected, actual := rpbCode_RpbGetBucketReq, cmd.getRequestCode(); expected != actual {

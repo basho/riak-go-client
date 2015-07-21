@@ -18,7 +18,6 @@ const (
 	NODE_SHUTDOWN
 )
 
-// TODO auth
 type NodeOptions struct {
 	RemoteAddress       string
 	MinConnections      uint16
@@ -28,6 +27,7 @@ type NodeOptions struct {
 	RequestTimeout      time.Duration
 	HealthCheckInterval time.Duration
 	HealthCheckBuilder  CommandBuilder
+	AuthOptions         *AuthOptions
 }
 
 type Node struct {
@@ -39,6 +39,7 @@ type Node struct {
 	requestTimeout      time.Duration
 	healthCheckInterval time.Duration
 	healthCheckBuilder  CommandBuilder
+	authOptions         *AuthOptions
 	// Health Check stop channel / timer
 	stop         chan bool
 	expireTicker *time.Ticker
@@ -96,6 +97,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			requestTimeout:      options.RequestTimeout,
 			healthCheckInterval: options.HealthCheckInterval,
 			healthCheckBuilder:  options.HealthCheckBuilder,
+			authOptions:         options.AuthOptions,
 			available:           make([]*connection, 0, options.MinConnections),
 		}
 		n.setStateDesc("NODE_ERROR", "NODE_CREATED", "NODE_RUNNING", "NODE_HEALTH_CHECKING", "NODE_SHUTTING_DOWN", "NODE_SHUTDOWN")
@@ -283,6 +285,7 @@ func (n *Node) createNewConnection(healthCheck Command, shouldLock bool) (conn *
 		connectTimeout: n.connectTimeout,
 		requestTimeout: n.requestTimeout,
 		healthCheck:    healthCheck,
+		authOptions:    n.authOptions,
 	}
 	if conn, err = newConnection(connectionOptions); err == nil {
 		if err = conn.connect(); err == nil {

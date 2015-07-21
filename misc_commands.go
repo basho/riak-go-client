@@ -45,6 +45,73 @@ func (cmd *PingCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// StartTls
+
+type StartTlsCommand struct {
+	CommandImpl
+}
+
+func (cmd *StartTlsCommand) Name() string {
+	return "StartTls"
+}
+
+func (cmd *StartTlsCommand) constructPbRequest() (msg proto.Message, err error) {
+	return nil, nil
+}
+
+func (cmd *StartTlsCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	return nil
+}
+
+func (cmd *StartTlsCommand) getRequestCode() byte {
+	return rpbCode_RpbStartTls
+}
+
+func (cmd *StartTlsCommand) getResponseCode() byte {
+	return rpbCode_RpbStartTls
+}
+
+func (cmd *StartTlsCommand) getResponseProtobufMessage() proto.Message {
+	return nil
+}
+
+// Auth
+
+type AuthCommand struct {
+	CommandImpl
+	User     string
+	Password string
+}
+
+func (cmd *AuthCommand) Name() string {
+	return "Auth"
+}
+
+func (cmd *AuthCommand) constructPbRequest() (msg proto.Message, err error) {
+	return &rpbRiak.RpbAuthReq{
+		User:     []byte(cmd.User),
+		Password: []byte(cmd.Password),
+	}, nil
+}
+
+func (cmd *AuthCommand) onSuccess(msg proto.Message) error {
+	cmd.Success = true
+	return nil
+}
+
+func (cmd *AuthCommand) getRequestCode() byte {
+	return rpbCode_RpbAuthReq
+}
+
+func (cmd *AuthCommand) getResponseCode() byte {
+	return rpbCode_RpbAuthResp
+}
+
+func (cmd *AuthCommand) getResponseProtobufMessage() proto.Message {
+	return nil
+}
+
 // FetchBucketProps
 
 type FetchBucketPropsCommand struct {
