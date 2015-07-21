@@ -215,15 +215,17 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 
 // non-exported funcs
 
-func (n *Node) getAvailableConnection() (c *connection) {
+func (n *Node) getAvailableConnection() *connection {
 	n.connMtx.Lock()
 	defer n.connMtx.Unlock()
-	c = nil
 	if len(n.available) > 0 {
-		c = n.available[0]
-		n.available = n.available[1:]
+		c := n.available[0]
+		if c.available() {
+			n.available = n.available[1:]
+			return c
+		}
 	}
-	return
+	return nil
 }
 
 func (n *Node) returnConnectionToPool(c *connection, shouldLock bool) {
@@ -232,7 +234,6 @@ func (n *Node) returnConnectionToPool(c *connection, shouldLock bool) {
 		defer n.connMtx.Unlock()
 	}
 	if n.isStateLessThan(NODE_SHUTTING_DOWN) {
-		c.inFlight = false
 		// TODO c.resetBuffer()
 		n.available = append(n.available, c)
 		logDebug("[Node] (%v)|Number of avail connections: %d", n, len(n.available))

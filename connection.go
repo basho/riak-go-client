@@ -25,6 +25,14 @@ type connectionOptions struct {
 	authOptions    *AuthOptions
 }
 
+type connState byte
+
+const (
+	connInactive connState = iota
+	connTlsStarting
+	connActive
+)
+
 // TODO authentication
 type connection struct {
 	addr           *net.TCPAddr
@@ -37,6 +45,7 @@ type connection struct {
 	active         bool
 	inFlight       bool
 	lastUsed       time.Time
+	state          connState
 }
 
 func newConnection(options *connectionOptions) (*connection, error) {
@@ -59,10 +68,9 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		healthCheck:    options.healthCheck,
 		authOptions:    options.authOptions,
 		sizeBuf:        make([]byte, 4),
-		active:         false,
-		// TODO may not be a necessary check
-		inFlight: false,
-		lastUsed: time.Now(),
+		inFlight:       false, // TODO: inFlight may not be necessary
+		lastUsed:       time.Now(),
+		state:          connInactive,
 	}, nil
 }
 
@@ -78,16 +86,15 @@ func (c *connection) connect() (err error) {
 	} else {
 		logDebug("[Connection] connected to: %s", c.addr)
 		if err = c.startTls(); err != nil {
+			c.state = connInactive
 			return
 		}
-		c.active = true
+		c.state = connActive
 		if c.healthCheck != nil {
 			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Successful() {
-				c.active = false
+				c.state = connInactive
 				logError(err.Error())
 				c.close()
-			} else {
-				c.inFlight = false
 			}
 		}
 	}
@@ -98,6 +105,7 @@ func (c *connection) startTls() (err error) {
 	if c.authOptions == nil {
 		return nil
 	}
+	c.state = connTlsStarting
 	startTlsCmd := &StartTlsCommand{}
 	if err = c.execute(startTlsCmd); err != nil {
 		return
@@ -113,14 +121,12 @@ func (c *connection) startTls() (err error) {
 	if err = tlsConn.Handshake(); err != nil {
 		return
 	}
+	c.conn = tlsConn
 	authCmd := &AuthCommand{
 		User:     c.authOptions.User,
 		Password: c.authOptions.Password,
 	}
-	if err = c.execute(authCmd); err != nil {
-		return
-	}
-	c.conn = tlsConn
+	err = c.execute(authCmd)
 	return
 }
 
@@ -130,7 +136,7 @@ func (c *connection) available() bool {
 			logErrorln("[Connection] available: connection panic!")
 		}
 	}()
-	return (c.conn != nil && c.active)
+	return (c.conn != nil && (c.state == connTlsStarting || c.state == connActive))
 }
 
 func (c *connection) close() (err error) {
@@ -140,14 +146,19 @@ func (c *connection) close() (err error) {
 	return
 }
 
+func (c *connection) setInFlight(inFlightVal bool) {
+	c.inFlight = inFlightVal
+}
+
 func (c *connection) execute(cmd Command) (err error) {
 	if c.inFlight == true {
-		err = fmt.Errorf("[Connection] attempted to run command on in-use connection")
+		err = fmt.Errorf("[Connection] attempted to run '%s' command on in-use connection", cmd.Name())
 		return
 	}
 
 	logDebug("[Connection] execute command: %v", cmd.Name())
-	c.inFlight = true
+	c.setInFlight(true)
+	defer c.setInFlight(false)
 	c.lastUsed = time.Now()
 
 	var message []byte
@@ -231,7 +242,7 @@ func (c *connection) read() (data []byte, err error) {
 	}
 	if err != nil {
 		// TODO why not close() ?
-		c.active = false
+		c.state = connInactive
 		data = nil
 	}
 	return
@@ -251,11 +262,11 @@ func (c *connection) write(data []byte) (err error) {
 		if err == syscall.EPIPE {
 			c.close()
 		}
-		c.active = false
+		c.state = connInactive
 		return
 	}
 	if count != len(data) {
-		c.active = false
+		c.state = connInactive
 		err = fmt.Errorf("[Connection] data length: %d, only wrote: %d", len(data), count)
 	}
 	return
