@@ -734,7 +734,6 @@ func TestBuildRpbDelReqCorrectlyViaBuilder(t *testing.T) {
 		WithDw(5).
 		WithRw(6).
 		WithVClock(vclockBytes).
-		WithSloppyQuorum(true).
 		WithTimeout(time.Second * 20)
 	cmd, err := builder.Build()
 	if err != nil {
@@ -774,9 +773,6 @@ func TestBuildRpbDelReqCorrectlyViaBuilder(t *testing.T) {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := 0, bytes.Compare(vclockBytes, req.GetVclock()); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
-		if expected, actual := true, req.GetSloppyQuorum(); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 		validateTimeout(t, time.Second*20, req.GetTimeout())
