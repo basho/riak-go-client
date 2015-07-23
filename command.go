@@ -11,6 +11,7 @@ type CommandBuilder interface {
 	Build() (Command, error)
 }
 
+// Command
 type StreamingCommand interface {
 	Done() bool
 }

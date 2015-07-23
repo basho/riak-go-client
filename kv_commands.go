@@ -411,6 +411,7 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 // RpbDelReq
 // RpbDelResp
 
+// Command used to delete a value from Riak.
 type DeleteValueCommand struct {
 	CommandImpl
 	Response bool
@@ -444,6 +445,14 @@ func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// This builder type is required for creating new instances of the DeleteValue command.
+// 
+//    deleteValue := NewDeleteValueCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        WithKey("myKey").
+//        WithVClock(vclock).
+//        Build()
 type DeleteValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbDelReq
 }
@@ -453,69 +462,86 @@ func NewDeleteValueCommandBuilder() *DeleteValueCommandBuilder {
 	return builder
 }
 
+// Set the bucket type.
+//
+// If not supplied, "default" is used.
 func (builder *DeleteValueCommandBuilder) WithBucketType(bucketType string) *DeleteValueCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// Set the bucket.
 func (builder *DeleteValueCommandBuilder) WithBucket(bucket string) *DeleteValueCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// Set the key.
 func (builder *DeleteValueCommandBuilder) WithKey(key string) *DeleteValueCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// Set the vector clock.
+//
+// If not set siblings may be created depending on bucket properties.
 func (builder *DeleteValueCommandBuilder) WithVClock(vclock []byte) *DeleteValueCommandBuilder {
 	builder.protobuf.Vclock = vclock
 	return builder
 }
 
+// Set the R value.
+//
+// If not set the bucket default is used.
 func (builder *DeleteValueCommandBuilder) WithR(r uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.R = &r
 	return builder
 }
 
+// Set the W value.
+// 
+// This represents the number of replicas to which to write before returning a successful response. If not set the bucket default is used.
 func (builder *DeleteValueCommandBuilder) WithW(w uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.W = &w
 	return builder
 }
 
+// Set the Pr value.
+//
+// If not set the bucket default is used.
 func (builder *DeleteValueCommandBuilder) WithPr(pr uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Pr = &pr
 	return builder
 }
 
+// Set the Pw value.
+//
+// This represents the number of primary nodes that must be available when the write is attempted. If not set the bucket default is used.
 func (builder *DeleteValueCommandBuilder) WithPw(pw uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Pw = &pw
 	return builder
 }
 
+// Set the DW value.
+//
+// This represents the number of replicas to which to commit to durable storage before returning a successful response. If not set the bucket default is used.
 func (builder *DeleteValueCommandBuilder) WithDw(dw uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
 }
 
+// Set the RW value.
+//
+// This represents the quorum for both get and put operations involved in deleting an object .
 func (builder *DeleteValueCommandBuilder) WithRw(rw uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Rw = &rw
 	return builder
 }
 
+// Set a timeout for this operation.
 func (builder *DeleteValueCommandBuilder) WithTimeout(timeout time.Duration) *DeleteValueCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
-	return builder
-}
-
-func (builder *DeleteValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *DeleteValueCommandBuilder {
-	builder.protobuf.SloppyQuorum = &sloppyQuorum
-	return builder
-}
-
-func (builder *DeleteValueCommandBuilder) WithNVal(nval uint32) *DeleteValueCommandBuilder {
-	builder.protobuf.NVal = &nval
 	return builder
 }
 
@@ -533,6 +559,7 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 // RpbListBucketsReq
 // RpbListBucketsResp
 
+// Command used to list buckets in a bucket type.
 type ListBucketsCommand struct {
 	CommandImpl
 	Response *ListBucketsResponse
@@ -613,6 +640,17 @@ type ListBucketsResponse struct {
 	Buckets []string
 }
 
+// This builder type is required for creating new instances of the ListBucketsCommand.
+// 
+//    cb := func(buckets []string) error {
+//        // Do something with buckets
+//        return nil
+//    }
+//    cmd := NewListBucketsCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithStreaming(true).
+//        WithCallback(cb).
+//        Build()
 type ListBucketsCommandBuilder struct {
 	callback func(buckets []string) error
 	protobuf *rpbRiakKV.RpbListBucketsReq
@@ -623,21 +661,29 @@ func NewListBucketsCommandBuilder() *ListBucketsCommandBuilder {
 	return builder
 }
 
+// Set the bucket type.
+//
+// If not supplied, "default" is used.
 func (builder *ListBucketsCommandBuilder) WithBucketType(bucketType string) *ListBucketsCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// Set to stream responses.
+//
+// If true, a callback must be provided via WithCallback()
 func (builder *ListBucketsCommandBuilder) WithStreaming(streaming bool) *ListBucketsCommandBuilder {
 	builder.protobuf.Stream = &streaming
 	return builder
 }
 
+// Callback to use when streaming responses.
 func (builder *ListBucketsCommandBuilder) WithCallback(callback func([]string) error) *ListBucketsCommandBuilder {
 	builder.callback = callback
 	return builder
 }
 
+// Set a timeout for this operation.
 func (builder *ListBucketsCommandBuilder) WithTimeout(timeout time.Duration) *ListBucketsCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds

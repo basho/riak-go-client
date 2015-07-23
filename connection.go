@@ -79,7 +79,7 @@ func (c *connection) connect() (err error) {
 		Timeout:   c.connectTimeout,
 		KeepAlive: time.Second * 30,
 	}
-	c.conn, err = dialer.Dial("tcp", c.addr.String())
+	c.conn, err = dialer.Dial("tcp", c.addr.String()) // NB: SetNoDelay() is true by default for TCP connections
 	if err != nil {
 		logError(err.Error())
 		c.close()
