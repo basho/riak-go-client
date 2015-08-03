@@ -63,3 +63,12 @@ func TestCreateClusterWithFourNodes(t *testing.T) {
 		t.Error("expected cluster to have a node manager")
 	}
 }
+
+func ExampleNewCluster() {
+	cluster, err := NewCluster(nil)
+	if err != nil {
+		panic(fmt.Sprintf("Error building cluster object: %s", err.Error()))
+	}
+	fmt.Println(cluster.nodes[0].addr.String())
+	// Output: 127.0.0.1:8087
+}

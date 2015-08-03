@@ -1,23 +1,30 @@
+// Copyright 2015 Basho Technologies, Inc. All rights reserved.
+// Use of this source code is governed by Apache License 2.0
+// license that can be found in the LICENSE file.
+
 package riak
 
 import (
 	"errors"
 	"fmt"
-	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
-	proto "github.com/golang/protobuf/proto"
 	"reflect"
 	"strconv"
 	"time"
+
+	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
+	proto "github.com/golang/protobuf/proto"
 )
 
 // FetchValue
 // RpbGetReq
 // RpbGetResp
 
+// ConflictResolver is an interface to handle sibling conflicts for a key
 type ConflictResolver interface {
 	Resolve([]*Object) []*Object
 }
 
+// FetchValueCommand is used to fetch / get a value from Riak
 type FetchValueCommand struct {
 	CommandImpl
 	Response *FetchValueResponse
@@ -95,6 +102,7 @@ func (cmd *FetchValueCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbGetResp{}
 }
 
+// FetchValueResponse contains the response data for a FetchValueCommand
 type FetchValueResponse struct {
 	IsNotFound  bool
 	IsUnchanged bool
@@ -102,11 +110,20 @@ type FetchValueResponse struct {
 	Values      []*Object
 }
 
+// FetchValueCommandBuilder contains config to build and execcute FetchValueCommand
 type FetchValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
 }
 
+/*
+NewFetchValueCommandBuilder builds the FetchValueCommand struct
+
+	builder := NewFetchValueCommandBuilder()
+	if cmd, err = builder.WithBucket(testBucketName).WithKey("notfound_key").Build(); err != nil {
+		t.Fatal(err.Error())
+	}
+*/
 func NewFetchValueCommandBuilder() *FetchValueCommandBuilder {
 	builder := &FetchValueCommandBuilder{protobuf: &rpbRiakKV.RpbGetReq{}}
 	return builder
@@ -197,6 +214,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 // RpbPutReq
 // RpbPutResp
 
+// Command used to store a value from Riak KV.
 type StoreValueCommand struct {
 	CommandImpl
 	Response *StoreValueResponse
@@ -411,7 +429,7 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 // RpbDelReq
 // RpbDelResp
 
-// Command used to delete a value from Riak.
+// Command used to delete a value from Riak KV.
 type DeleteValueCommand struct {
 	CommandImpl
 	Response bool
@@ -446,7 +464,7 @@ func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
 }
 
 // This builder type is required for creating new instances of the DeleteValue command.
-// 
+//
 //    deleteValue := NewDeleteValueCommandBuilder().
 //        WithBucketType("myBucketType").
 //        WithBucket("myBucket").
@@ -499,7 +517,7 @@ func (builder *DeleteValueCommandBuilder) WithR(r uint32) *DeleteValueCommandBui
 }
 
 // Set the W value.
-// 
+//
 // This represents the number of replicas to which to write before returning a successful response. If not set the bucket default is used.
 func (builder *DeleteValueCommandBuilder) WithW(w uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.W = &w
@@ -641,7 +659,7 @@ type ListBucketsResponse struct {
 }
 
 // This builder type is required for creating new instances of the ListBucketsCommand.
-// 
+//
 //    cb := func(buckets []string) error {
 //        // Do something with buckets
 //        return nil
@@ -707,6 +725,7 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 // RpbListKeysReq
 // RpbListKeysResp
 
+// Command used to fetch a list of keys from Riak KV.
 type ListKeysCommand struct {
 	CommandImpl
 	Response  *ListKeysResponse
@@ -844,6 +863,7 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 // RpbGetBucketKeyPreflistReq
 // RpbGetBucketKeyPreflistResp
 
+// Command used to fetch the preference list for a key from Riak KV
 type FetchPreflistCommand struct {
 	CommandImpl
 	Response *FetchPreflistResponse
@@ -944,6 +964,7 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 // RpbGetBucketKeyPreflistReq
 // RpbGetBucketKeyPreflistResp
 
+// Command used to query for keys from Riak KV using secondary indexes
 type SecondaryIndexQueryCommand struct {
 	CommandImpl
 	Response *SecondaryIndexQueryResponse
@@ -1167,6 +1188,7 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 // RpbMapRedReq
 // RpbMapRedResp
 
+// Command used to fetch keys or data from Riak KV using the MapReduce technique
 type MapReduceCommand struct {
 	CommandImpl
 	Response  [][]byte

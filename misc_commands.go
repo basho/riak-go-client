@@ -1,10 +1,15 @@
+// Copyright 2015 Basho Technologies, Inc. All rights reserved.
+// Use of this source code is governed by Apache License 2.0
+// license that can be found in the LICENSE file.
+
 package riak
 
 import (
 	"fmt"
+	"reflect"
+
 	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
 	proto "github.com/golang/protobuf/proto"
-	"reflect"
 )
 
 // Ping
