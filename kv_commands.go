@@ -25,6 +25,13 @@ type FetchValueCommand struct {
 	resolver ConflictResolver
 }
 
+func NewFetchValueCommand(pb *rpbRiakKV.RpbGetReq, resolver ConflictResolver) *FetchValueCommand {
+	return &FetchValueCommand{
+		protobuf: pb,
+		resolver: resolver,
+	}
+}
+
 func (cmd *FetchValueCommand) Name() string {
 	return "FetchValue"
 }
