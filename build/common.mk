@@ -1,8 +1,11 @@
-.PHONY: all lint test unit-test integration-test fmt help
+.PHONY: all get-deps lint test unit-test integration-test fmt help
 
 all: lint test
 
-lint:
+get-deps:
+	go get -t ./...
+
+lint: get-deps
 	go vet
 
 unit-test: lint

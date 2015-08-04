@@ -1,1 +1,10 @@
+branches:
+  only:
+    - master
+    - develop
+
 language: go
+
+script:
+    - make unit-test
+
