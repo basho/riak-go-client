@@ -446,7 +446,7 @@ func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
 }
 
 // This builder type is required for creating new instances of the DeleteValue command.
-// 
+//
 //    deleteValue := NewDeleteValueCommandBuilder().
 //        WithBucketType("myBucketType").
 //        WithBucket("myBucket").
@@ -499,7 +499,7 @@ func (builder *DeleteValueCommandBuilder) WithR(r uint32) *DeleteValueCommandBui
 }
 
 // Set the W value.
-// 
+//
 // This represents the number of replicas to which to write before returning a successful response. If not set the bucket default is used.
 func (builder *DeleteValueCommandBuilder) WithW(w uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.W = &w
@@ -641,7 +641,7 @@ type ListBucketsResponse struct {
 }
 
 // This builder type is required for creating new instances of the ListBucketsCommand.
-// 
+//
 //    cb := func(buckets []string) error {
 //        // Do something with buckets
 //        return nil
