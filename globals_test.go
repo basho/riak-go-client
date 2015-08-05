@@ -3,9 +3,9 @@ package riak
 import (
 	"bytes"
 	"encoding/binary"
-	"net"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"testing"

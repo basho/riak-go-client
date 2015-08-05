@@ -81,7 +81,7 @@ func (c *connection) connect() (err error) {
 	}
 	c.conn, err = dialer.Dial("tcp", c.addr.String()) // NB: SetNoDelay() is true by default for TCP connections
 	if err != nil {
-		logError(err.Error())
+		logError("[Connection] error when dialing %s: '%s'", c.addr.String(), err.Error())
 		c.close()
 	} else {
 		logDebug("[Connection] connected to: %s", c.addr)
@@ -93,7 +93,7 @@ func (c *connection) connect() (err error) {
 		if c.healthCheck != nil {
 			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Successful() {
 				c.state = connInactive
-				logError(err.Error())
+				logError("[Connection] initial health check error: '%s'", err.Error())
 				c.close()
 			}
 		}
@@ -105,13 +105,13 @@ func (c *connection) startTls() (err error) {
 	if c.authOptions == nil {
 		return nil
 	}
+	if c.authOptions.TlsConfig == nil {
+		return ErrAuthMissingConfig
+	}
 	c.state = connTlsStarting
 	startTlsCmd := &StartTlsCommand{}
 	if err = c.execute(startTlsCmd); err != nil {
 		return
-	}
-	if c.authOptions.TlsConfig == nil {
-		return ErrAuthMissingConfig
 	}
 	var tlsConn *tls.Conn
 	if tlsConn = tls.Client(c.conn, c.authOptions.TlsConfig); tlsConn == nil {
