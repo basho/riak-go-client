@@ -209,8 +209,6 @@ func (c *connection) execute(cmd Command) (err error) {
 			return
 		}
 	}
-
-	return
 }
 
 // TODO: we should also take currently executing Command (Riak operation)

@@ -351,8 +351,6 @@ func (n *Node) healthCheck() {
 			}
 		}
 	}
-
-	return
 }
 
 func (n *Node) expireIdleConnections() {

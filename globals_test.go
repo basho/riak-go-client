@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"net"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strconv"
+	"testing"
+	"time"
 )
 
 var localhost = net.ParseIP("127.0.0.1")
@@ -21,4 +27,151 @@ func rpbOldWrite(code byte, data []byte) []byte {
 	buf = append(buf, mc.Bytes()...)
 	buf = append(buf, data...)
 	return buf
+}
+
+var cluster *Cluster
+
+var riakHost = "riak-test"
+var riakPort uint16 = 10017
+var remoteAddress = "riak-test:10017"
+
+var vclock = bytes.NewBufferString("vclock123456789")
+var vclockBytes = vclock.Bytes()
+
+var crdtContext = bytes.NewBufferString("crdt_context")
+var crdtContextBytes = crdtContext.Bytes()
+
+// riak-admin bucket-type create leveldb_type '{"props":{"backend":"leveldb_backend"}}'
+// riak-admin bucket-type activate leveldb_type
+const testBucketType = "leveldb_type"
+const testBucketName = "riak_index_tests"
+
+// riak_admin bucket-type create counters '{"props":{"datatype":"counter"}}'
+// riak-admin bucket-type activate counters
+const testCounterBucketType = "counters"
+
+// riak_admin bucket-type create sets '{"props":{"datatype":"set"}}'
+// riak-admin bucket-type activate sets
+const testSetBucketType = "sets"
+
+// riak_admin bucket-type create maps '{"props":{"datatype":"map"}}'
+// riak-admin bucket-type activate maps
+const testMapBucketType = "maps"
+
+func init() {
+	if hostEnvVar := os.ExpandEnv("$RIAK_HOST"); hostEnvVar != "" {
+		riakHost = hostEnvVar
+	}
+	if portEnvVar := os.ExpandEnv("$RIAK_PORT"); portEnvVar != "" {
+		if portNum, err := strconv.Atoi(portEnvVar); err == nil {
+			riakPort = uint16(portNum)
+		}
+	}
+	remoteAddress = fmt.Sprintf("%s:%d", riakHost, riakPort)
+}
+
+func integrationTestsBuildCluster() {
+	var err error
+	if cluster == nil {
+		nodeOpts := &NodeOptions{
+			RemoteAddress:  remoteAddress,
+			RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
+		}
+		var node *Node
+		node, err = NewNode(nodeOpts)
+		if err != nil {
+			panic(fmt.Sprintf("error building integration test node object: %s", err.Error()))
+		}
+		if node == nil {
+			panic("NewNode returned nil!")
+		}
+		nodes := []*Node{node}
+		opts := &ClusterOptions{
+			Nodes: nodes,
+		}
+		cluster, err = NewCluster(opts)
+		if err != nil {
+			panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
+		}
+		if err = cluster.Start(); err != nil {
+			panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
+		}
+	}
+}
+
+func getBasicObject() *Object {
+	return &Object{
+		ContentType:     "text/plain",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           []byte("this is a value in Riak"),
+	}
+}
+
+func TestDeleteFromSliceWhileIterating(t *testing.T) {
+	s := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	if len(s) != 10 {
+		t.Errorf("expected 10 elements, got %v", len(s))
+	}
+	for i := 0; i < len(s); {
+		e := s[i]
+		// t.Log(i, "Processing:", e)
+		if e%2 == 0 {
+			l := len(s) - 1
+			s[i], s[l], s = s[l], 0, s[:l]
+		} else {
+			i++
+		}
+	}
+	if len(s) != 5 {
+		t.Errorf("expected 5 elements, got %v", len(s))
+	}
+}
+
+func writePingResp(t *testing.T, c net.Conn) (success bool) {
+	success = false
+	data := buildRiakMessage(rpbCode_RpbPingResp, nil)
+	count, err := c.Write(data)
+	if err != nil {
+		t.Error(err)
+	}
+	if count != len(data) {
+		t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
+	}
+	success = true
+	return
+}
+
+func jsonDump(val interface{}) {
+	EnableDebugLogging = true
+	defer func() {
+		EnableDebugLogging = false
+	}()
+	if val == nil {
+		logDebug("[jsonDump] NIL VAL")
+	} else {
+		if json, err := json.MarshalIndent(val, "", "  "); err != nil {
+			logDebug("[jsonDump] %s", err.Error())
+		} else {
+			logDebug("[jsonDump] %s", string(json))
+		}
+	}
+}
+
+func validateTimeout(t *testing.T, e time.Duration, a uint32) {
+	actualDuration := time.Duration(a) * time.Millisecond
+	if expected, actual := e, actualDuration; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func sliceIncludes(slice [][]byte, term []byte) (rv bool) {
+	rv = false
+	for _, t := range slice {
+		if bytes.Compare(t, term) == 0 {
+			rv = true
+			break
+		}
+	}
+	return
 }

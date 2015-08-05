@@ -1528,7 +1528,7 @@ func TestParseRpbMapRedRespCorrectly(t *testing.T) {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
 		} else {
-			t.Errorf("Could not convert %v to *MapReduceCommand", ok, reflect.TypeOf(cmd))
+			t.Errorf("Could not convert %v to *MapReduceCommand", reflect.TypeOf(cmd))
 		}
 	} else {
 		t.Error(err.Error())
@@ -1569,7 +1569,7 @@ func TestParseRpbMapRedRespCorrectlyWithStreaming(t *testing.T) {
 					t.Error("expected nil results")
 				}
 			} else {
-				t.Errorf("Could not convert %v to *MapReduceCommand", ok, reflect.TypeOf(cmd))
+				t.Errorf("Could not convert %v to *MapReduceCommand", reflect.TypeOf(cmd))
 			}
 		}
 		if expected, actual := 10, count; expected != actual {
