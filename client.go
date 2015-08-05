@@ -1,20 +1,19 @@
-// Copyright 2015 Basho Technologies, Inc. All rights reserved.
-// Use of this source code is governed by Apache License 2.0
-// license that can be found in the LICENSE file.
-
 package riak
 
 import (
 	"net"
 )
 
+// Client object contains your active connection to Riak and the debug flag
 type Client struct {
 	conn  *connection
 	debug bool
 }
 
-func New(addrs []string, max int) (*Client, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8098")
+// New generates a new Client object using an address string in the form of
+// "127.0.0.1:8098" with default connectionOptions
+func New(addrs string) (*Client, error) {
+	addr, err := net.ResolveTCPAddr("tcp", addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -30,6 +29,8 @@ func New(addrs []string, max int) (*Client, error) {
 	return client, nil
 }
 
+// Debug controls the debug flag for the Client object, allowing debug messages
+// to be written to the logs
 func (c *Client) Debug(debug bool) {
 	c.debug = debug
 }
