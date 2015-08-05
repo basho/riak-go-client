@@ -14,7 +14,8 @@ unit-test: lint
 integration-test: lint
 	go test -v -tags=integration ./...
 
-test: lint unit-test integration-test
+# TODO: add integration-test
+test: lint unit-test
 
 fmt:
 	gofmt -s -w .
