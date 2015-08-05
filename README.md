@@ -28,9 +28,11 @@ Most documentation is living in the
 
 ```
 git clone --recursive https://github.com/basho-labs/riak-go-client
+```
 
-# OR:
+OR:
 
+```
 git clone https://github.com/basho-labs/riak-go-client
 git submodule init --update
 ```

@@ -1,18 +1,18 @@
-.PHONY: all get-deps lint test unit-test integration-test fmt help
+.PHONY: all install-deps lint test unit-test integration-test fmt help
 
-all: lint test
+all: install-deps lint test
 
-get-deps:
-	go get -t ./...
+install-deps:
+	go get -t github.com/basho-labs/riak-go-client/...
 
-lint: get-deps
-	go vet
+lint: install-deps
+	go vet github.com/basho-labs/riak-go-client/...
 
 unit-test: lint
-	go test -v ./...
+	go test -v github.com/basho-labs/riak-go-client/...
 
 integration-test: lint
-	go test -v -tags=integration ./...
+	go test -v -tags=integration github.com/basho-labs/riak-go-client/...
 
 # TODO: add integration-test
 test: lint unit-test

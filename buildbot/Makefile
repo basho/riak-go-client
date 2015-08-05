@@ -20,5 +20,5 @@ configure:
 compile: install-deps
 
 setup-integration:
-	echo 'Nothing to do!'
+	@echo 'Nothing to do!'
 
