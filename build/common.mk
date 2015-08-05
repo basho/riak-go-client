@@ -1,11 +1,11 @@
-.PHONY: all get-deps lint test unit-test integration-test fmt help
+.PHONY: all install-deps lint test unit-test integration-test fmt help
 
-all: lint test
+all: install-deps lint test
 
-get-deps:
+install-deps:
 	go get -t ./...
 
-lint: get-deps
+lint: install-deps
 	go vet
 
 unit-test: lint
