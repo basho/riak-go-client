@@ -40,7 +40,12 @@ TL;DR;
       fmt.Println(err.Error())
     }
 
-    obj := getBasicObject()
+    obj := &Object{
+  		ContentType:     "text/plain",
+  		Charset:         "utf-8",
+  		ContentEncoding: "utf-8",
+  		Value:           []byte("this is a value in Riak"),
+  	}
 
     cmd, err := NewStoreValueCommandBuilder().
   		WithBucket(testBucketName).
