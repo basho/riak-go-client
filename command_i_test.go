@@ -19,7 +19,7 @@ func TestPing(t *testing.T) {
 		err  error
 		conn *connection
 	)
-	addr, err = net.ResolveTCPAddr("tcp4", "riak-test:10017")
+	addr, err = net.ResolveTCPAddr("tcp4", getRiakAddress())
 	if err != nil {
 		t.Error(err.Error())
 	}

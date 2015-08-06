@@ -127,6 +127,8 @@ func TestConnectionTimeout(t *testing.T) {
 		} else {
 			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 				t.Log("timeout error", neterr)
+			} else if operr, ok := err.(*net.OpError); ok {
+				t.Log("op error", operr)
 			} else {
 				t.Errorf("expected to see timeout error, but got '%s' (type: %v)", err.Error(), reflect.TypeOf(err))
 			}
