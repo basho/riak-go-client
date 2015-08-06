@@ -14,8 +14,7 @@ unit-test: lint
 integration-test: lint
 	go test -v -tags=integration github.com/basho-labs/riak-go-client/...
 
-# TODO: add integration-test
-test: lint unit-test
+test: unit-test integration-test
 
 fmt:
 	gofmt -s -w .

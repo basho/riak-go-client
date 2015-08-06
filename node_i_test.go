@@ -9,8 +9,10 @@ import (
 )
 
 func TestCreateNodeWithOptionsAndStart(t *testing.T) {
+	remoteAddress := getRiakAddress()
+	t.Log("[TestCreateNodeWithOptionsAndStart] remoteAddress:", remoteAddress)
 	opts := &NodeOptions{
-		RemoteAddress:       "riak-test:10017",
+		RemoteAddress:       remoteAddress,
 		MinConnections:      2,
 		MaxConnections:      2048,
 		IdleTimeout:         thirtyMinutes,

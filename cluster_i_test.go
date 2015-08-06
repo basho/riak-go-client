@@ -8,7 +8,7 @@ import (
 
 func TestExecuteCommandOnCluster(t *testing.T) {
 	nodeOpts := &NodeOptions{
-		RemoteAddress: remoteAddress,
+		RemoteAddress: getRiakAddress(),
 	}
 
 	var node *Node
@@ -65,7 +65,7 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 	nodeOpts := &NodeOptions{
 		MinConnections: 32,
 		MaxConnections: 64,
-		RemoteAddress:  remoteAddress,
+		RemoteAddress:  getRiakAddress(),
 	}
 
 	var node *Node

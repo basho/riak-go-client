@@ -16,10 +16,6 @@ var localhost = net.ParseIP("127.0.0.1")
 
 var cluster *Cluster
 
-var riakHost = "riak-test"
-var riakPort uint16 = 10017
-var remoteAddress = "riak-test:10017"
-
 var vclock = bytes.NewBufferString("vclock123456789")
 var vclockBytes = vclock.Bytes()
 
@@ -43,7 +39,9 @@ const testSetBucketType = "sets"
 // riak-admin bucket-type activate maps
 const testMapBucketType = "maps"
 
-func init() {
+func getRiakAddress() string {
+	riakHost := "riak-test"
+	riakPort := uint16(10017)
 	if hostEnvVar := os.ExpandEnv("$RIAK_HOST"); hostEnvVar != "" {
 		riakHost = hostEnvVar
 	}
@@ -52,14 +50,14 @@ func init() {
 			riakPort = uint16(portNum)
 		}
 	}
-	remoteAddress = fmt.Sprintf("%s:%d", riakHost, riakPort)
+	return fmt.Sprintf("%s:%d", riakHost, riakPort)
 }
 
 func integrationTestsBuildCluster() {
 	var err error
 	if cluster == nil {
 		nodeOpts := &NodeOptions{
-			RemoteAddress:  remoteAddress,
+			RemoteAddress:  getRiakAddress(),
 			RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
 		}
 		var node *Node
