@@ -1,7 +1,3 @@
-// Copyright 2015 Basho Technologies, Inc. All rights reserved.
-// Use of this source code is governed by Apache License 2.0
-// license that can be found in the LICENSE file.
-
 package riak
 
 import (
@@ -12,15 +8,19 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
+// CommandBuilder interface requires Build() method for generating the Command
+// to be executed
 type CommandBuilder interface {
 	Build() (Command, error)
 }
 
-// Command
+// StreamingCommand interface requires the Done() method for signaling the
+// completion of a streamed response
 type StreamingCommand interface {
 	Done() bool
 }
 
+// Command interface enforces proper structure of a Command object
 type Command interface {
 	Name() string
 	Successful() bool
