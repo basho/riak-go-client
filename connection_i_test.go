@@ -21,15 +21,12 @@ func TestSuccessfulConnection(t *testing.T) {
 	sawConnection := false
 
 	go func() {
-		for {
-			c, err := ln.Accept()
-			sawConnection = true
-			if err == nil {
-				c.Close()
-			} else {
-				t.Error(err.Error())
-			}
+		c, err := ln.Accept()
+		defer c.Close()
+		if err != nil {
+			t.Error(err.Error())
 		}
+		sawConnection = true
 	}()
 
 	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1337")
@@ -67,12 +64,10 @@ func TestConnectionClosed(t *testing.T) {
 	defer ln.Close()
 
 	go func() {
-		for {
-			c, err := ln.Accept()
-			if err != nil {
-				break
-			}
-			c.Close()
+		c, err := ln.Accept()
+		defer c.Close()
+		if err != nil {
+			t.Error(err)
 		}
 	}()
 
@@ -141,35 +136,31 @@ func TestHealthCheckFail(t *testing.T) {
 	defer ln.Close()
 
 	go func() {
-		for {
-			c, err := ln.Accept()
-			if err != nil {
-				t.Error(err)
-				break
-			}
+		c, err := ln.Accept()
+		if err != nil {
+			t.Error(err)
+		}
+		defer c.Close()
 
-			var errcode uint32 = 1
-			errmsg := bytes.NewBufferString("this is an error")
-			rpbErr := &rpb_riak.RpbErrorResp{
-				Errcode: &errcode,
-				Errmsg:  errmsg.Bytes(),
-			}
+		var errcode uint32 = 1
+		errmsg := bytes.NewBufferString("this is an error")
+		rpbErr := &rpb_riak.RpbErrorResp{
+			Errcode: &errcode,
+			Errmsg:  errmsg.Bytes(),
+		}
 
-			encoded, err := proto.Marshal(rpbErr)
-			if err != nil {
-				t.Error(err)
-				break
-			}
+		encoded, err := proto.Marshal(rpbErr)
+		if err != nil {
+			t.Error(err)
+		}
 
-			data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
-			count, err := c.Write(data)
-			if err != nil {
-				t.Error(err)
-				break
-			}
-			if count != len(data) {
-				t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
-			}
+		data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
+		count, err := c.Write(data)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != len(data) {
+			t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
 		}
 	}()
 
@@ -209,14 +200,12 @@ func TestHealthCheckSuccess(t *testing.T) {
 	defer ln.Close()
 
 	go func() {
-		for {
-			c, err := ln.Accept()
-			if err != nil {
-				t.Error(err)
-				break
-			}
-			writePingResp(t, c)
+		c, err := ln.Accept()
+		defer c.Close()
+		if err != nil {
+			t.Error(err)
 		}
+		writePingResp(t, c)
 	}()
 
 	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1340")
