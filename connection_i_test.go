@@ -6,7 +6,9 @@ import (
 	"bytes"
 	rpb_riak "github.com/basho-labs/riak-go-client/rpb/riak"
 	"github.com/golang/protobuf/proto"
+	"io"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -65,8 +67,10 @@ func TestConnectionClosed(t *testing.T) {
 
 	go func() {
 		c, err := ln.Accept()
-		defer c.Close()
 		if err != nil {
+			t.Error(err)
+		}
+		if err := c.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
@@ -88,13 +92,17 @@ func TestConnectionClosed(t *testing.T) {
 	if err := conn.connect(); err != nil {
 		t.Error("unexpected error in connect", err)
 	} else {
+		if err := ln.Close(); err != nil {
+			t.Error(err)
+		}
 		cmd := &PingCommand{}
-		ln.Close()
 		if err := conn.execute(cmd); err != nil {
 			if operr, ok := err.(*net.OpError); ok {
 				t.Log("op error", operr, operr.Op)
+			} else if err == io.EOF {
+				t.Log("saw EOF")
 			} else {
-				t.Error("expected to see net.OpError")
+				t.Errorf("expected to see net.OpError or io.EOF, but got '%s' (type: %v)", err.Error(), reflect.TypeOf(err))
 			}
 		} else {
 			t.Error("expected error in execute")
@@ -103,7 +111,7 @@ func TestConnectionClosed(t *testing.T) {
 }
 
 func TestConnectionTimeout(t *testing.T) {
-	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:65535")
+	addr, err := net.ResolveTCPAddr("tcp4", "10.255.255.1:65535")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -120,7 +128,7 @@ func TestConnectionTimeout(t *testing.T) {
 			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 				t.Log("timeout error", neterr)
 			} else {
-				t.Error("expected to see timeout error")
+				t.Errorf("expected to see timeout error, but got '%s' (type: %v)", err.Error(), reflect.TypeOf(err))
 			}
 		}
 	} else {
