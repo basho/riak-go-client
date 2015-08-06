@@ -20,7 +20,7 @@ func TestStoreFetchAndDeleteAYokozunaIndex(t *testing.T) {
 	var cmd Command
 	indexName := "indexName"
 	sbuilder := NewStoreIndexCommandBuilder()
-	cmd, err = sbuilder.WithIndexName(indexName).WithTimeout(time.Second * 10).Build()
+	cmd, err = sbuilder.WithIndexName(indexName).WithTimeout(time.Second * 30).Build()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -94,20 +94,20 @@ func TestStoreFetchAndDeleteAYokozunaSchema(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
-	if fcmd, ok := cmd.(*FetchSchemaCommand); ok {
-		if fcmd.Response == nil {
-			t.Errorf("expected non-nil Response")
-		}
-		sch := fcmd.Response
-		if expected, actual := defaultSchemaName, sch.Name; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
-		schemaXml = sch.Content
-	} else {
-		t.FailNow()
+
+	fcmd := cmd.(*FetchSchemaCommand)
+	if fcmd.Response == nil {
+		t.Fatal("expected non-nil Response")
 	}
+
+	sch := fcmd.Response
+	if expected, actual := defaultSchemaName, sch.Name; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+
+	schemaXml = sch.Content
 
 	sbuilder := NewStoreSchemaCommandBuilder()
 	cmd, err = sbuilder.WithSchemaName(schemaName).WithSchema(schemaXml).Build()
