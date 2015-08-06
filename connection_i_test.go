@@ -111,7 +111,7 @@ func TestConnectionClosed(t *testing.T) {
 }
 
 func TestConnectionTimeout(t *testing.T) {
-	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:65535")
+	addr, err := net.ResolveTCPAddr("tcp4", "10.255.255.1:65535")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -128,7 +128,7 @@ func TestConnectionTimeout(t *testing.T) {
 			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 				t.Log("timeout error", neterr)
 			} else {
-				t.Error("expected to see timeout error")
+				t.Errorf("expected to see timeout error, but got '%s' (type: %v)", err.Error(), reflect.TypeOf(err))
 			}
 		}
 	} else {
