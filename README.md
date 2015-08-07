@@ -13,7 +13,7 @@ latency. Both Riak and this code is maintained by [Basho](http://www.basho.com/)
 
 ## Installation
 
-TODO
+`go get github.com/basho/riak-go-client`
 
 ## Documentation
 
@@ -49,7 +49,7 @@ Thank you for being part of the community! We love you for it.
 
 ## Roadmap
 
-TODO
+* 1.0.0 - Full Riak 2 support with command queuing and retries.
 
 ## License and Authors
 
@@ -60,7 +60,8 @@ These excellent community projects inspired this client and parts of their code 
 * [`goriakpbc`](https://github.com/tpjg/goriakpbc)
 * [`riaken-core`](https://github.com/riaken/riaken-core)
 
-* Author: [Luke Bakken](http://bakken.io/)
+* Author: [Luke Bakken](https://github.com/lukebakken)
+* Author: [Christopher Mancini](https://github.com/christophermancini)
 
 ## Contributors
 
