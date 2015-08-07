@@ -3,7 +3,7 @@ package riak
 import (
 	"bytes"
 	"fmt"
-	rpbRiakDT "github.com/basho-labs/riak-go-client/rpb/riak_dt"
+	rpbRiakDT "github.com/basho/riak-go-client/rpb/riak_dt"
 	"reflect"
 	"testing"
 	"time"
