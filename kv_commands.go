@@ -28,6 +28,7 @@ type FetchValueCommand struct {
 	resolver ConflictResolver
 }
 
+// Name identifies this command
 func (cmd *FetchValueCommand) Name() string {
 	return "FetchValue"
 }
@@ -63,15 +64,15 @@ func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
 			} else {
 				response.Values = make([]*Object, len(pbContent))
 				for i, content := range pbContent {
-					if ro, err := fromRpbContent(content); err != nil {
+					ro, err := fromRpbContent(content)
+					if err != nil {
 						return err
-					} else {
-						ro.VClock = vclock
-						ro.BucketType = string(cmd.protobuf.Type)
-						ro.Bucket = string(cmd.protobuf.Bucket)
-						ro.Key = string(cmd.protobuf.Key)
-						response.Values[i] = ro
 					}
+					ro.VClock = vclock
+					ro.BucketType = string(cmd.protobuf.Type)
+					ro.Bucket = string(cmd.protobuf.Bucket)
+					ro.Key = string(cmd.protobuf.Key)
+					response.Values[i] = ro
 				}
 				if cmd.resolver != nil {
 					response.Values = cmd.resolver.Resolve(response.Values)
@@ -106,55 +107,70 @@ type FetchValueResponse struct {
 	Values      []*Object
 }
 
-// FetchValueCommandBuilder contains config to build and execcute FetchValueCommand
+// FetchValueCommandBuilder type is required for creating new instances of FetchValueCommand
+//
+//    command := NewFetchValueCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        WithKey("myKey").
+//        Build()
 type FetchValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
 }
 
-/*
-NewFetchValueCommandBuilder builds the FetchValueCommand struct
-
-	builder := NewFetchValueCommandBuilder()
-	if cmd, err = builder.WithBucket(testBucketName).WithKey("notfound_key").Build(); err != nil {
-		t.Fatal(err.Error())
-	}
-*/
+// NewFetchValueCommandBuilder is a factory function for generating the command builder struct
 func NewFetchValueCommandBuilder() *FetchValueCommandBuilder {
 	builder := &FetchValueCommandBuilder{protobuf: &rpbRiakKV.RpbGetReq{}}
 	return builder
 }
 
+// WithConflictResolver builds the command object with a user defined ConflictResolver for handling conflicting key values
 func (builder *FetchValueCommandBuilder) WithConflictResolver(resolver ConflictResolver) *FetchValueCommandBuilder {
 	builder.resolver = resolver
 	return builder
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *FetchValueCommandBuilder) WithBucketType(bucketType string) *FetchValueCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *FetchValueCommandBuilder) WithBucket(bucket string) *FetchValueCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *FetchValueCommandBuilder) WithKey(key string) *FetchValueCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchValueCommandBuilder) WithR(r uint32) *FetchValueCommandBuilder {
 	builder.protobuf.R = &r
 	return builder
 }
 
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchValueCommandBuilder) WithPr(pr uint32) *FetchValueCommandBuilder {
 	builder.protobuf.Pr = &pr
 	return builder
 }
 
+// WithNVal sets the number of times this command operation is replicated in the Cluster. If
+// ommitted, the ring default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchValueCommandBuilder) WithNVal(nval uint32) *FetchValueCommandBuilder {
 	builder.protobuf.NVal = &nval
 	return builder
@@ -185,6 +201,7 @@ func (builder *FetchValueCommandBuilder) WithReturnDeletedVClock(returnDeletedVC
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *FetchValueCommandBuilder) WithTimeout(timeout time.Duration) *FetchValueCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
@@ -196,6 +213,7 @@ func (builder *FetchValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *Fe
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -219,6 +237,7 @@ type StoreValueCommand struct {
 	resolver ConflictResolver
 }
 
+// Name identifies this command
 func (cmd *StoreValueCommand) Name() string {
 	return "StoreValue"
 }
@@ -314,12 +333,19 @@ type StoreValueResponse struct {
 	Values       []*Object
 }
 
+// StoreValueCommandBuilder type is required for creating new instances of StoreValueCommand
+//
+//    command := NewStoreValueCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        Build()
 type StoreValueCommandBuilder struct {
 	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
 	resolver ConflictResolver
 }
 
+// NewStoreValueCommandBuilder is a factory function for generating the command builder struct
 func NewStoreValueCommandBuilder() *StoreValueCommandBuilder {
 	builder := &StoreValueCommandBuilder{protobuf: &rpbRiakKV.RpbPutReq{}}
 	return builder
@@ -330,16 +356,19 @@ func (builder *StoreValueCommandBuilder) WithConflictResolver(resolver ConflictR
 	return builder
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *StoreValueCommandBuilder) WithBucketType(bucketType string) *StoreValueCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *StoreValueCommandBuilder) WithBucket(bucket string) *StoreValueCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *StoreValueCommandBuilder) WithKey(key string) *StoreValueCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
@@ -355,26 +384,46 @@ func (builder *StoreValueCommandBuilder) WithContent(object *Object) *StoreValue
 	return builder
 }
 
+// WithW sets the number of nodes that must report back a successful write in order for then
+// command operation to be considered a success by Riak
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreValueCommandBuilder) WithW(w uint32) *StoreValueCommandBuilder {
 	builder.protobuf.W = &w
 	return builder
 }
 
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreValueCommandBuilder) WithDw(dw uint32) *StoreValueCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
 }
 
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.  If ommitted, the bucket default is
+// used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreValueCommandBuilder) WithPw(pw uint32) *StoreValueCommandBuilder {
 	builder.protobuf.Pw = &pw
 	return builder
 }
 
+// WithNVal sets the number of times this command operation is replicated in the Cluster. If
+// ommitted, the ring default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreValueCommandBuilder) WithNVal(nval uint32) *StoreValueCommandBuilder {
 	builder.protobuf.NVal = &nval
 	return builder
 }
 
+// WithReturnBody sets Riak to return the value within its response after completing the write
+// operation
 func (builder *StoreValueCommandBuilder) WithReturnBody(returnBody bool) *StoreValueCommandBuilder {
 	builder.protobuf.ReturnBody = &returnBody
 	return builder
@@ -395,6 +444,7 @@ func (builder *StoreValueCommandBuilder) WithReturnHead(returnHead bool) *StoreV
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *StoreValueCommandBuilder) WithTimeout(timeout time.Duration) *StoreValueCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
@@ -411,6 +461,7 @@ func (builder *StoreValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *St
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -432,6 +483,7 @@ type DeleteValueCommand struct {
 	protobuf *rpbRiakKV.RpbDelReq
 }
 
+// Name identifies this command
 func (cmd *DeleteValueCommand) Name() string {
 	return "DeleteValue"
 }
@@ -459,7 +511,7 @@ func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
-// This builder type is required for creating new instances of the DeleteValue command.
+// DeleteValueCommandBuilder type is required for creating new instances of DeleteValueCommand
 //
 //    deleteValue := NewDeleteValueCommandBuilder().
 //        WithBucketType("myBucketType").
@@ -471,26 +523,25 @@ type DeleteValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbDelReq
 }
 
+// NewDeleteValueCommandBuilder is a factory function for generating the command builder struct
 func NewDeleteValueCommandBuilder() *DeleteValueCommandBuilder {
 	builder := &DeleteValueCommandBuilder{protobuf: &rpbRiakKV.RpbDelReq{}}
 	return builder
 }
 
-// Set the bucket type.
-//
-// If not supplied, "default" is used.
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *DeleteValueCommandBuilder) WithBucketType(bucketType string) *DeleteValueCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
-// Set the bucket.
+// WithBucket sets the bucket to be used by the command
 func (builder *DeleteValueCommandBuilder) WithBucket(bucket string) *DeleteValueCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
-// Set the key.
+// WithKey sets the key to be used by the command to read / write values
 func (builder *DeleteValueCommandBuilder) WithKey(key string) *DeleteValueCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
@@ -504,41 +555,48 @@ func (builder *DeleteValueCommandBuilder) WithVClock(vclock []byte) *DeleteValue
 	return builder
 }
 
-// Set the R value.
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
 //
-// If not set the bucket default is used.
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *DeleteValueCommandBuilder) WithR(r uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.R = &r
 	return builder
 }
 
-// Set the W value.
+// WithW sets the number of nodes that must report back a successful write in order for then
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
 //
-// This represents the number of replicas to which to write before returning a successful response. If not set the bucket default is used.
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *DeleteValueCommandBuilder) WithW(w uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.W = &w
 	return builder
 }
 
-// Set the Pr value.
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak. If ommitted, the bucket default is used.
 //
-// If not set the bucket default is used.
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *DeleteValueCommandBuilder) WithPr(pr uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Pr = &pr
 	return builder
 }
 
-// Set the Pw value.
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.  If ommitted, the bucket default is
+// used.
 //
-// This represents the number of primary nodes that must be available when the write is attempted. If not set the bucket default is used.
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *DeleteValueCommandBuilder) WithPw(pw uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Pw = &pw
 	return builder
 }
 
-// Set the DW value.
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
 //
-// This represents the number of replicas to which to commit to durable storage before returning a successful response. If not set the bucket default is used.
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *DeleteValueCommandBuilder) WithDw(dw uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
@@ -552,13 +610,14 @@ func (builder *DeleteValueCommandBuilder) WithRw(rw uint32) *DeleteValueCommandB
 	return builder
 }
 
-// Set a timeout for this operation.
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *DeleteValueCommandBuilder) WithTimeout(timeout time.Duration) *DeleteValueCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -582,6 +641,7 @@ type ListBucketsCommand struct {
 	done     bool
 }
 
+// Name identifies this command
 func (cmd *ListBucketsCommand) Name() string {
 	return "ListBuckets"
 }
@@ -654,7 +714,7 @@ type ListBucketsResponse struct {
 	Buckets []string
 }
 
-// This builder type is required for creating new instances of the ListBucketsCommand.
+// ListBucketsCommandBuilder type is required for creating new instances of ListBucketsCommand
 //
 //    cb := func(buckets []string) error {
 //        // Do something with buckets
@@ -670,14 +730,13 @@ type ListBucketsCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbListBucketsReq
 }
 
+// NewListBucketsCommandBuilder is a factory function for generating the command builder struct
 func NewListBucketsCommandBuilder() *ListBucketsCommandBuilder {
 	builder := &ListBucketsCommandBuilder{protobuf: &rpbRiakKV.RpbListBucketsReq{}}
 	return builder
 }
 
-// Set the bucket type.
-//
-// If not supplied, "default" is used.
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *ListBucketsCommandBuilder) WithBucketType(bucketType string) *ListBucketsCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
@@ -697,13 +756,14 @@ func (builder *ListBucketsCommandBuilder) WithCallback(callback func([]string) e
 	return builder
 }
 
-// Set a timeout for this operation.
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *ListBucketsCommandBuilder) WithTimeout(timeout time.Duration) *ListBucketsCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -731,6 +791,7 @@ type ListKeysCommand struct {
 	done      bool
 }
 
+// Name identifies this command
 func (cmd *ListKeysCommand) Name() string {
 	return "ListKeys"
 }
@@ -801,22 +862,37 @@ type ListKeysResponse struct {
 	Keys []string
 }
 
+// ListKeysCommandBuilder type is required for creating new instances of ListKeysCommand
+//
+//    cb := func(keys []string) error {
+//        // Do something with keys
+//        return nil
+//    }
+//    cmd := NewListKeysCommandBuilder().
+//        WithBucketType("myBucketType").
+//				WithBucket("myBucket").
+//        WithStreaming(true).
+//        WithCallback(cb).
+//        Build()
 type ListKeysCommandBuilder struct {
 	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
 	callback  func(buckets []string) error
 }
 
+// NewListKeysCommandBuilder is a factory function for generating the command builder struct
 func NewListKeysCommandBuilder() *ListKeysCommandBuilder {
 	builder := &ListKeysCommandBuilder{protobuf: &rpbRiakKV.RpbListKeysReq{}}
 	return builder
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *ListKeysCommandBuilder) WithBucketType(bucketType string) *ListKeysCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *ListKeysCommandBuilder) WithBucket(bucket string) *ListKeysCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
@@ -832,12 +908,14 @@ func (builder *ListKeysCommandBuilder) WithCallback(callback func([]string) erro
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *ListKeysCommandBuilder) WithTimeout(timeout time.Duration) *ListKeysCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -866,6 +944,7 @@ type FetchPreflistCommand struct {
 	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
 }
 
+// Name identifies this command
 func (cmd *FetchPreflistCommand) Name() string {
 	return "FetchPreflist"
 }
@@ -922,30 +1001,42 @@ type FetchPreflistResponse struct {
 	Preflist []*PreflistItem
 }
 
+// FetchPreflistCommandBuilder type is required for creating new instances of FetchPreflistCommand
+//
+//    preflist := NewFetchPreflistCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        WithKey("myKey").
+//        Build()
 type FetchPreflistCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
 }
 
+// NewFetchPreflistCommandBuilder is a factory function for generating the command builder struct
 func NewFetchPreflistCommandBuilder() *FetchPreflistCommandBuilder {
 	builder := &FetchPreflistCommandBuilder{protobuf: &rpbRiakKV.RpbGetBucketKeyPreflistReq{}}
 	return builder
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *FetchPreflistCommandBuilder) WithBucketType(bucketType string) *FetchPreflistCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *FetchPreflistCommandBuilder) WithBucket(bucket string) *FetchPreflistCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *FetchPreflistCommandBuilder) WithKey(key string) *FetchPreflistCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -977,6 +1068,7 @@ func (cmd *SecondaryIndexQueryCommand) Done() bool {
 	}
 }
 
+// Name identifies this command
 func (cmd *SecondaryIndexQueryCommand) Name() string {
 	return "SecondaryIndexQuery"
 }
@@ -1077,26 +1169,38 @@ type SecondaryIndexQueryResponse struct {
 	Continuation []byte
 }
 
+// SecondaryIndexQueryCommandBuilder type is required for creating new instances of SecondaryIndexQueryCommand
+//
+//    command := NewSecondaryIndexQueryCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        WithIndexName("myIndexName").
+//        WithIndexKey("myIndexKey").
+//        Build()
 type SecondaryIndexQueryCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbIndexReq
 	callback func([]*SecondaryIndexQueryResult) error
 }
 
+// NewSecondaryIndexQueryCommandBuilder is a factory function for generating the command builder struct
 func NewSecondaryIndexQueryCommandBuilder() *SecondaryIndexQueryCommandBuilder {
 	builder := &SecondaryIndexQueryCommandBuilder{protobuf: &rpbRiakKV.RpbIndexReq{}}
 	return builder
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *SecondaryIndexQueryCommandBuilder) WithBucketType(bucketType string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *SecondaryIndexQueryCommandBuilder) WithBucket(bucket string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithIndexName sets the index to use for the command
 func (builder *SecondaryIndexQueryCommandBuilder) WithIndexName(indexName string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Index = []byte(indexName)
 	return builder
@@ -1154,12 +1258,14 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithTermRegex(regex string) *S
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *SecondaryIndexQueryCommandBuilder) WithTimeout(timeout time.Duration) *SecondaryIndexQueryCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -1194,6 +1300,7 @@ type MapReduceCommand struct {
 	done      bool
 }
 
+// Name identifies this command
 func (cmd *MapReduceCommand) Name() string {
 	return "MapReduce"
 }
@@ -1249,12 +1356,18 @@ func (cmd *MapReduceCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbMapRedResp{}
 }
 
+// MapReduceCommandBuilder type is required for creating new instances of MapReduceCommand
+//
+//    command := NewMapReduceCommandBuilder().
+//        WithQuery("myMapReduceQuery").
+//        Build()
 type MapReduceCommandBuilder struct {
 	protobuf  *rpbRiakKV.RpbMapRedReq
 	streaming bool
 	callback  func(response []byte) error
 }
 
+// NewMapReduceCommandBuilder is a factory function for generating the command builder struct
 func NewMapReduceCommandBuilder() *MapReduceCommandBuilder {
 	return &MapReduceCommandBuilder{
 		protobuf: &rpbRiakKV.RpbMapRedReq{
@@ -1278,6 +1391,7 @@ func (builder *MapReduceCommandBuilder) WithCallback(callback func([]byte) error
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *MapReduceCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")

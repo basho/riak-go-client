@@ -31,6 +31,7 @@ type StoreIndexCommand struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
 
+// Name identifies this command
 func (cmd *StoreIndexCommand) Name() string {
 	return "StoreIndex"
 }
@@ -57,10 +58,17 @@ func (cmd *StoreIndexCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// StoreIndexCommandBuilder type is required for creating new instances of StoreIndexCommand
+//
+//    command := NewStoreIndexCommandBuilder().
+//        WithIndexName("myIndexName").
+//        WithSchemaName("mySchemaName").
+//        Build()
 type StoreIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
 
+// NewStoreIndexCommandBuilder is a factory function for generating the command builder struct
 func NewStoreIndexCommandBuilder() *StoreIndexCommandBuilder {
 	protobuf := &rpbRiakYZ.RpbYokozunaIndexPutReq{
 		Index: &rpbRiakYZ.RpbYokozunaIndex{},
@@ -69,6 +77,7 @@ func NewStoreIndexCommandBuilder() *StoreIndexCommandBuilder {
 	return builder
 }
 
+// WithIndexName sets the index to use for the command
 func (builder *StoreIndexCommandBuilder) WithIndexName(indexName string) *StoreIndexCommandBuilder {
 	builder.protobuf.Index.Name = []byte(indexName)
 	return builder
@@ -79,17 +88,23 @@ func (builder *StoreIndexCommandBuilder) WithSchemaName(schemaName string) *Stor
 	return builder
 }
 
+// WithNVal sets the number of times this command operation is replicated in the Cluster. If
+// ommitted, the ring default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreIndexCommandBuilder) WithNVal(nval uint32) *StoreIndexCommandBuilder {
 	builder.protobuf.Index.NVal = &nval
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *StoreIndexCommandBuilder) WithTimeout(timeout time.Duration) *StoreIndexCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *StoreIndexCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -107,6 +122,7 @@ type FetchIndexCommand struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexGetReq
 }
 
+// Name identifies this command
 func (cmd *FetchIndexCommand) Name() string {
 	return "FetchIndex"
 }
@@ -150,20 +166,28 @@ func (cmd *FetchIndexCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakYZ.RpbYokozunaIndexGetResp{}
 }
 
+// FetchIndexCommandBuilder type is required for creating new instances of FetchIndexCommand
+//
+//    command := NewFetchIndexCommandBuilder().
+//        WithIndexName("myIndexName").
+//        Build()
 type FetchIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexGetReq
 }
 
+// NewFetchIndexCommandBuilder is a factory function for generating the command builder struct
 func NewFetchIndexCommandBuilder() *FetchIndexCommandBuilder {
 	builder := &FetchIndexCommandBuilder{protobuf: &rpbRiakYZ.RpbYokozunaIndexGetReq{}}
 	return builder
 }
 
+// WithIndexName sets the index to use for the command
 func (builder *FetchIndexCommandBuilder) WithIndexName(indexName string) *FetchIndexCommandBuilder {
 	builder.protobuf.Name = []byte(indexName)
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchIndexCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -181,6 +205,7 @@ type DeleteIndexCommand struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexDeleteReq
 }
 
+// Name identifies this command
 func (cmd *DeleteIndexCommand) Name() string {
 	return "DeleteIndex"
 }
@@ -211,16 +236,19 @@ type DeleteIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexDeleteReq
 }
 
+// NewDeleteIndexCommandBuilder is a factory function for generating the command builder struct
 func NewDeleteIndexCommandBuilder() *DeleteIndexCommandBuilder {
 	builder := &DeleteIndexCommandBuilder{protobuf: &rpbRiakYZ.RpbYokozunaIndexDeleteReq{}}
 	return builder
 }
 
+// WithIndexName sets the index to use for the command
 func (builder *DeleteIndexCommandBuilder) WithIndexName(indexName string) *DeleteIndexCommandBuilder {
 	builder.protobuf.Name = []byte(indexName)
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *DeleteIndexCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -238,6 +266,7 @@ type StoreSchemaCommand struct {
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaPutReq
 }
 
+// Name identifies this command
 func (cmd *StoreSchemaCommand) Name() string {
 	return "StoreSchema"
 }
@@ -268,6 +297,7 @@ type StoreSchemaCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaPutReq
 }
 
+// NewStoreSchemaCommandBuilder is a factory function for generating the command builder struct
 func NewStoreSchemaCommandBuilder() *StoreSchemaCommandBuilder {
 	protobuf := &rpbRiakYZ.RpbYokozunaSchemaPutReq{
 		Schema: &rpbRiakYZ.RpbYokozunaSchema{},
@@ -286,6 +316,7 @@ func (builder *StoreSchemaCommandBuilder) WithSchema(schema string) *StoreSchema
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *StoreSchemaCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -303,6 +334,7 @@ type FetchSchemaCommand struct {
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaGetReq
 }
 
+// Name identifies this command
 func (cmd *FetchSchemaCommand) Name() string {
 	return "FetchSchema"
 }
@@ -345,6 +377,7 @@ type FetchSchemaCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaGetReq
 }
 
+// NewFetchSchemaCommandBuilder is a factory function for generating the command builder struct
 func NewFetchSchemaCommandBuilder() *FetchSchemaCommandBuilder {
 	builder := &FetchSchemaCommandBuilder{protobuf: &rpbRiakYZ.RpbYokozunaSchemaGetReq{}}
 	return builder
@@ -355,6 +388,7 @@ func (builder *FetchSchemaCommandBuilder) WithSchemaName(schemaName string) *Fet
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchSchemaCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -372,6 +406,7 @@ type SearchCommand struct {
 	protobuf *rpbRiakSCH.RpbSearchQueryReq
 }
 
+// Name identifies this command
 func (cmd *SearchCommand) Name() string {
 	return "Search"
 }
@@ -470,11 +505,13 @@ type SearchCommandBuilder struct {
 	protobuf *rpbRiakSCH.RpbSearchQueryReq
 }
 
+// NewSearchCommandBuilder is a factory function for generating the command builder struct
 func NewSearchCommandBuilder() *SearchCommandBuilder {
 	builder := &SearchCommandBuilder{protobuf: &rpbRiakSCH.RpbSearchQueryReq{}}
 	return builder
 }
 
+// WithIndexName sets the index to use for the command
 func (builder *SearchCommandBuilder) WithIndexName(index string) *SearchCommandBuilder {
 	builder.protobuf.Index = []byte(index)
 	return builder
@@ -528,6 +565,7 @@ func (builder *SearchCommandBuilder) WithPresort(presort string) *SearchCommandB
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *SearchCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
