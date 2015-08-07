@@ -7,25 +7,28 @@ Currently, this library was written for and tested against Riak KV 2.0+.
 
 TL;DR;
 
-	import "fmt"
+	import (
+		"fmt"
+		riak "github.com/basho/riak-go-client"
+	)
 
 	func main() {
-		nodeOpts := &NodeOptions{
+		nodeOpts := &riak.NodeOptions{
 			RemoteAddress: "127.0.0.1:8098",
 		}
 
-		var node *Node
+		var node *riak.Node
 		var err error
-		if node, err = NewNode(nodeOpts); err != nil {
+		if node, err = riak.NewNode(nodeOpts); err != nil {
 			fmt.Println(err.Error())
 		}
 
-		nodes := []*Node{node}
-		opts := &ClusterOptions{
+		nodes := []*riak.Node{node}
+		opts := &riak.ClusterOptions{
 			Nodes: nodes,
 		}
 
-		cluster, err := NewCluster(opts)
+		cluster, err := riak.NewCluster(opts)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -40,14 +43,14 @@ TL;DR;
 			fmt.Println(err.Error())
 		}
 
-		obj := &Object{
+		obj := &riak.Object{
 			ContentType:     "text/plain",
 			Charset:         "utf-8",
 			ContentEncoding: "utf-8",
 			Value:           []byte("this is a value in Riak"),
 		}
 
-		cmd, err := NewStoreValueCommandBuilder().
+		cmd, err := riak.NewStoreValueCommandBuilder().
 			WithBucket(testBucketName).
 			WithContent(obj).
 			Build()
