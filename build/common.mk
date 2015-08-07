@@ -1,4 +1,4 @@
-.PHONY: all install-deps lint test unit-test integration-test fmt help
+.PHONY: all install-deps lint unit-test integration-test test fmt help
 
 all: install-deps lint test
 
