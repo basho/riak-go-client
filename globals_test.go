@@ -39,18 +39,26 @@ const testSetBucketType = "sets"
 // riak-admin bucket-type activate maps
 const testMapBucketType = "maps"
 
-func getRiakAddress() string {
-	riakHost := "riak-test"
+func getRiakPort() uint16 {
 	riakPort := uint16(10017)
-	if hostEnvVar := os.ExpandEnv("$RIAK_HOST"); hostEnvVar != "" {
-		riakHost = hostEnvVar
-	}
 	if portEnvVar := os.ExpandEnv("$RIAK_PORT"); portEnvVar != "" {
 		if portNum, err := strconv.Atoi(portEnvVar); err == nil {
 			riakPort = uint16(portNum)
 		}
 	}
-	return fmt.Sprintf("%s:%d", riakHost, riakPort)
+	return riakPort
+}
+
+func getRiakHost() string {
+	riakHost := "riak-test"
+	if hostEnvVar := os.ExpandEnv("$RIAK_HOST"); hostEnvVar != "" {
+		riakHost = hostEnvVar
+	}
+	return riakHost
+}
+
+func getRiakAddress() string {
+	return fmt.Sprintf("%s:%d", getRiakHost(), getRiakPort())
 }
 
 func integrationTestsBuildCluster() {

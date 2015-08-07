@@ -10,7 +10,6 @@ import (
 
 func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	remoteAddress := getRiakAddress()
-	t.Log("[TestCreateNodeWithOptionsAndStart] remoteAddress:", remoteAddress)
 	opts := &NodeOptions{
 		RemoteAddress:       remoteAddress,
 		MinConnections:      2,
@@ -25,8 +24,12 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if node.addr.Port != 10017 {
-		t.Errorf("expected port 10017, got: %s", string(node.addr.Port))
+	if node == nil {
+		t.Fatal("expected non-nil node")
+	}
+	expectedPort := getRiakPort()
+	if node.addr.Port != int(expectedPort) {
+		t.Errorf("expected port %d, got: %d", expectedPort, node.addr.Port)
 	}
 	if node.addr.Zone != "" {
 		t.Errorf("expected empty zone, got: %s", string(node.addr.Zone))
@@ -51,8 +54,8 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 			t.Error("got unexpected nil value")
 			continue
 		}
-		if conn.addr.Port != 10017 {
-			t.Errorf("expected port 10017, got: %s", string(conn.addr.Port))
+		if conn.addr.Port != int(expectedPort) {
+			t.Errorf("expected port %d, got: %d", expectedPort, node.addr.Port)
 		}
 		if conn.addr.Zone != "" {
 			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
