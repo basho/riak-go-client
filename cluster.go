@@ -2,14 +2,14 @@ package riak
 
 import "errors"
 
-// Cluster states constants
+// Constants identifying Cluster state
 const (
-	CLUSTER_ERROR state = iota
-	CLUSTER_CREATED
-	CLUSTER_RUNNING
-	CLUSTER_QUEUEING
-	CLUSTER_SHUTTING_DOWN
-	CLUSTER_SHUTDOWN
+	ClusterError state = iota
+	ClusterCreated
+	ClusterRunning
+	ClusterQueueing
+	ClusterShuttingDown
+	ClusterShutdown
 )
 
 // ClusterOptions object contains your pool of Node objects and the NodeManager
@@ -50,12 +50,12 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 
 	c.nodeManager = options.NodeManager
 
-	c.setStateDesc("CLUSTER_ERROR", "CLUSTER_CREATED", "CLUSTER_RUNNING", "CLUSTER_QUEUEING", "CLUSTER_SHUTTING_DOWN", "CLUSTER_SHUTDOWN")
-	c.setState(CLUSTER_CREATED)
+	c.setStateDesc("ClusterError", "ClusterCreated", "ClusterRunning", "ClusterQueueing", "ClusterShuttingDown", "ClusterShutting")
+	c.setState(ClusterCreated)
 	return
 }
 
-// TODO
+// String returns a formatted string that lists status information for the Cluster
 func (c *Cluster) String() string {
 	// return fmt.Sprintf("%v|%d", c.addr)
 	return "TODO cluster"
@@ -64,11 +64,11 @@ func (c *Cluster) String() string {
 // Start opens connections with your configured nodes and adds them to
 // the active pool
 func (c *Cluster) Start() (err error) {
-	if c.isCurrentState(CLUSTER_RUNNING) {
+	if c.isCurrentState(ClusterRunning) {
 		logWarnln("[Cluster] cluster already running.")
 		return
 	}
-	if err = c.stateCheck(CLUSTER_CREATED); err != nil {
+	if err = c.stateCheck(ClusterCreated); err != nil {
 		return
 	}
 
@@ -80,7 +80,7 @@ func (c *Cluster) Start() (err error) {
 		}
 	}
 
-	c.setState(CLUSTER_RUNNING)
+	c.setState(ClusterRunning)
 	logDebug("[Cluster] cluster started.")
 
 	return
@@ -89,12 +89,12 @@ func (c *Cluster) Start() (err error) {
 // Stop closes the connections with your configured nodes and removes them from
 // the active pool
 func (c *Cluster) Stop() (err error) {
-	if err = c.stateCheck(CLUSTER_RUNNING, CLUSTER_QUEUEING); err != nil {
+	if err = c.stateCheck(ClusterRunning, ClusterQueueing); err != nil {
 		return
 	}
 
 	logDebug("[Cluster] shutting down")
-	c.setState(CLUSTER_SHUTTING_DOWN)
+	c.setState(ClusterShuttingDown)
 	for _, node := range c.nodes {
 		err = node.Stop() // TODO multiple errors?
 	}
@@ -103,14 +103,14 @@ func (c *Cluster) Stop() (err error) {
 	logDebug("[Cluster] checking to see if nodes are shut down")
 	for _, node := range c.nodes {
 		nodeState := node.getState()
-		if nodeState != NODE_SHUTDOWN {
+		if nodeState != NodeShutdown {
 			allStopped = false
 			break
 		}
 	}
 
 	if allStopped {
-		c.setState(CLUSTER_SHUTDOWN)
+		c.setState(ClusterShutdown)
 		logDebug("[Cluster] cluster shut down")
 		/* TODO
 		if (this._commandQueue.length) {

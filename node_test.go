@@ -24,7 +24,7 @@ func TestCreateNodeWithOptions(t *testing.T) {
 	if expected, actual := "8.8.8.8:1234|0", node.String(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	if expected, actual := NODE_CREATED, node.getState(); expected != actual {
+	if expected, actual := NodeCreated, node.getState(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if node.addr.Port != 1234 {
@@ -104,7 +104,7 @@ func TestEnsureDefaultNodeValues(t *testing.T) {
 	if node.healthCheckBuilder != nil {
 		t.Errorf("expected nil, got: %v", node.healthCheckBuilder)
 	}
-	if expected, actual := NODE_CREATED, node.getState(); expected != actual {
+	if expected, actual := NodeCreated, node.getState(); expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 }
