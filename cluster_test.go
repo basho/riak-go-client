@@ -17,7 +17,7 @@ func TestCreateClusterWithDefaultOptions(t *testing.T) {
 	if expected, actual := defaultRemoteAddress, defaultNodeAddr; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	if expected, actual := CLUSTER_CREATED, cluster.getState(); expected != actual {
+	if expected, actual := clusterCreated, cluster.getState(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if cluster.nodeManager == nil {
@@ -56,10 +56,19 @@ func TestCreateClusterWithFourNodes(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	}
-	if expected, actual := CLUSTER_CREATED, cluster.getState(); expected != actual {
+	if expected, actual := clusterCreated, cluster.getState(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if cluster.nodeManager == nil {
 		t.Error("expected cluster to have a node manager")
 	}
+}
+
+func ExampleNewCluster() {
+	cluster, err := NewCluster(nil)
+	if err != nil {
+		panic(fmt.Sprintf("Error building cluster object: %s", err.Error()))
+	}
+	fmt.Println(cluster.nodes[0].addr.String())
+	// Output: 127.0.0.1:8087
 }

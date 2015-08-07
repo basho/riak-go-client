@@ -1,12 +1,13 @@
 package riak
 
 import (
-	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
-	rpbRiakSCH "github.com/basho/riak-go-client/rpb/riak_search"
-	rpbRiakYZ "github.com/basho/riak-go-client/rpb/riak_yokozuna"
 	"reflect"
 	"testing"
 	"time"
+
+	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
+	rpbRiakSCH "github.com/basho/riak-go-client/rpb/riak_search"
+	rpbRiakYZ "github.com/basho/riak-go-client/rpb/riak_yokozuna"
 )
 
 // StoreIndex

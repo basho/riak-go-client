@@ -2,6 +2,7 @@ package riak
 
 import (
 	"fmt"
+
 	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
 	proto "github.com/golang/protobuf/proto"
 )

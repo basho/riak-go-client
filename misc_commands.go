@@ -2,9 +2,10 @@ package riak
 
 import (
 	"fmt"
+	"reflect"
+
 	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
 	proto "github.com/golang/protobuf/proto"
-	"reflect"
 )
 
 // Ping
@@ -12,6 +13,7 @@ import (
 type PingCommandBuilder struct {
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *PingCommandBuilder) Build() (Command, error) {
 	return &PingCommand{}, nil
 }
@@ -20,6 +22,7 @@ type PingCommand struct {
 	CommandImpl
 }
 
+// Name identifies this command
 func (cmd *PingCommand) Name() string {
 	return "Ping"
 }
@@ -51,6 +54,7 @@ type StartTlsCommand struct {
 	CommandImpl
 }
 
+// Name identifies this command
 func (cmd *StartTlsCommand) Name() string {
 	return "StartTls"
 }
@@ -84,6 +88,7 @@ type AuthCommand struct {
 	Password string
 }
 
+// Name identifies this command
 func (cmd *AuthCommand) Name() string {
 	return "Auth"
 }
@@ -120,6 +125,7 @@ type FetchBucketPropsCommand struct {
 	protobuf *rpbRiak.RpbGetBucketReq
 }
 
+// Name identifies this command
 func (cmd *FetchBucketPropsCommand) Name() string {
 	return "FetchBucketProps"
 }
@@ -247,21 +253,25 @@ type FetchBucketPropsCommandBuilder struct {
 	protobuf *rpbRiak.RpbGetBucketReq
 }
 
+// NewFetchBucketPropsCommandBuilder is a factory function for generating the command builder struct
 func NewFetchBucketPropsCommandBuilder() *FetchBucketPropsCommandBuilder {
 	builder := &FetchBucketPropsCommandBuilder{protobuf: &rpbRiak.RpbGetBucketReq{}}
 	return builder
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *FetchBucketPropsCommandBuilder) WithBucketType(bucketType string) *FetchBucketPropsCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *FetchBucketPropsCommandBuilder) WithBucket(bucket string) *FetchBucketPropsCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchBucketPropsCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -309,6 +319,7 @@ type StoreBucketPropsCommand struct {
 	protobuf *rpbRiak.RpbSetBucketReq
 }
 
+// Name identifies this command
 func (cmd *StoreBucketPropsCommand) Name() string {
 	return "StoreBucketProps"
 }
@@ -339,6 +350,7 @@ type StoreBucketPropsCommandBuilder struct {
 	props    *rpbRiak.RpbBucketProps
 }
 
+// NewStoreBucketPropsCommandBuilder is a factory function for generating the command builder struct
 func NewStoreBucketPropsCommandBuilder() *StoreBucketPropsCommandBuilder {
 	props := &rpbRiak.RpbBucketProps{}
 	protobuf := &rpbRiak.RpbSetBucketReq{
@@ -348,16 +360,22 @@ func NewStoreBucketPropsCommandBuilder() *StoreBucketPropsCommandBuilder {
 	return builder
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *StoreBucketPropsCommandBuilder) WithBucketType(bucketType string) *StoreBucketPropsCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *StoreBucketPropsCommandBuilder) WithBucket(bucket string) *StoreBucketPropsCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithNVal sets the number of times this command operation is replicated in the Cluster. If
+// ommitted, the ring default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithNVal(nval uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.NVal = &nval
 	return builder
@@ -393,26 +411,48 @@ func (builder *StoreBucketPropsCommandBuilder) WithSmallVClock(smallVClock uint3
 	return builder
 }
 
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithR(r uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.R = &r
 	return builder
 }
 
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithPr(pr uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.Pr = &pr
 	return builder
 }
 
+// WithW sets the number of nodes that must report back a successful write in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithW(w uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.W = &w
 	return builder
 }
 
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak. If ommitted, the bucket default is
+// used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithPw(pw uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.Pw = &pw
 	return builder
 }
 
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithDw(dw uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.Dw = &dw
 	return builder
@@ -468,6 +508,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithChashKeyFun(val *ModFun) *Sto
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *StoreBucketPropsCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")

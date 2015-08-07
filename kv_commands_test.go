@@ -3,12 +3,13 @@ package riak
 import (
 	"bytes"
 	"fmt"
-	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
-	rpbRiakKV "github.com/basho/riak-go-client/rpb/riak_kv"
-	proto "github.com/golang/protobuf/proto"
 	"reflect"
 	"testing"
 	"time"
+
+	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
+	rpbRiakKV "github.com/basho/riak-go-client/rpb/riak_kv"
+	proto "github.com/golang/protobuf/proto"
 )
 
 // FetchValue
@@ -1577,4 +1578,8 @@ func TestParseRpbMapRedRespCorrectlyWithStreaming(t *testing.T) {
 	} else {
 		t.Error(err.Error())
 	}
+}
+
+func ExampleNewFetchValueCommandBuilder() {
+
 }

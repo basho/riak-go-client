@@ -4,13 +4,15 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
-	proto "github.com/golang/protobuf/proto"
 	"io"
 	"net"
 	"syscall"
 	"time"
+
+	proto "github.com/golang/protobuf/proto"
 )
 
+// AuthOptions object contains the authentication credentials and tls config
 type AuthOptions struct {
 	User      string
 	Password  string

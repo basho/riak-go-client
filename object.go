@@ -2,9 +2,10 @@ package riak
 
 import (
 	"fmt"
+	"time"
+
 	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
 	rpbRiakKV "github.com/basho/riak-go-client/rpb/riak_kv"
-	"time"
 )
 
 type Link struct {

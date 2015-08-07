@@ -2,8 +2,9 @@ package riak
 
 import (
 	"bytes"
-	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
 	"testing"
+
+	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
 )
 
 func TestBuildErrorFromRpbErrorResp(t *testing.T) {

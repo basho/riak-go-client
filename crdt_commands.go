@@ -3,22 +3,25 @@ package riak
 import (
 	"errors"
 	"fmt"
-	rpbRiakDT "github.com/basho/riak-go-client/rpb/riak_dt"
-	proto "github.com/golang/protobuf/proto"
 	"reflect"
 	"time"
+
+	rpbRiakDT "github.com/basho/riak-go-client/rpb/riak_dt"
+	proto "github.com/golang/protobuf/proto"
 )
 
 // UpdateCounter
 // DtUpdateReq
 // DtUpdateResp
 
+// UpdateCounterCommand is used to increment or decrement a counter data type in Riak KV
 type UpdateCounterCommand struct {
 	CommandImpl
 	Response *UpdateCounterResponse
 	protobuf *rpbRiakDT.DtUpdateReq
 }
 
+// Name identifies this command
 func (cmd *UpdateCounterCommand) Name() string {
 	return "UpdateCounter"
 }
@@ -54,6 +57,7 @@ func (cmd *UpdateCounterCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtUpdateResp{}
 }
 
+// UpdateCounterResponse is the object containing the response
 type UpdateCounterResponse struct {
 	GeneratedKey string
 	CounterValue int64
@@ -63,6 +67,7 @@ type UpdateCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
 
+// NewUpdateCounterCommandBuilder is a factory function for generating the command builder struct
 func NewUpdateCounterCommandBuilder() *UpdateCounterCommandBuilder {
 	return &UpdateCounterCommandBuilder{
 		protobuf: &rpbRiakDT.DtUpdateReq{
@@ -73,52 +78,73 @@ func NewUpdateCounterCommandBuilder() *UpdateCounterCommandBuilder {
 	}
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *UpdateCounterCommandBuilder) WithBucketType(bucketType string) *UpdateCounterCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *UpdateCounterCommandBuilder) WithBucket(bucket string) *UpdateCounterCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *UpdateCounterCommandBuilder) WithKey(key string) *UpdateCounterCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// WithIncrement defines the increment the Counter value is to be increased / decreased by
 func (builder *UpdateCounterCommandBuilder) WithIncrement(increment int64) *UpdateCounterCommandBuilder {
 	builder.protobuf.Op.CounterOp.Increment = &increment
 	return builder
 }
 
+// WithW sets the number of nodes that must report back a successful write in order for then
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateCounterCommandBuilder) WithW(w uint32) *UpdateCounterCommandBuilder {
 	builder.protobuf.W = &w
 	return builder
 }
 
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.  If ommitted, the bucket default is
+// used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateCounterCommandBuilder) WithPw(pw uint32) *UpdateCounterCommandBuilder {
 	builder.protobuf.Pw = &pw
 	return builder
 }
 
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateCounterCommandBuilder) WithDw(dw uint32) *UpdateCounterCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
 }
 
+// WithReturnBody sets Riak to return the value within its response after completing the write
+// operation
 func (builder *UpdateCounterCommandBuilder) WithReturnBody(returnBody bool) *UpdateCounterCommandBuilder {
 	builder.protobuf.ReturnBody = &returnBody
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *UpdateCounterCommandBuilder) WithTimeout(timeout time.Duration) *UpdateCounterCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -139,6 +165,7 @@ type FetchCounterCommand struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
+// Name identifies this command
 func (cmd *FetchCounterCommand) Name() string {
 	return "FetchCounter"
 }
@@ -187,30 +214,42 @@ type FetchCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
+// NewFetchCounterCommandBuilder is a factory function for generating the command builder struct
 func NewFetchCounterCommandBuilder() *FetchCounterCommandBuilder {
 	return &FetchCounterCommandBuilder{protobuf: &rpbRiakDT.DtFetchReq{}}
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *FetchCounterCommandBuilder) WithBucketType(bucketType string) *FetchCounterCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *FetchCounterCommandBuilder) WithBucket(bucket string) *FetchCounterCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *FetchCounterCommandBuilder) WithKey(key string) *FetchCounterCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchCounterCommandBuilder) WithR(r uint32) *FetchCounterCommandBuilder {
 	builder.protobuf.R = &r
 	return builder
 }
 
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchCounterCommandBuilder) WithPr(pr uint32) *FetchCounterCommandBuilder {
 	builder.protobuf.Pr = &pr
 	return builder
@@ -226,12 +265,14 @@ func (builder *FetchCounterCommandBuilder) WithBasicQuorum(basicQuorum bool) *Fe
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *FetchCounterCommandBuilder) WithTimeout(timeout time.Duration) *FetchCounterCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchCounterCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -252,6 +293,7 @@ type UpdateSetCommand struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
 
+// Name identifies this command
 func (cmd *UpdateSetCommand) Name() string {
 	return "UpdateSet"
 }
@@ -299,6 +341,7 @@ type UpdateSetCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
 
+// NewUpdateSetCommandBuilder is a factory function for generating the command builder struct
 func NewUpdateSetCommandBuilder() *UpdateSetCommandBuilder {
 	return &UpdateSetCommandBuilder{
 		protobuf: &rpbRiakDT.DtUpdateReq{
@@ -309,16 +352,19 @@ func NewUpdateSetCommandBuilder() *UpdateSetCommandBuilder {
 	}
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *UpdateSetCommandBuilder) WithBucketType(bucketType string) *UpdateSetCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *UpdateSetCommandBuilder) WithBucket(bucket string) *UpdateSetCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *UpdateSetCommandBuilder) WithKey(key string) *UpdateSetCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
@@ -343,11 +389,20 @@ func (builder *UpdateSetCommandBuilder) WithRemovals(removals ...[]byte) *Update
 	return builder
 }
 
+// WithW sets the number of nodes that must report back a successful write in order for then
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateSetCommandBuilder) WithW(w uint32) *UpdateSetCommandBuilder {
 	builder.protobuf.W = &w
 	return builder
 }
 
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.  If ommitted, the bucket default is
+// used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateSetCommandBuilder) WithPw(pw uint32) *UpdateSetCommandBuilder {
 	builder.protobuf.Pw = &pw
 	return builder
@@ -358,17 +413,21 @@ func (builder *UpdateSetCommandBuilder) WithDw(dw uint32) *UpdateSetCommandBuild
 	return builder
 }
 
+// WithReturnBody sets Riak to return the value within its response after completing the write
+// operation
 func (builder *UpdateSetCommandBuilder) WithReturnBody(returnBody bool) *UpdateSetCommandBuilder {
 	builder.protobuf.ReturnBody = &returnBody
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *UpdateSetCommandBuilder) WithTimeout(timeout time.Duration) *UpdateSetCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *UpdateSetCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -389,6 +448,7 @@ type FetchSetCommand struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
+// Name identifies this command
 func (cmd *FetchSetCommand) Name() string {
 	return "FetchSet"
 }
@@ -440,30 +500,42 @@ type FetchSetCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
+// NewFetchSetCommandBuilder is a factory function for generating the command builder struct
 func NewFetchSetCommandBuilder() *FetchSetCommandBuilder {
 	return &FetchSetCommandBuilder{protobuf: &rpbRiakDT.DtFetchReq{}}
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *FetchSetCommandBuilder) WithBucketType(bucketType string) *FetchSetCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *FetchSetCommandBuilder) WithBucket(bucket string) *FetchSetCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *FetchSetCommandBuilder) WithKey(key string) *FetchSetCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchSetCommandBuilder) WithR(r uint32) *FetchSetCommandBuilder {
 	builder.protobuf.R = &r
 	return builder
 }
 
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchSetCommandBuilder) WithPr(pr uint32) *FetchSetCommandBuilder {
 	builder.protobuf.Pr = &pr
 	return builder
@@ -479,12 +551,14 @@ func (builder *FetchSetCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchS
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *FetchSetCommandBuilder) WithTimeout(timeout time.Duration) *FetchSetCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchSetCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -506,6 +580,7 @@ type UpdateMapCommand struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
 
+// Name identifies this command
 func (cmd *UpdateMapCommand) Name() string {
 	return "UpdateMap"
 }
@@ -912,20 +987,24 @@ type UpdateMapCommandBuilder struct {
 	protobuf     *rpbRiakDT.DtUpdateReq
 }
 
+// NewUpdateMapCommandBuilder is a factory function for generating the command builder struct
 func NewUpdateMapCommandBuilder() *UpdateMapCommandBuilder {
 	return &UpdateMapCommandBuilder{protobuf: &rpbRiakDT.DtUpdateReq{}}
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *UpdateMapCommandBuilder) WithBucketType(bucketType string) *UpdateMapCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *UpdateMapCommandBuilder) WithBucket(bucket string) *UpdateMapCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *UpdateMapCommandBuilder) WithKey(key string) *UpdateMapCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
@@ -941,11 +1020,20 @@ func (builder *UpdateMapCommandBuilder) WithMapOperation(mapOperation *MapOperat
 	return builder
 }
 
+// WithW sets the number of nodes that must report back a successful write in order for then
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateMapCommandBuilder) WithW(w uint32) *UpdateMapCommandBuilder {
 	builder.protobuf.W = &w
 	return builder
 }
 
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.  If ommitted, the bucket default is
+// used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateMapCommandBuilder) WithPw(pw uint32) *UpdateMapCommandBuilder {
 	builder.protobuf.Pw = &pw
 	return builder
@@ -956,17 +1044,21 @@ func (builder *UpdateMapCommandBuilder) WithDw(dw uint32) *UpdateMapCommandBuild
 	return builder
 }
 
+// WithReturnBody sets Riak to return the value within its response after completing the write
+// operation
 func (builder *UpdateMapCommandBuilder) WithReturnBody(returnBody bool) *UpdateMapCommandBuilder {
 	builder.protobuf.ReturnBody = &returnBody
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *UpdateMapCommandBuilder) WithTimeout(timeout time.Duration) *UpdateMapCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
@@ -993,6 +1085,7 @@ type FetchMapCommand struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
+// Name identifies this command
 func (cmd *FetchMapCommand) Name() string {
 	return "FetchMap"
 }
@@ -1049,30 +1142,42 @@ type FetchMapCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
+// NewFetchMapCommandBuilder is a factory function for generating the command builder struct
 func NewFetchMapCommandBuilder() *FetchMapCommandBuilder {
 	return &FetchMapCommandBuilder{protobuf: &rpbRiakDT.DtFetchReq{}}
 }
 
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *FetchMapCommandBuilder) WithBucketType(bucketType string) *FetchMapCommandBuilder {
 	builder.protobuf.Type = []byte(bucketType)
 	return builder
 }
 
+// WithBucket sets the bucket to be used by the command
 func (builder *FetchMapCommandBuilder) WithBucket(bucket string) *FetchMapCommandBuilder {
 	builder.protobuf.Bucket = []byte(bucket)
 	return builder
 }
 
+// WithKey sets the key to be used by the command to read / write values
 func (builder *FetchMapCommandBuilder) WithKey(key string) *FetchMapCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchMapCommandBuilder) WithR(r uint32) *FetchMapCommandBuilder {
 	builder.protobuf.R = &r
 	return builder
 }
 
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *FetchMapCommandBuilder) WithPr(pr uint32) *FetchMapCommandBuilder {
 	builder.protobuf.Pr = &pr
 	return builder
@@ -1088,12 +1193,14 @@ func (builder *FetchMapCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchM
 	return builder
 }
 
+// WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *FetchMapCommandBuilder) WithTimeout(timeout time.Duration) *FetchMapCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
 
+// Build validates the configuration options provided then builds the command
 func (builder *FetchMapCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
