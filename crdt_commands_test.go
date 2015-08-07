@@ -3,10 +3,11 @@ package riak
 import (
 	"bytes"
 	"fmt"
-	rpbRiakDT "github.com/basho/riak-go-client/rpb/riak_dt"
 	"reflect"
 	"testing"
 	"time"
+
+	rpbRiakDT "github.com/basho/riak-go-client/rpb/riak_dt"
 )
 
 // UpdateCounter

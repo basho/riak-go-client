@@ -4,13 +4,14 @@ package riak
 
 import (
 	"bytes"
-	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
-	"github.com/golang/protobuf/proto"
 	"io"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
+	proto "github.com/golang/protobuf/proto"
 )
 
 func TestSuccessfulConnection(t *testing.T) {
