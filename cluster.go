@@ -4,12 +4,12 @@ import "errors"
 
 // Constants identifying Cluster state
 const (
-	ClusterError state = iota
-	ClusterCreated
-	ClusterRunning
-	ClusterQueueing
-	ClusterShuttingDown
-	ClusterShutdown
+	clusterError state = iota
+	clusterCreated
+	clusterRunning
+	clusterQueueing
+	clusterShuttingDown
+	clusterShutdown
 )
 
 // ClusterOptions object contains your pool of Node objects and the NodeManager
@@ -50,8 +50,8 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 
 	c.nodeManager = options.NodeManager
 
-	c.setStateDesc("ClusterError", "ClusterCreated", "ClusterRunning", "ClusterQueueing", "ClusterShuttingDown", "ClusterShutting")
-	c.setState(ClusterCreated)
+	c.setStateDesc("clusterError", "clusterCreated", "clusterRunning", "clusterQueueing", "clusterShuttingDown", "clusterShutdown")
+	c.setState(clusterCreated)
 	return
 }
 
@@ -64,11 +64,11 @@ func (c *Cluster) String() string {
 // Start opens connections with your configured nodes and adds them to
 // the active pool
 func (c *Cluster) Start() (err error) {
-	if c.isCurrentState(ClusterRunning) {
+	if c.isCurrentState(clusterRunning) {
 		logWarnln("[Cluster] cluster already running.")
 		return
 	}
-	if err = c.stateCheck(ClusterCreated); err != nil {
+	if err = c.stateCheck(clusterCreated); err != nil {
 		return
 	}
 
@@ -80,7 +80,7 @@ func (c *Cluster) Start() (err error) {
 		}
 	}
 
-	c.setState(ClusterRunning)
+	c.setState(clusterRunning)
 	logDebug("[Cluster] cluster started.")
 
 	return
@@ -89,12 +89,12 @@ func (c *Cluster) Start() (err error) {
 // Stop closes the connections with your configured nodes and removes them from
 // the active pool
 func (c *Cluster) Stop() (err error) {
-	if err = c.stateCheck(ClusterRunning, ClusterQueueing); err != nil {
+	if err = c.stateCheck(clusterRunning, clusterQueueing); err != nil {
 		return
 	}
 
 	logDebug("[Cluster] shutting down")
-	c.setState(ClusterShuttingDown)
+	c.setState(clusterShuttingDown)
 	for _, node := range c.nodes {
 		err = node.Stop() // TODO multiple errors?
 	}
@@ -103,14 +103,14 @@ func (c *Cluster) Stop() (err error) {
 	logDebug("[Cluster] checking to see if nodes are shut down")
 	for _, node := range c.nodes {
 		nodeState := node.getState()
-		if nodeState != NodeShutdown {
+		if nodeState != nodeShutdown {
 			allStopped = false
 			break
 		}
 	}
 
 	if allStopped {
-		c.setState(ClusterShutdown)
+		c.setState(clusterShutdown)
 		logDebug("[Cluster] cluster shut down")
 		/* TODO
 		if (this._commandQueue.length) {

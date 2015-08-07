@@ -9,12 +9,12 @@ import (
 
 // Constants identifying Node state
 const (
-	NodeError state = iota
-	NodeCreated
-	NodeRunning
-	NodeHealthChecking
-	NodeShuttingDown
-	NodeShutdown
+	nodeError state = iota
+	nodeCreated
+	nodeRunning
+	nodeHealthChecking
+	nodeShuttingDown
+	nodeShutdown
 )
 
 // NodeOptions defines the RemoteAddress and operational configuration for connections to a Riak KV
@@ -105,8 +105,8 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			authOptions:         options.AuthOptions,
 			available:           make([]*connection, 0, options.MinConnections),
 		}
-		n.setStateDesc("NodeError", "NodeCreated", "NodeRunning", "NodeHealthChecking", "NodeShuttingDown", "NodeShutting")
-		n.setState(NodeCreated)
+		n.setStateDesc("nodeError", "nodeCreated", "nodeRunning", "nodeHealthChecking", "nodeShuttingDown", "nodeShutdown")
+		n.setState(nodeCreated)
 		return n, nil
 	}
 
@@ -122,7 +122,7 @@ func (n *Node) String() string {
 // Start opens a connection with Riak at the configured remoteAddress and adds the connections to the
 // active pool
 func (n *Node) Start() (err error) {
-	if err = n.stateCheck(NodeCreated); err != nil {
+	if err = n.stateCheck(nodeCreated); err != nil {
 		return
 	}
 
@@ -149,7 +149,7 @@ func (n *Node) Start() (err error) {
 	n.expireTicker = time.NewTicker(thirtySeconds)
 	go n.expireIdleConnections()
 
-	n.setState(NodeRunning)
+	n.setState(nodeRunning)
 
 	logDebug("[Node] (%v) started", n)
 
@@ -160,10 +160,10 @@ func (n *Node) Start() (err error) {
 // Stop closes the connections with Riak at the configured remoteAddress and removes the connections
 // from the active pool
 func (n *Node) Stop() (err error) {
-	if err = n.stateCheck(NodeRunning, NodeHealthChecking); err != nil {
+	if err = n.stateCheck(nodeRunning, nodeHealthChecking); err != nil {
 		return
 	}
-	n.setState(NodeShuttingDown)
+	n.setState(nodeShuttingDown)
 	n.stop <- true
 	n.expireTicker.Stop()
 	logDebug("[Node] (%v) shutting down.", n)
@@ -176,11 +176,11 @@ func (n *Node) Stop() (err error) {
 func (n *Node) Execute(cmd Command) (executed bool, err error) {
 	executed = false
 
-	if err = n.stateCheck(NodeRunning, NodeHealthChecking); err != nil {
+	if err = n.stateCheck(nodeRunning, nodeHealthChecking); err != nil {
 		return
 	}
 
-	if n.isCurrentState(NodeRunning) {
+	if n.isCurrentState(nodeRunning) {
 		var conn *connection
 		if conn = n.getAvailableConnection(); conn == nil {
 			// TODO retry?
@@ -242,7 +242,7 @@ func (n *Node) returnConnectionToPool(c *connection, shouldLock bool) {
 		n.connMtx.Lock()
 		defer n.connMtx.Unlock()
 	}
-	if n.isStateLessThan(NodeShuttingDown) {
+	if n.isStateLessThan(nodeShuttingDown) {
 		// TODO c.resetBuffer()
 		n.available = append(n.available, c)
 		logDebug("[Node] (%v)|Number of avail connections: %d", n, len(n.available))
@@ -263,13 +263,13 @@ func (n *Node) shutdown() (err error) {
 		err = conn.close()
 	}
 	if err != nil {
-		n.setState(NodeError)
+		n.setState(nodeError)
 		return
 	}
 
 	if n.currentNumConnections == 0 {
 		n.available = nil
-		n.setState(NodeShutdown)
+		n.setState(nodeShutdown)
 		logDebug("[Node] (%v) shut down.", n)
 	} else {
 		// Should never happen
@@ -281,10 +281,10 @@ func (n *Node) shutdown() (err error) {
 
 func (n *Node) doHealthCheck() {
 	// NB: ensure we're not already health checking or shutting down
-	if tmpErr := n.stateCheck(NodeHealthChecking, NodeShuttingDown); tmpErr == nil {
+	if tmpErr := n.stateCheck(nodeHealthChecking, nodeShuttingDown); tmpErr == nil {
 		logDebug("[Node] (%v) already health checking.")
 	} else {
-		n.setState(NodeHealthChecking)
+		n.setState(nodeHealthChecking)
 		go n.healthCheck()
 	}
 }
@@ -350,7 +350,7 @@ func (n *Node) healthCheck() {
 				logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
 			} else {
 				n.returnConnectionToPool(conn, true)
-				n.setState(NodeRunning)
+				n.setState(nodeRunning)
 				logDebug("[Node] (%v) healthcheck success", n)
 				return
 			}

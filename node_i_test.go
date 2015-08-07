@@ -133,19 +133,19 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		t.Error("expected non-nil error")
 	}
 	nodeState := <-stateChan
-	if expected, actual := NodeCreated, nodeState; expected != actual {
+	if expected, actual := nodeCreated, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	nodeState = <-stateChan
-	if expected, actual := NodeRunning, nodeState; expected != actual {
+	if expected, actual := nodeRunning, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	nodeState = <-stateChan
-	if expected, actual := NodeHealthChecking, nodeState; expected != actual {
+	if expected, actual := nodeHealthChecking, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	nodeState = <-stateChan
-	if expected, actual := NodeRunning, nodeState; expected != actual {
+	if expected, actual := nodeRunning, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
