@@ -17,7 +17,7 @@ package riak_search
 
 import proto "github.com/golang/protobuf/proto"
 import math "math"
-import riak "github.com/basho-labs/riak-go-client/rpb/riak"
+import riak "github.com/basho/riak-go-client/rpb/riak"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal

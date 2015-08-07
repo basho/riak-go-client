@@ -86,7 +86,7 @@ function Do-ProtoGen {
         if ($_.Name -eq 'riak_search.proto' -or $_.Name -eq 'riak_kv.proto') {
             (Get-Content $rpb_file) |
                 ForEach-Object {
-                    $_ -Replace 'import riak "riak.pb"', 'import riak "github.com/basho-labs/riak-go-client/rpb/riak"'
+                    $_ -Replace 'import riak "riak.pb"', 'import riak "github.com/basho/riak-go-client/rpb/riak"'
                 } | Set-Content $rpb_file
         }
     }

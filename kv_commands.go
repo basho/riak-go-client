@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	rpbRiakKV "github.com/basho-labs/riak-go-client/rpb/riak_kv"
+	rpbRiakKV "github.com/basho/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
 )
 

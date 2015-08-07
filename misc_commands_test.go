@@ -1,7 +1,7 @@
 package riak
 
 import (
-	rpbRiak "github.com/basho-labs/riak-go-client/rpb/riak"
+	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
 	"reflect"
 	"testing"
 )

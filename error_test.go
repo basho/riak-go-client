@@ -2,7 +2,7 @@ package riak
 
 import (
 	"bytes"
-	rpb_riak "github.com/basho-labs/riak-go-client/rpb/riak"
+	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
 	"testing"
 )
 

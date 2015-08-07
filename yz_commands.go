@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"time"
 
-	rpbRiakSCH "github.com/basho-labs/riak-go-client/rpb/riak_search"
-	rpbRiakYZ "github.com/basho-labs/riak-go-client/rpb/riak_yokozuna"
+	rpbRiakSCH "github.com/basho/riak-go-client/rpb/riak_search"
+	rpbRiakYZ "github.com/basho/riak-go-client/rpb/riak_yokozuna"
 	proto "github.com/golang/protobuf/proto"
 )
 
