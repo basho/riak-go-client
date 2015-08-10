@@ -3,7 +3,14 @@
 package riak
 
 import (
+	"bytes"
+	"net"
+	"strconv"
 	"testing"
+	"time"
+
+	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
+	proto "github.com/golang/protobuf/proto"
 )
 
 func TestExecuteCommandOnCluster(t *testing.T) {
@@ -119,6 +126,105 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 		}
 	}
 	if expected, actual := count, j; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestRetryCommandThreeTimesOnDifferentNodes(t *testing.T) {
+	nodeCount := 3
+	port := 1337
+	listenerChan := make(chan bool, nodeCount)
+	servers := make([]net.Listener, nodeCount)
+	defer func() {
+		for _, s := range servers {
+			s.Close()
+		}
+	}()
+
+	nodes := make([]*Node, nodeCount)
+	for i := 0; i < nodeCount; i++ {
+		laddr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+		if listener, err := net.Listen("tcp", laddr); err != nil {
+			t.Fatal(err)
+		} else {
+			port++
+			servers[i] = listener
+
+			go func() {
+				c, err := listener.Accept()
+				defer c.Close()
+				if err != nil {
+					t.Error(err)
+					return
+				}
+
+				var errcode uint32 = 1
+				errmsg := bytes.NewBufferString("this is an error")
+				rpbErr := &rpb_riak.RpbErrorResp{
+					Errcode: &errcode,
+					Errmsg:  errmsg.Bytes(),
+				}
+
+				encoded, err := proto.Marshal(rpbErr)
+				if err != nil {
+					t.Error(err)
+				}
+
+				data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
+				count, err := c.Write(data)
+				if err != nil {
+					t.Error(err)
+				}
+				if count != len(data) {
+					t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
+				}
+
+				listenerChan <- true
+			}()
+
+			nodeOptions := &NodeOptions{
+				RemoteAddress:  laddr,
+				MinConnections: 0,
+				MaxConnections: 1,
+			}
+			if node, err := NewNode(nodeOptions); err == nil {
+				nodes[i] = node
+			} else {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	clusterOptions := &ClusterOptions{
+		Nodes: nodes,
+	}
+	cluster, err := NewCluster(clusterOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cluster.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	fetch, err := NewFetchValueCommandBuilder().
+		WithBucket("b").
+		WithKey("k").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cluster.Execute(fetch)
+
+	j := 0
+	for j := 0; j < nodeCount; {
+		select {
+		case <-listenerChan:
+			j++
+		case <-time.After(5 * time.Second):
+			t.Fatal("test timed out")
+		}
+	}
+	if expected, actual := nodeCount, j; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
