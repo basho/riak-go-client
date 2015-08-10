@@ -16,5 +16,6 @@ const defaultIdleTimeout = time.Second * 3
 const defaultConnectTimeout = time.Second * 30
 const defaultRequestTimeout = time.Second * 5
 const defaultHealthCheckInterval = time.Second * 5
+const defaultExecutionAttempts = byte(3)
 
 const defaultBucketType = "default"

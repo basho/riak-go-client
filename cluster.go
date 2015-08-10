@@ -15,21 +15,24 @@ const (
 // ClusterOptions object contains your pool of Node objects and the NodeManager
 // If the NodeManager is not defined, the defaultNodeManager is used
 type ClusterOptions struct {
-	Nodes       []*Node
-	NodeManager NodeManager
+	Nodes             []*Node
+	NodeManager       NodeManager
+	ExecutionAttempts byte
 }
 
 // Cluster object contains your pool of Node objects, the NodeManager and the
 // current stateData object of the cluster
 type Cluster struct {
-	nodes       []*Node
-	nodeManager NodeManager
+	nodes             []*Node
+	nodeManager       NodeManager
+	executionAttempts byte
 	stateData
 }
 
 var defaultClusterOptions = &ClusterOptions{
-	Nodes:       make([]*Node, 0),
-	NodeManager: &defaultNodeManager{},
+	Nodes:             make([]*Node, 0),
+	NodeManager:       &defaultNodeManager{},
+	ExecutionAttempts: defaultExecutionAttempts,
 }
 
 // NewCluster generates a new Cluster object using the provided ClusterOptions object
@@ -40,6 +43,9 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 	if options.NodeManager == nil {
 		options.NodeManager = &defaultNodeManager{}
 	}
+	if options.ExecutionAttempts == 0 {
+		options.ExecutionAttempts = defaultExecutionAttempts
+	}
 
 	c = &Cluster{}
 
@@ -49,6 +55,7 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 	}
 
 	c.nodeManager = options.NodeManager
+	c.executionAttempts = options.ExecutionAttempts
 
 	c.setStateDesc("clusterError", "clusterCreated", "clusterRunning", "clusterQueueing", "clusterShuttingDown", "clusterShutdown")
 	c.setState(clusterCreated)
@@ -137,8 +144,8 @@ func (c *Cluster) Stop() (err error) {
 func (c *Cluster) Execute(command Command) (err error) {
 	// TODO retries
 	// TODO command queueing
-	// TODO "previous" node
 	executed := false
+
 	if executed, err = c.nodeManager.ExecuteOnNode(c.nodes, command, nil); err != nil {
 		return
 	}

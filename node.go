@@ -183,7 +183,6 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 	if n.isCurrentState(nodeRunning) {
 		var conn *connection
 		if conn = n.getAvailableConnection(); conn == nil {
-			// TODO retry?
 			n.connMtx.RLock()
 			defer n.connMtx.RUnlock()
 			if n.currentNumConnections < n.maxConnections {
@@ -206,18 +205,14 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 			panic(fmt.Sprintf("[Node] (%v) expected connection", n))
 		}
 
-		// TODO handle errors like connection closed / timeout
-		// with regard to re-execution of command
 		logDebug("[Node] (%v) - executing command '%v'", n, cmd.Name())
 		defer n.returnConnectionToPool(conn, true)
 		if err = conn.execute(cmd); err == nil {
 			executed = true
 		} else {
-			// TODO basically, this is _connectionClosed in Node.js client
+			// NB: basically, this is _connectionClosed in Node.js client
 			executed = false
 			n.doHealthCheck()
-			// TODO retry command if retries remain by calling n.Execute
-			// after decrementing # of tries.
 		}
 	}
 
