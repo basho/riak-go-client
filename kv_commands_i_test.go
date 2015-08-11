@@ -12,7 +12,6 @@ import (
 
 func init() {
 	integrationTestsBuildCluster()
-	addDataToIndexes()
 }
 
 // FetchValue
@@ -338,7 +337,12 @@ func TestFetchPreflistForAValue(t *testing.T) {
 
 // SecondaryIndexQueryCommand
 
+var indexDataAdded = false
+
 func addDataToIndexes() {
+	if indexDataAdded {
+		return
+	}
 	var store Command
 	var err error
 	for i := 0; i < 25; i++ {
@@ -381,6 +385,7 @@ func addDataToIndexes() {
 			panic(err.Error())
 		}
 	}
+	indexDataAdded = true
 }
 
 func TestIntQueryAgainstDefaultType(t *testing.T) {
@@ -437,6 +442,7 @@ func TestIntQueryAgainstNonDefaultType(t *testing.T) {
 }
 
 func TestBinQueryAgainstDefaultType(t *testing.T) {
+	addDataToIndexes()
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -463,6 +469,7 @@ func TestBinQueryAgainstDefaultType(t *testing.T) {
 }
 
 func TestBinQueryAgainstNonDefaultType(t *testing.T) {
+	addDataToIndexes()
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -490,6 +497,7 @@ func TestBinQueryAgainstNonDefaultType(t *testing.T) {
 }
 
 func TestSetContinuationOnPaginatedQuery(t *testing.T) {
+	addDataToIndexes()
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().

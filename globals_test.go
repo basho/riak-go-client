@@ -61,35 +61,6 @@ func getRiakAddress() string {
 	return fmt.Sprintf("%s:%d", getRiakHost(), getRiakPort())
 }
 
-func integrationTestsBuildCluster() {
-	var err error
-	if cluster == nil {
-		nodeOpts := &NodeOptions{
-			RemoteAddress:  getRiakAddress(),
-			RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
-		}
-		var node *Node
-		node, err = NewNode(nodeOpts)
-		if err != nil {
-			panic(fmt.Sprintf("error building integration test node object: %s", err.Error()))
-		}
-		if node == nil {
-			panic("NewNode returned nil!")
-		}
-		nodes := []*Node{node}
-		opts := &ClusterOptions{
-			Nodes: nodes,
-		}
-		cluster, err = NewCluster(opts)
-		if err != nil {
-			panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
-		}
-		if err = cluster.Start(); err != nil {
-			panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
-		}
-	}
-}
-
 func getBasicObject() *Object {
 	return &Object{
 		ContentType:     "text/plain",

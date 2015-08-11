@@ -4,14 +4,9 @@ package riak
 
 import (
 	"net"
-	"os"
 	"testing"
 	"time"
 )
-
-func init() {
-	setLogWriter(os.Stderr)
-}
 
 func TestPing(t *testing.T) {
 	var (

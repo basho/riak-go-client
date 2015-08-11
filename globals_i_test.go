@@ -11,6 +11,7 @@ import (
 	"net"
 	"runtime"
 	"testing"
+	"time"
 
 	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
 	proto "github.com/golang/protobuf/proto"
@@ -18,6 +19,35 @@ import (
 
 func init() {
 	runtime.GOMAXPROCS(2)
+}
+
+func integrationTestsBuildCluster() {
+	var err error
+	if cluster == nil {
+		nodeOpts := &NodeOptions{
+			RemoteAddress:  getRiakAddress(),
+			RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
+		}
+		var node *Node
+		node, err = NewNode(nodeOpts)
+		if err != nil {
+			panic(fmt.Sprintf("error building integration test node object: %s", err.Error()))
+		}
+		if node == nil {
+			panic("NewNode returned nil!")
+		}
+		nodes := []*Node{node}
+		opts := &ClusterOptions{
+			Nodes: nodes,
+		}
+		cluster, err = NewCluster(opts)
+		if err != nil {
+			panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
+		}
+		if err = cluster.Start(); err != nil {
+			panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
+		}
+	}
 }
 
 func readWritePingResp(t *testing.T, c net.Conn) (success bool) {
