@@ -61,10 +61,10 @@ func (cmd *StoreIndexCommand) getResponseProtobufMessage() proto.Message {
 
 // StoreIndexCommandBuilder type is required for creating new instances of StoreIndexCommand
 //
-//    command := NewStoreIndexCommandBuilder().
-//        WithIndexName("myIndexName").
-//        WithSchemaName("mySchemaName").
-//        Build()
+//	command := NewStoreIndexCommandBuilder().
+//		WithIndexName("myIndexName").
+//		WithSchemaName("mySchemaName").
+//		Build()
 type StoreIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
@@ -170,9 +170,9 @@ func (cmd *FetchIndexCommand) getResponseProtobufMessage() proto.Message {
 
 // FetchIndexCommandBuilder type is required for creating new instances of FetchIndexCommand
 //
-//    command := NewFetchIndexCommandBuilder().
-//        WithIndexName("myIndexName").
-//        Build()
+//	command := NewFetchIndexCommandBuilder().
+//		WithIndexName("myIndexName").
+//		Build()
 type FetchIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexGetReq
 }

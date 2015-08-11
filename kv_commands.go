@@ -109,11 +109,11 @@ type FetchValueResponse struct {
 
 // FetchValueCommandBuilder type is required for creating new instances of FetchValueCommand
 //
-//    command := NewFetchValueCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//        Build()
+//	command := NewFetchValueCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
@@ -345,10 +345,10 @@ type StoreValueResponse struct {
 
 // StoreValueCommandBuilder type is required for creating new instances of StoreValueCommand
 //
-//    command := NewStoreValueCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        Build()
+//	command := NewStoreValueCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		Build()
 type StoreValueCommandBuilder struct {
 	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
@@ -525,12 +525,12 @@ func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
 
 // DeleteValueCommandBuilder type is required for creating new instances of DeleteValueCommand
 //
-//    deleteValue := NewDeleteValueCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//        WithVClock(vclock).
-//        Build()
+//	deleteValue := NewDeleteValueCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithVClock(vclock).
+//		Build()
 type DeleteValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbDelReq
 }
@@ -733,15 +733,15 @@ type ListBucketsResponse struct {
 
 // ListBucketsCommandBuilder type is required for creating new instances of ListBucketsCommand
 //
-//    cb := func(buckets []string) error {
-//        // Do something with buckets
-//        return nil
-//    }
-//    cmd := NewListBucketsCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithStreaming(true).
-//        WithCallback(cb).
-//        Build()
+//	cb := func(buckets []string) error {
+//		// Do something with the result
+//		return nil
+//	}
+//	cmd := NewListBucketsCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithStreaming(true).
+//		WithCallback(cb).
+//		Build()
 type ListBucketsCommandBuilder struct {
 	callback func(buckets []string) error
 	protobuf *rpbRiakKV.RpbListBucketsReq
@@ -885,16 +885,16 @@ type ListKeysResponse struct {
 
 // ListKeysCommandBuilder type is required for creating new instances of ListKeysCommand
 //
-//    cb := func(keys []string) error {
-//        // Do something with keys
-//        return nil
-//    }
-//    cmd := NewListKeysCommandBuilder().
-//        WithBucketType("myBucketType").
-//				WithBucket("myBucket").
-//        WithStreaming(true).
-//        WithCallback(cb).
-//        Build()
+//	cb := func(buckets []string) error {
+//		// Do something with the result
+//		return nil
+//	}
+//	cmd := NewListKeysCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithStreaming(true).
+//		WithCallback(cb).
+//		Build()
 type ListKeysCommandBuilder struct {
 	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
@@ -1031,11 +1031,11 @@ type FetchPreflistResponse struct {
 
 // FetchPreflistCommandBuilder type is required for creating new instances of FetchPreflistCommand
 //
-//    preflist := NewFetchPreflistCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//        Build()
+//	preflist := NewFetchPreflistCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchPreflistCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
 }
@@ -1201,12 +1201,12 @@ type SecondaryIndexQueryResponse struct {
 
 // SecondaryIndexQueryCommandBuilder type is required for creating new instances of SecondaryIndexQueryCommand
 //
-//    command := NewSecondaryIndexQueryCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithIndexName("myIndexName").
-//        WithIndexKey("myIndexKey").
-//        Build()
+//	command := NewSecondaryIndexQueryCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithIndexName("myIndexName").
+//		WithIndexKey("myIndexKey").
+//		Build()
 type SecondaryIndexQueryCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbIndexReq
 	callback func([]*SecondaryIndexQueryResult) error
@@ -1395,9 +1395,9 @@ func (cmd *MapReduceCommand) getResponseProtobufMessage() proto.Message {
 
 // MapReduceCommandBuilder type is required for creating new instances of MapReduceCommand
 //
-//    command := NewMapReduceCommandBuilder().
-//        WithQuery("myMapReduceQuery").
-//        Build()
+//	command := NewMapReduceCommandBuilder().
+//		WithQuery("myMapReduceQuery").
+//		Build()
 type MapReduceCommandBuilder struct {
 	protobuf  *rpbRiakKV.RpbMapRedReq
 	streaming bool

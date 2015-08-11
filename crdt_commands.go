@@ -65,12 +65,12 @@ type UpdateCounterResponse struct {
 
 // UpdateCounterCommandBuilder type is required for creating new instances of UpdateCounterCommand
 //
-//    command := NewUpdateCounterCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//				WithIncrement(1).
-//        Build()
+//	command := NewUpdateCounterCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithIncrement(1).
+//		Build()
 type UpdateCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
@@ -222,11 +222,11 @@ type FetchCounterResponse struct {
 
 // FetchCounterCommandBuilder type is required for creating new instances of FetchCounterCommand
 //
-//    command := NewFetchCounterCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//        Build()
+//	command := NewFetchCounterCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -366,20 +366,20 @@ type UpdateSetResponse struct {
 
 // UpdateSetCommandBuilder type is required for creating new instances of UpdateSetCommand
 //
-//    adds := [][]byte{
-//    	[]byte("a1"),
-//    	[]byte("a2"),
-//    	[]byte("a3"),
-//    	[]byte("a4"),
-//    }
+//	adds := [][]byte{
+//		[]byte("a1"),
+//		[]byte("a2"),
+//		[]byte("a3"),
+//		[]byte("a4"),
+//	}
 //
-//    command := NewUpdateSetCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//				WithContext(setContext).
-//				WithAdditions(adds).
-//        Build()
+//	command := NewUpdateSetCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithContext(setContext).
+//		WithAdditions(adds).
+//		 Build()
 type UpdateSetCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
