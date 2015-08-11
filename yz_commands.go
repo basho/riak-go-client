@@ -25,6 +25,7 @@ type Schema struct {
 // RpbYokozunaIndexPutReq
 // RpbPutResp
 
+// StoreIndexCommand is sused to store a new search index on Riak
 type StoreIndexCommand struct {
 	CommandImpl
 	Response bool
@@ -116,6 +117,7 @@ func (builder *StoreIndexCommandBuilder) Build() (Command, error) {
 // RpbYokozunaIndexGetReq
 // RpbYokozunaIndexGetResp
 
+// FetchIndexCommand is used to fetch a search index from Riak
 type FetchIndexCommand struct {
 	CommandImpl
 	Response []*SearchIndex
@@ -199,6 +201,7 @@ func (builder *FetchIndexCommandBuilder) Build() (Command, error) {
 // RpbYokozunaIndexDeleteReq
 // RpbDelResp
 
+// DeleteIndexCommand is used to delete a search index from Riak
 type DeleteIndexCommand struct {
 	CommandImpl
 	Response bool
@@ -260,6 +263,7 @@ func (builder *DeleteIndexCommandBuilder) Build() (Command, error) {
 // RpbYokozunaSchemaPutReq
 // RpbPutResp
 
+// StoreSchemaCommand is used to store / update a search schema in Riak
 type StoreSchemaCommand struct {
 	CommandImpl
 	Response bool
@@ -328,6 +332,7 @@ func (builder *StoreSchemaCommandBuilder) Build() (Command, error) {
 // RpbYokozunaSchemaPutReq
 // RpbPutResp
 
+// FetchSchemaCommand is used to GET a search schema from Riak
 type FetchSchemaCommand struct {
 	CommandImpl
 	Response *Schema
@@ -400,6 +405,7 @@ func (builder *FetchSchemaCommandBuilder) Build() (Command, error) {
 // RpbSearchQueryReq
 // RpbSearchQueryResp
 
+// SearchCommand is used to search Riak for values using search indexes & schemas
 type SearchCommand struct {
 	CommandImpl
 	Response *SearchResponse
@@ -495,6 +501,7 @@ type SearchDoc struct {
 	Fields     map[string][]string
 }
 
+// SearchResponse contains the response data for a SearchCommand
 type SearchResponse struct {
 	Docs     []*SearchDoc
 	MaxScore float32

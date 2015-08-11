@@ -18,6 +18,7 @@ func (builder *PingCommandBuilder) Build() (Command, error) {
 	return &PingCommand{}, nil
 }
 
+// PingCommand is used to verify Riak is active and the connection is working
 type PingCommand struct {
 	CommandImpl
 }
@@ -48,8 +49,7 @@ func (cmd *PingCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
-// StartTls
-
+// StartTlsCommand is used to open a secure connection with Riak
 type StartTlsCommand struct {
 	CommandImpl
 }
@@ -80,8 +80,7 @@ func (cmd *StartTlsCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
-// Auth
-
+// AuthCommand is used to securely authenticate with Riak over TLS
 type AuthCommand struct {
 	CommandImpl
 	User     string
@@ -117,8 +116,7 @@ func (cmd *AuthCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
-// FetchBucketProps
-
+// FetchBucketPropsCommand is used to fetch the active / non-default properties for a bucket
 type FetchBucketPropsCommand struct {
 	CommandImpl
 	Response *FetchBucketPropsResponse
@@ -219,6 +217,7 @@ type ModFun struct {
 	Function string
 }
 
+// FetchBucketPropsResponse contains the response data for a FetchBucketPropsCommand
 type FetchBucketPropsResponse struct {
 	NVal          uint32
 	AllowMult     bool
@@ -312,8 +311,7 @@ func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
 	return hooks
 }
 
-// StoreBucketProps
-
+// StoreBucketPropsCommand is used to store changes to a buckets properties
 type StoreBucketPropsCommand struct {
 	CommandImpl
 	protobuf *rpbRiak.RpbSetBucketReq
@@ -458,6 +456,12 @@ func (builder *StoreBucketPropsCommandBuilder) WithDw(dw uint32) *StoreBucketPro
 	return builder
 }
 
+// WithRw (delete quorum) sets the number of nodes that must report back a successful delete to
+// backend storage in order for the command operation to be considered a success by Riak. It
+// represents the read and write operations that are completed internal to Riak to complete a delete.
+// If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithRw(rw uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.Rw = &rw
 	return builder
@@ -481,27 +485,36 @@ func (builder *StoreBucketPropsCommandBuilder) WithNotFoundOk(notFoundOk bool) *
 	return builder
 }
 
+// WithSearch enables / disables search features for this bucket
 func (builder *StoreBucketPropsCommandBuilder) WithSearch(search bool) *StoreBucketPropsCommandBuilder {
 	builder.props.Search = &search
 	return builder
 }
 
+// WithBackend sets the backend to be used for this bucket
 func (builder *StoreBucketPropsCommandBuilder) WithBackend(backend string) *StoreBucketPropsCommandBuilder {
 	builder.props.Backend = []byte(backend)
 	return builder
 }
 
+// WithSearchIndex sets a searchIndex to be used on the bucket
 func (builder *StoreBucketPropsCommandBuilder) WithSearchIndex(searchIndex string) *StoreBucketPropsCommandBuilder {
 	builder.props.SearchIndex = []byte(searchIndex)
 	return builder
 }
 
+// AddPreCommit allows you to attach a precommit hook to the bucket
+//
+// See http://docs.basho.com/riak/latest/dev/using/commit-hooks/
 func (builder *StoreBucketPropsCommandBuilder) AddPreCommit(commitHook *CommitHook) *StoreBucketPropsCommandBuilder {
 	rpbCommitHook := toRpbCommitHook(commitHook)
 	builder.props.Precommit = addCommitHookTo(builder.props.Precommit, rpbCommitHook)
 	return builder
 }
 
+// AddPostCommit allows you to attach a postcommit hook to the bucket
+//
+// See http://docs.basho.com/riak/latest/dev/using/commit-hooks/
 func (builder *StoreBucketPropsCommandBuilder) AddPostCommit(commitHook *CommitHook) *StoreBucketPropsCommandBuilder {
 	rpbCommitHook := toRpbCommitHook(commitHook)
 	builder.props.Postcommit = addCommitHookTo(builder.props.Postcommit, rpbCommitHook)

@@ -167,6 +167,7 @@ func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 // DtFetchReq
 // DtFetchResp
 
+// FetchCounterCommand fetches a counter CRDT from Riak
 type FetchCounterCommand struct {
 	CommandImpl
 	Response *FetchCounterResponse
@@ -213,6 +214,7 @@ func (cmd *FetchCounterCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtFetchResp{}
 }
 
+// FetchCounterResponse contains the response data for a FetchCounterCommand
 type FetchCounterResponse struct {
 	IsNotFound   bool
 	CounterValue int64
@@ -310,6 +312,7 @@ func (builder *FetchCounterCommandBuilder) Build() (Command, error) {
 // DtUpdateReq
 // DtUpdateResp
 
+// UpdateSetCommand stores or updates a set CRDT in Riak
 type UpdateSetCommand struct {
 	CommandImpl
 	Response *UpdateSetResponse
@@ -354,13 +357,14 @@ func (cmd *UpdateSetCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtUpdateResp{}
 }
 
+// UpdateSetResponse contains the response data for a UpdateSetCommand
 type UpdateSetResponse struct {
 	GeneratedKey string
 	Context      []byte
 	SetValue     [][]byte
 }
 
-// FetchValueCommandBuilder type is required for creating new instances of FetchValueCommand
+// UpdateSetCommandBuilder type is required for creating new instances of UpdateSetCommand
 //
 //    adds := [][]byte{
 //    	[]byte("a1"),
@@ -369,7 +373,7 @@ type UpdateSetResponse struct {
 //    	[]byte("a4"),
 //    }
 //
-//    command := NewFetchValueCommandBuilder().
+//    command := NewUpdateSetCommandBuilder().
 //        WithBucketType("myBucketType").
 //        WithBucket("myBucket").
 //        WithKey("myKey").
@@ -409,11 +413,13 @@ func (builder *UpdateSetCommandBuilder) WithKey(key string) *UpdateSetCommandBui
 	return builder
 }
 
+// WithContext sets the causal context needed to identify the state of the set when removing elements
 func (builder *UpdateSetCommandBuilder) WithContext(context []byte) *UpdateSetCommandBuilder {
 	builder.protobuf.Context = context
 	return builder
 }
 
+// WithAdditions sets the set elements to be added to the CRDT set via this update operation
 func (builder *UpdateSetCommandBuilder) WithAdditions(adds ...[]byte) *UpdateSetCommandBuilder {
 	opAdds := builder.protobuf.Op.SetOp.Adds
 	opAdds = append(opAdds, adds...)
@@ -421,6 +427,7 @@ func (builder *UpdateSetCommandBuilder) WithAdditions(adds ...[]byte) *UpdateSet
 	return builder
 }
 
+// WithRemovals sets the set elements to be removed from the CRDT set via this update operation
 func (builder *UpdateSetCommandBuilder) WithRemovals(removals ...[]byte) *UpdateSetCommandBuilder {
 	opRemoves := builder.protobuf.Op.SetOp.Removes
 	opRemoves = append(opRemoves, removals...)
@@ -486,6 +493,7 @@ func (builder *UpdateSetCommandBuilder) Build() (Command, error) {
 // DtFetchReq
 // DtFetchResp
 
+// FetchSetCommand fetches a set CRDT from Riak
 type FetchSetCommand struct {
 	CommandImpl
 	Response *FetchSetResponse
@@ -534,6 +542,7 @@ func (cmd *FetchSetCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtFetchResp{}
 }
 
+// FetchSetResponse contains the response data for a FetchSetCommand
 type FetchSetResponse struct {
 	IsNotFound bool
 	Context    []byte
@@ -625,6 +634,7 @@ func (builder *FetchSetCommandBuilder) Build() (Command, error) {
 // DtUpdateReq
 // DtUpdateResp
 
+// UpdateMapCommand updates a map CRDT in Riak
 type UpdateMapCommand struct {
 	CommandImpl
 	Response *UpdateMapResponse
@@ -832,6 +842,7 @@ type MapOperation struct {
 	removeMaps map[string]bool
 }
 
+// IncrementCounter increments a child counter CRDT of the map at the specified key
 func (mapOp *MapOperation) IncrementCounter(key string, increment int64) *MapOperation {
 	if mapOp.removeCounters != nil {
 		delete(mapOp.removeCounters, key)
@@ -843,6 +854,7 @@ func (mapOp *MapOperation) IncrementCounter(key string, increment int64) *MapOpe
 	return mapOp
 }
 
+// RemoveCounter removes a child counter CRDT from the map at the specified key
 func (mapOp *MapOperation) RemoveCounter(key string) *MapOperation {
 	if mapOp.incrementCounters != nil {
 		delete(mapOp.incrementCounters, key)
@@ -854,6 +866,7 @@ func (mapOp *MapOperation) RemoveCounter(key string) *MapOperation {
 	return mapOp
 }
 
+// AddToSet adds an element to the child set CRDT of the map at the specified key
 func (mapOp *MapOperation) AddToSet(key string, value []byte) *MapOperation {
 	if mapOp.removeSets != nil {
 		delete(mapOp.removeSets, key)
@@ -865,6 +878,7 @@ func (mapOp *MapOperation) AddToSet(key string, value []byte) *MapOperation {
 	return mapOp
 }
 
+// RemoveFromSet removes elements from the child set CRDT of the map at the specified key
 func (mapOp *MapOperation) RemoveFromSet(key string, value []byte) *MapOperation {
 	if mapOp.removeSets != nil {
 		delete(mapOp.removeSets, key)
@@ -876,6 +890,7 @@ func (mapOp *MapOperation) RemoveFromSet(key string, value []byte) *MapOperation
 	return mapOp
 }
 
+// RemoveSet removes the child set CRDT from the map
 func (mapOp *MapOperation) RemoveSet(key string) *MapOperation {
 	if mapOp.addToSets != nil {
 		delete(mapOp.addToSets, key)
@@ -890,6 +905,7 @@ func (mapOp *MapOperation) RemoveSet(key string) *MapOperation {
 	return mapOp
 }
 
+// SetRegister sets a register CRDT on the map with the provided value
 func (mapOp *MapOperation) SetRegister(key string, value []byte) *MapOperation {
 	if mapOp.removeRegisters != nil {
 		delete(mapOp.removeRegisters, key)
@@ -901,6 +917,7 @@ func (mapOp *MapOperation) SetRegister(key string, value []byte) *MapOperation {
 	return mapOp
 }
 
+// RemoveRegister removes a register CRDT from the map
 func (mapOp *MapOperation) RemoveRegister(key string) *MapOperation {
 	if mapOp.registersToSet != nil {
 		delete(mapOp.registersToSet, key)
@@ -912,6 +929,7 @@ func (mapOp *MapOperation) RemoveRegister(key string) *MapOperation {
 	return mapOp
 }
 
+// SetFlag sets a flag CRDT on the map
 func (mapOp *MapOperation) SetFlag(key string, value bool) *MapOperation {
 	if mapOp.removeFlags != nil {
 		delete(mapOp.removeFlags, key)
@@ -923,6 +941,7 @@ func (mapOp *MapOperation) SetFlag(key string, value bool) *MapOperation {
 	return mapOp
 }
 
+// RemoveFlag removes a flag CRDT from the map
 func (mapOp *MapOperation) RemoveFlag(key string) *MapOperation {
 	if mapOp.flagsToSet != nil {
 		delete(mapOp.flagsToSet, key)
@@ -934,6 +953,7 @@ func (mapOp *MapOperation) RemoveFlag(key string) *MapOperation {
 	return mapOp
 }
 
+// Map returns a nested map operation for manipulation
 func (mapOp *MapOperation) Map(key string) *MapOperation {
 	if mapOp.removeMaps != nil {
 		delete(mapOp.removeMaps, key)
@@ -941,15 +961,18 @@ func (mapOp *MapOperation) Map(key string) *MapOperation {
 	if mapOp.maps == nil {
 		mapOp.maps = make(map[string]*MapOperation)
 	}
-	if innerMapOp, ok := mapOp.maps[key]; ok {
-		return innerMapOp
-	} else {
-		innerMapOp = &MapOperation{}
-		mapOp.maps[key] = innerMapOp
+
+	innerMapOp, ok := mapOp.maps[key]
+	if ok {
 		return innerMapOp
 	}
+
+	innerMapOp = &MapOperation{}
+	mapOp.maps[key] = innerMapOp
+	return innerMapOp
 }
 
+// RemoveMap removes a nested map from the map
 func (mapOp *MapOperation) RemoveMap(key string) *MapOperation {
 	if mapOp.maps != nil {
 		delete(mapOp.maps, key)
@@ -1028,6 +1051,7 @@ type Map struct {
 	Maps      map[string]*Map
 }
 
+// UpdateMapResponse contains the response data for a UpdateMapCommand
 type UpdateMapResponse struct {
 	GeneratedKey string
 	Context      []byte
@@ -1062,11 +1086,13 @@ func (builder *UpdateMapCommandBuilder) WithKey(key string) *UpdateMapCommandBui
 	return builder
 }
 
+// WithContext sets the causal context needed to identify the state of the map when removing elements
 func (builder *UpdateMapCommandBuilder) WithContext(context []byte) *UpdateMapCommandBuilder {
 	builder.protobuf.Context = context
 	return builder
 }
 
+// WithMapOperation provides the details of what is supposed to be updated on the map
 func (builder *UpdateMapCommandBuilder) WithMapOperation(mapOperation *MapOperation) *UpdateMapCommandBuilder {
 	builder.mapOperation = mapOperation
 	return builder
@@ -1136,6 +1162,7 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 // DtFetchReq
 // DtFetchResp
 
+// FetchMapCommand fetches a map CRDT from Riak
 type FetchMapCommand struct {
 	CommandImpl
 	Response *FetchMapResponse
@@ -1189,6 +1216,7 @@ func (cmd *FetchMapCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtFetchResp{}
 }
 
+// FetchMapResponse contains the response data for a FetchMapCommand
 type FetchMapResponse struct {
 	IsNotFound bool
 	Context    []byte
