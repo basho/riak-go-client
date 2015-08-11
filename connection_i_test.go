@@ -17,15 +17,14 @@ func TestSuccessfulConnection(t *testing.T) {
 	}
 	defer ln.Close()
 
-	sawConnection := false
-
+	connChan := make(chan bool)
 	go func() {
 		c, err := ln.Accept()
 		defer c.Close()
 		if err != nil {
-			t.Error(err.Error())
+			t.Log(err.Error())
 		}
-		sawConnection = true
+		connChan <- true
 	}()
 
 	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1337")
@@ -45,6 +44,8 @@ func TestSuccessfulConnection(t *testing.T) {
 	if err := conn.connect(); err != nil {
 		t.Error(err)
 	}
+
+	sawConnection := <-connChan
 
 	if err := conn.close(); err != nil {
 		t.Error(err)
