@@ -1,5 +1,7 @@
 package riak
 
+import "sync"
+
 // NodeManager enforces the structure needed to if going to implement your own NodeManager
 type NodeManager interface {
 	ExecuteOnNode(nodes []*Node, command Command, previous *Node) (executed bool, err error)
@@ -7,11 +9,15 @@ type NodeManager interface {
 
 type defaultNodeManager struct {
 	nodeIndex uint16
+	mtx       sync.Mutex
 }
 
 // ExecuteOnNode selects a Node from the pool and executes the provided Command on that Node. The
 // defaultNodeManager uses a simple round robin approach to distributing load
 func (nm *defaultNodeManager) ExecuteOnNode(nodes []*Node, command Command, previous *Node) (executed bool, err error) {
+	nm.mtx.Lock()
+	defer nm.mtx.Unlock()
+
 	executed = false
 	startingIndex := nm.nodeIndex
 
@@ -31,7 +37,7 @@ func (nm *defaultNodeManager) ExecuteOnNode(nodes []*Node, command Command, prev
 
 		if executed, err = node.Execute(command); err != nil {
 			executed = false
-			logErr(err)
+			logErr("[DefaultNodeManager]", err)
 		} else {
 			executed = true
 			break

@@ -72,14 +72,14 @@ func (c *Cluster) String() string {
 // the active pool
 func (c *Cluster) Start() (err error) {
 	if c.isCurrentState(clusterRunning) {
-		logWarnln("[Cluster] cluster already running.")
+		logWarnln("[Cluster]", "cluster already running.")
 		return
 	}
 	if err = c.stateCheck(clusterCreated); err != nil {
 		return
 	}
 
-	logDebug("[Cluster] starting.")
+	logDebug("[Cluster]", "starting")
 
 	for _, node := range c.nodes {
 		if err = node.Start(); err != nil {
@@ -88,7 +88,7 @@ func (c *Cluster) Start() (err error) {
 	}
 
 	c.setState(clusterRunning)
-	logDebug("[Cluster] cluster started.")
+	logDebug("[Cluster]", "cluster started")
 
 	return
 }
@@ -97,17 +97,18 @@ func (c *Cluster) Start() (err error) {
 // the active pool
 func (c *Cluster) Stop() (err error) {
 	if err = c.stateCheck(clusterRunning, clusterQueueing); err != nil {
+		logError("[Cluster]", "Stop: %s", err.Error())
 		return
 	}
 
-	logDebug("[Cluster] shutting down")
+	logDebug("[Cluster]", "shutting down")
 	c.setState(clusterShuttingDown)
 	for _, node := range c.nodes {
 		err = node.Stop() // TODO multiple errors?
 	}
 
 	allStopped := true
-	logDebug("[Cluster] checking to see if nodes are shut down")
+	logDebug("[Cluster]", "checking to see if nodes are shut down")
 	for _, node := range c.nodes {
 		nodeState := node.getState()
 		if nodeState != nodeShutdown {
@@ -118,7 +119,7 @@ func (c *Cluster) Stop() (err error) {
 
 	if allStopped {
 		c.setState(clusterShutdown)
-		logDebug("[Cluster] cluster shut down")
+		logDebug("[Cluster]", "cluster shut down")
 		/* TODO
 		if (this._commandQueue.length) {
 			logger.warn('[RiakCluster] There were %d commands in the queue at shutdown',
@@ -127,7 +128,7 @@ func (c *Cluster) Stop() (err error) {
 		*/
 	} else {
 		// TODO is this even possible?
-		logDebug("[Cluster] nodes still running")
+		logDebug("[Cluster]", "nodes still running")
 		/*
 			var self = this;
 			setTimeout(function() {

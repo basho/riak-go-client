@@ -3,14 +3,10 @@
 package riak
 
 import (
-	"bytes"
 	"net"
 	"strconv"
 	"testing"
 	"time"
-
-	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
-	proto "github.com/golang/protobuf/proto"
 )
 
 func TestExecuteCommandOnCluster(t *testing.T) {
@@ -107,7 +103,7 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 	count := 32
 	pingChan := make(chan *PingCommand, count)
 	for i := 0; i < count; i++ {
-		logDebug("i: %d", i)
+		logDebug("[TestExecuteConcurrentCommandsOnCluster]", "i: %d", i)
 		go func() {
 			command := &PingCommand{}
 			if err := cluster.Execute(command); err != nil {
@@ -121,7 +117,7 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 	for i := 0; i < count; i++ {
 		select {
 		case pingCommand := <-pingChan:
-			logDebug("j: %d, pingCommand: %v", j, pingCommand)
+			logDebug("[TestExecuteConcurrentCommandsOnCluster]", "j: %d, pingCommand: %v", j, pingCommand)
 			j++
 		}
 	}
@@ -130,9 +126,9 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 	}
 }
 
-func TestRetryCommandThreeTimesOnDifferentNodes(t *testing.T) {
+func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	nodeCount := 3
-	port := 1337
+	port := 6666
 	listenerChan := make(chan bool, nodeCount)
 	servers := make([]net.Listener, nodeCount)
 	defer func() {
@@ -144,42 +140,23 @@ func TestRetryCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	nodes := make([]*Node, nodeCount)
 	for i := 0; i < nodeCount; i++ {
 		laddr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-		if listener, err := net.Listen("tcp", laddr); err != nil {
+		if l, err := net.Listen("tcp", laddr); err != nil {
 			t.Fatal(err)
 		} else {
 			port++
-			servers[i] = listener
+			servers[i] = l
 
 			go func() {
-				c, err := listener.Accept()
-				defer c.Close()
-				if err != nil {
-					t.Error(err)
-					return
+				for {
+					conn, err := l.Accept()
+					if err != nil {
+						if _, ok := err.(*net.OpError); !ok {
+							t.Error(err)
+						}
+						return
+					}
+					go handleClientMessageWithRiakError(t, conn, listenerChan)
 				}
-
-				var errcode uint32 = 1
-				errmsg := bytes.NewBufferString("this is an error")
-				rpbErr := &rpb_riak.RpbErrorResp{
-					Errcode: &errcode,
-					Errmsg:  errmsg.Bytes(),
-				}
-
-				encoded, err := proto.Marshal(rpbErr)
-				if err != nil {
-					t.Error(err)
-				}
-
-				data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
-				count, err := c.Write(data)
-				if err != nil {
-					t.Error(err)
-				}
-				if count != len(data) {
-					t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
-				}
-
-				listenerChan <- true
 			}()
 
 			nodeOptions := &NodeOptions{
@@ -205,6 +182,11 @@ func TestRetryCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	if err := cluster.Start(); err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
 
 	fetch, err := NewFetchValueCommandBuilder().
 		WithBucket("b").
@@ -216,11 +198,11 @@ func TestRetryCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	cluster.Execute(fetch)
 
 	j := 0
-	for j := 0; j < nodeCount; {
+	for j = 0; j < nodeCount; {
 		select {
 		case <-listenerChan:
 			j++
-		case <-time.After(5 * time.Second):
+		case <-time.After(1 * time.Second):
 			t.Fatal("test timed out")
 		}
 	}

@@ -83,10 +83,10 @@ func (c *connection) connect() (err error) {
 	}
 	c.conn, err = dialer.Dial("tcp", c.addr.String()) // NB: SetNoDelay() is true by default for TCP connections
 	if err != nil {
-		logError("[Connection] error when dialing %s: '%s'", c.addr.String(), err.Error())
+		logError("[Connection]", "error when dialing %s: '%s'", c.addr.String(), err.Error())
 		c.close()
 	} else {
-		logDebug("[Connection] connected to: %s", c.addr)
+		logDebug("[Connection]", "connected to: %s", c.addr)
 		if err = c.startTls(); err != nil {
 			c.state = connInactive
 			return
@@ -95,7 +95,7 @@ func (c *connection) connect() (err error) {
 		if c.healthCheck != nil {
 			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Successful() {
 				c.state = connInactive
-				logError("[Connection] initial health check error: '%s'", err.Error())
+				logError("[Connection]", "initial health check error: '%s'", err.Error())
 				c.close()
 			}
 		}
@@ -135,7 +135,7 @@ func (c *connection) startTls() (err error) {
 func (c *connection) available() bool {
 	defer func() {
 		if err := recover(); err != nil {
-			logErrorln("[Connection] available: connection panic!")
+			logErrorln("[Connection]", "available(): connection panic!")
 		}
 	}()
 	return (c.conn != nil && (c.state == connTlsStarting || c.state == connActive))
@@ -144,6 +144,7 @@ func (c *connection) available() bool {
 func (c *connection) close() (err error) {
 	if c.conn != nil {
 		err = c.conn.Close()
+		c.conn = nil
 	}
 	return
 }
@@ -158,7 +159,7 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
-	logDebug("[Connection] execute command: %v", cmd.Name())
+	logDebug("[Connection]", "execute command: %v", cmd.Name())
 	c.setInFlight(true)
 	defer c.setInFlight(false)
 	c.lastUsed = time.Now()

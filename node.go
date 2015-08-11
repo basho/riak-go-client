@@ -126,7 +126,7 @@ func (n *Node) Start() (err error) {
 		return
 	}
 
-	logDebug("[Node] (%v) starting", n)
+	logDebug("[Node]", "(%v) starting", n)
 
 	var i uint16
 	for i = 0; i < n.minConnections; i++ {
@@ -150,10 +150,7 @@ func (n *Node) Start() (err error) {
 	go n.expireIdleConnections()
 
 	n.setState(nodeRunning)
-
-	logDebug("[Node] (%v) started", n)
-
-	// TODO emit stateChange event, do we care?
+	logDebug("[Node]", "(%v) started", n)
 	return
 }
 
@@ -166,7 +163,8 @@ func (n *Node) Stop() (err error) {
 	n.setState(nodeShuttingDown)
 	n.stop <- true
 	n.expireTicker.Stop()
-	logDebug("[Node] (%v) shutting down.", n)
+	close(n.stop)
+	logDebug("[Node]", "(%v) shutting down.", n)
 	n.shutdown()
 	return
 }
@@ -187,13 +185,13 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 			defer n.connMtx.RUnlock()
 			if n.currentNumConnections < n.maxConnections {
 				if conn, err = n.createNewConnection(nil, true); conn == nil || err != nil {
-					logErr(err)
+					logErr("[Node]", err)
 					executed = false
 					n.doHealthCheck()
 					return
 				}
 			} else {
-				logDebug("[Node] node (%v): all connections in use and at max", n)
+				logDebug("[Node]", "(%v): all connections in use and at max", n)
 				executed = false
 				return
 			}
@@ -205,13 +203,20 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 			panic(fmt.Sprintf("[Node] (%v) expected connection", n))
 		}
 
-		logDebug("[Node] (%v) - executing command '%v'", n, cmd.Name())
-		defer n.returnConnectionToPool(conn, true)
+		logDebug("[Node]", "(%v) - executing command '%v'", n, cmd.Name())
 		if err = conn.execute(cmd); err == nil {
 			executed = true
+			n.returnConnectionToPool(conn, true)
 		} else {
 			// NB: basically, this is _connectionClosed in Node.js client
+			n.connMtx.Lock()
+			defer n.connMtx.Unlock()
+			logDebug("[Node]", "(%v) - closing connection due to error: '%v'", n, err)
 			executed = false
+			if err := conn.close(); err != nil {
+				logErr("[Node]", err)
+			}
+			n.currentNumConnections--
 			n.doHealthCheck()
 		}
 	}
@@ -240,9 +245,9 @@ func (n *Node) returnConnectionToPool(c *connection, shouldLock bool) {
 	if n.isStateLessThan(nodeShuttingDown) {
 		// TODO c.resetBuffer()
 		n.available = append(n.available, c)
-		logDebug("[Node] (%v)|Number of avail connections: %d", n, len(n.available))
+		logDebug("[Node]", "(%v)|Number of avail connections: %d", n, len(n.available))
 	} else {
-		logDebug("[Node] (%v)|Connection returned to pool during shutdown.", n)
+		logDebug("[Node]", "(%v)|Connection returned to pool during shutdown.", n)
 		n.currentNumConnections--
 		c.close() // NB: discard error
 	}
@@ -252,23 +257,31 @@ func (n *Node) shutdown() (err error) {
 	n.connMtx.Lock()
 	defer n.connMtx.Unlock()
 
-	for i, conn := range n.available {
-		n.available[i] = nil
-		n.currentNumConnections--
-		err = conn.close()
-	}
-	if err != nil {
-		n.setState(nodeError)
-		return
-	}
+	allClosed := false
+	for allClosed == false {
+		if n.currentNumConnections != uint16(len(n.available)) {
+			logError("[Node]", "shutdown: current connection count '%d' does NOT equal pool length '%d'", n.currentNumConnections, len(n.available))
+		}
+		for i, conn := range n.available {
+			n.available[i] = nil
+			n.currentNumConnections--
+			if conn != nil {
+				err = conn.close()
+			}
+		}
+		if err != nil {
+			n.setState(nodeError)
+			return
+		}
 
-	if n.currentNumConnections == 0 {
-		n.available = nil
-		n.setState(nodeShutdown)
-		logDebug("[Node] (%v) shut down.", n)
-	} else {
-		// Should never happen
-		panic(fmt.Sprintf("[Node] (%v); Connections still in use.", n))
+		if n.currentNumConnections == 0 {
+			allClosed = true
+			n.available = nil
+			n.setState(nodeShutdown)
+			logDebug("[Node]", "(%v) shut down.", n)
+		} else {
+			logWarn("[Node]", "(%v) %d connections still in use.", n, n.currentNumConnections)
+		}
 	}
 
 	return
@@ -277,7 +290,7 @@ func (n *Node) shutdown() (err error) {
 func (n *Node) doHealthCheck() {
 	// NB: ensure we're not already health checking or shutting down
 	if tmpErr := n.stateCheck(nodeHealthChecking, nodeShuttingDown); tmpErr == nil {
-		logDebug("[Node] (%v) already health checking.")
+		logDebug("[Node]", "(%v) is already health checking or shutting down.", n)
 	} else {
 		n.setState(nodeHealthChecking)
 		go n.healthCheck()
@@ -317,78 +330,106 @@ func (n *Node) getHealthCheckCommand() (hc Command) {
 	}
 
 	if err != nil {
-		logErr(err)
+		logErr("[Node]", err)
 		hc = &PingCommand{}
 	}
 
 	return
 }
 
+func (n *Node) ensureHealthCheckCanContinue() bool {
+	// ensure we ARE health checking
+	if tmpErr := n.stateCheck(nodeHealthChecking); tmpErr != nil {
+		logDebug("[Node]", "(%v) expected to be in health checking state.", n)
+		return false
+	}
+
+	// ensure we're not shutting down
+	if tmpErr := n.stateCheck(nodeShuttingDown); tmpErr == nil {
+		logDebug("[Node]", "(%v) is shutting down.", n)
+		return false
+	} else {
+		return true
+	}
+}
+
 // private goroutine funcs
 
 func (n *Node) healthCheck() {
 
-	logDebug("[Node] (%v) running health check", n)
+	logDebug("[Node]", "(%v) running health check", n)
 
 	healthCheckTicker := time.NewTicker(n.healthCheckInterval)
 	defer healthCheckTicker.Stop()
 	healthCheckCommand := n.getHealthCheckCommand()
 
 	for {
-		select {
-		case <-n.stop:
-			logDebug("[Node] (%v) health check routine quitting.")
-			return
-		case t := <-healthCheckTicker.C:
-			logDebug("[Node] (%v) running health check at %v", n, t)
-			if conn, err := n.createNewConnection(healthCheckCommand, true); conn == nil || err != nil {
-				logDebug("[Node] (%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
-			} else {
-				n.returnConnectionToPool(conn, true)
-				n.setState(nodeRunning)
-				logDebug("[Node] (%v) healthcheck success", n)
+		if n.ensureHealthCheckCanContinue() {
+			select {
+			case <-n.stop:
+				logDebug("[Node]", "(%v) health check quitting", n)
 				return
+			case t := <-healthCheckTicker.C:
+				if n.ensureHealthCheckCanContinue() {
+					logDebug("[Node]", "(%v) running health check at %v", n, t)
+					if conn, err := n.createNewConnection(healthCheckCommand, true); conn == nil || err != nil {
+						logDebug("[Node]", "(%v) failed healthcheck - conn: %v err: %v", n, conn == nil, err)
+					} else {
+						n.returnConnectionToPool(conn, true)
+						n.setState(nodeRunning)
+						logDebug("[Node]", "(%v) healthcheck success", n)
+						return
+					}
+				}
 			}
+		} else {
+			return
 		}
 	}
 }
 
 func (n *Node) expireIdleConnections() {
-	logDebug("[Node] (%v) idle connection expiration routine starting", n)
+	logDebug("[Node]", "(%v) idle connection expiration routine is starting", n)
 	for {
 		select {
 		case <-n.stop:
-			logDebug("[Node] (%v) idle connection expiration routine quitting", n)
+			logDebug("[Node]", "(%v) idle connection expiration routine is quitting", n)
 			return
 		case t := <-n.expireTicker.C:
-			logDebug("[Node] (%v) expiring idle connections at %v", n, t)
-			n.connMtx.Lock()
-			count := 0
-			now := time.Now()
-			for i := 0; i < len(n.available); {
-				if n.currentNumConnections <= n.minConnections {
-					break
+			// NB: ensure we're not already shutting down
+			if tmpErr := n.stateCheck(nodeShuttingDown); tmpErr == nil {
+				logDebug("[Node]", "(%v) shutting down, idle connection expiration routine is quitting.")
+				return
+			} else {
+				logDebug("[Node]", "(%v) expiring idle connections at %v", n, t)
+				n.connMtx.Lock()
+				count := 0
+				now := time.Now()
+				for i := 0; i < len(n.available); {
+					if n.currentNumConnections <= n.minConnections {
+						break
+					}
+					conn := n.available[i]
+					if now.Sub(conn.lastUsed) >= n.idleTimeout {
+						// NB: overwrites current element in slice with last element,
+						// and shrinks the slice by one
+						// does NOT increment i so that we re-visit the index, which now
+						// contains what used to be the last element
+						// "Delete without preserving order"
+						// https://github.com/golang/go/wiki/SliceTricks
+						l := len(n.available) - 1
+						n.available[i], n.available[l], n.available =
+							n.available[l], nil, n.available[:l]
+						n.currentNumConnections--
+						conn.close() // TODO error
+						count++
+					} else {
+						i++
+					}
 				}
-				conn := n.available[i]
-				if now.Sub(conn.lastUsed) >= n.idleTimeout {
-					// NB: overwrites current element in slice with last element,
-					// and shrinks the slice by one
-					// does NOT increment i so that we re-visit the index, which now
-					// contains what used to be the last element
-					// "Delete without preserving order"
-					// https://github.com/golang/go/wiki/SliceTricks
-					l := len(n.available) - 1
-					n.available[i], n.available[l], n.available =
-						n.available[l], nil, n.available[:l]
-					n.currentNumConnections--
-					conn.close()
-					count++
-				} else {
-					i++
-				}
+				n.connMtx.Unlock()
+				logDebug("[Node]", "(%v) expired %d connections.", n, count)
 			}
-			n.connMtx.Unlock()
-			logDebug("[Node] (%v) expired %d connections.", n, count)
 		}
 	}
 }
