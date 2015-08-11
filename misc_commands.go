@@ -463,11 +463,19 @@ func (builder *StoreBucketPropsCommandBuilder) WithRw(rw uint32) *StoreBucketPro
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *StoreBucketPropsCommandBuilder) WithBasicQuorum(basicQuorum bool) *StoreBucketPropsCommandBuilder {
 	builder.props.BasicQuorum = &basicQuorum
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *StoreBucketPropsCommandBuilder) WithNotFoundOk(notFoundOk bool) *StoreBucketPropsCommandBuilder {
 	builder.props.NotfoundOk = &notFoundOk
 	return builder

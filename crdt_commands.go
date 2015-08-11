@@ -63,6 +63,14 @@ type UpdateCounterResponse struct {
 	CounterValue int64
 }
 
+// UpdateCounterCommandBuilder type is required for creating new instances of UpdateCounterCommand
+//
+//    command := NewUpdateCounterCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        WithKey("myKey").
+//				WithIncrement(1).
+//        Build()
 type UpdateCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
@@ -210,6 +218,13 @@ type FetchCounterResponse struct {
 	CounterValue int64
 }
 
+// FetchCounterCommandBuilder type is required for creating new instances of FetchCounterCommand
+//
+//    command := NewFetchCounterCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        WithKey("myKey").
+//        Build()
 type FetchCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -255,11 +270,19 @@ func (builder *FetchCounterCommandBuilder) WithPr(pr uint32) *FetchCounterComman
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchCounterCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchCounterCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchCounterCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchCounterCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
@@ -337,6 +360,22 @@ type UpdateSetResponse struct {
 	SetValue     [][]byte
 }
 
+// FetchValueCommandBuilder type is required for creating new instances of FetchValueCommand
+//
+//    adds := [][]byte{
+//    	[]byte("a1"),
+//    	[]byte("a2"),
+//    	[]byte("a3"),
+//    	[]byte("a4"),
+//    }
+//
+//    command := NewFetchValueCommandBuilder().
+//        WithBucketType("myBucketType").
+//        WithBucket("myBucket").
+//        WithKey("myKey").
+//				WithContext(setContext).
+//				WithAdditions(adds).
+//        Build()
 type UpdateSetCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
@@ -408,6 +447,11 @@ func (builder *UpdateSetCommandBuilder) WithPw(pw uint32) *UpdateSetCommandBuild
 	return builder
 }
 
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateSetCommandBuilder) WithDw(dw uint32) *UpdateSetCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
@@ -541,11 +585,19 @@ func (builder *FetchSetCommandBuilder) WithPr(pr uint32) *FetchSetCommandBuilder
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchSetCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchSetCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchSetCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchSetCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
@@ -1039,6 +1091,11 @@ func (builder *UpdateMapCommandBuilder) WithPw(pw uint32) *UpdateMapCommandBuild
 	return builder
 }
 
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateMapCommandBuilder) WithDw(dw uint32) *UpdateMapCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
@@ -1183,11 +1240,19 @@ func (builder *FetchMapCommandBuilder) WithPr(pr uint32) *FetchMapCommandBuilder
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchMapCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchMapCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchMapCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchMapCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder

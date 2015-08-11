@@ -20,7 +20,7 @@ type ConflictResolver interface {
 	Resolve([]*Object) []*Object
 }
 
-// FetchValueCommand is used to fetch / get a value from Riak
+// FetchValueCommand is used to fetch / get a value from Riak KV
 type FetchValueCommand struct {
 	CommandImpl
 	Response *FetchValueResponse
@@ -176,11 +176,19 @@ func (builder *FetchValueCommandBuilder) WithNVal(nval uint32) *FetchValueComman
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchValueCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchValueCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchValueCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchValueCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
@@ -228,7 +236,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 // RpbPutReq
 // RpbPutResp
 
-// Command used to store a value from Riak KV.
+// StoreValueCommand used to store a value from Riak KV.
 type StoreValueCommand struct {
 	CommandImpl
 	Response *StoreValueResponse
@@ -288,19 +296,20 @@ func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
 			if pbContent := rpbPutResp.GetContent(); pbContent != nil && len(pbContent) > 0 {
 				response.Values = make([]*Object, len(pbContent))
 				for i, content := range pbContent {
-					if ro, err := fromRpbContent(content); err != nil {
+					ro, err := fromRpbContent(content)
+					if err != nil {
 						return err
-					} else {
-						ro.VClock = vclock
-						ro.BucketType = string(cmd.protobuf.Type)
-						ro.Bucket = string(cmd.protobuf.Bucket)
-						if responseKey == "" {
-							ro.Key = string(cmd.protobuf.Key)
-						} else {
-							ro.Key = responseKey
-						}
-						response.Values[i] = ro
 					}
+
+					ro.VClock = vclock
+					ro.BucketType = string(cmd.protobuf.Type)
+					ro.Bucket = string(cmd.protobuf.Bucket)
+					if responseKey == "" {
+						ro.Key = string(cmd.protobuf.Key)
+					} else {
+						ro.Key = responseKey
+					}
+					response.Values[i] = ro
 				}
 				if cmd.resolver != nil {
 					response.Values = cmd.resolver.Resolve(response.Values)
@@ -327,6 +336,7 @@ func (cmd *StoreValueCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbPutResp{}
 }
 
+// StoreValueResponse contains the response data for a StoreValueCommand
 type StoreValueResponse struct {
 	GeneratedKey string
 	VClock       []byte
@@ -374,11 +384,13 @@ func (builder *StoreValueCommandBuilder) WithKey(key string) *StoreValueCommandB
 	return builder
 }
 
+// WithVClock sets the vclock for the object to be stored, providing causal context for conflicts
 func (builder *StoreValueCommandBuilder) WithVClock(vclock []byte) *StoreValueCommandBuilder {
 	builder.protobuf.Vclock = vclock
 	return builder
 }
 
+// WithContent sets the object / value to be stored at the specified key
 func (builder *StoreValueCommandBuilder) WithContent(object *Object) *StoreValueCommandBuilder {
 	builder.value = object
 	return builder
@@ -710,6 +722,7 @@ func (cmd *ListBucketsCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbListBucketsResp{}
 }
 
+// ListBucketsResponse contains the response data for a ListBucketsCommand
 type ListBucketsResponse struct {
 	Buckets []string
 }
@@ -742,7 +755,7 @@ func (builder *ListBucketsCommandBuilder) WithBucketType(bucketType string) *Lis
 	return builder
 }
 
-// Set to stream responses.
+// WithStreaming sets the command to provide a streamed response
 //
 // If true, a callback must be provided via WithCallback()
 func (builder *ListBucketsCommandBuilder) WithStreaming(streaming bool) *ListBucketsCommandBuilder {
@@ -750,7 +763,9 @@ func (builder *ListBucketsCommandBuilder) WithStreaming(streaming bool) *ListBuc
 	return builder
 }
 
-// Callback to use when streaming responses.
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *ListBucketsCommandBuilder) WithCallback(callback func([]string) error) *ListBucketsCommandBuilder {
 	builder.callback = callback
 	return builder
@@ -858,6 +873,7 @@ func (cmd *ListKeysCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbListKeysResp{}
 }
 
+// ListKeysResponse contains the response data for a ListKeysCommand
 type ListKeysResponse struct {
 	Keys []string
 }
@@ -898,11 +914,17 @@ func (builder *ListKeysCommandBuilder) WithBucket(bucket string) *ListKeysComman
 	return builder
 }
 
+// WithStreaming sets the command to provide a streamed response
+//
+// If true, a callback must be provided via WithCallback()
 func (builder *ListKeysCommandBuilder) WithStreaming(streaming bool) *ListKeysCommandBuilder {
 	builder.streaming = streaming
 	return builder
 }
 
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *ListKeysCommandBuilder) WithCallback(callback func([]string) error) *ListKeysCommandBuilder {
 	builder.callback = callback
 	return builder
@@ -1228,11 +1250,17 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithReturnKeyAndIndex(val bool
 	return builder
 }
 
+// WithStreaming sets the command to provide a streamed response
+//
+// If true, a callback must be provided via WithCallback()
 func (builder *SecondaryIndexQueryCommandBuilder) WithStreaming(streaming bool) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Stream = &streaming
 	return builder
 }
 
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *SecondaryIndexQueryCommandBuilder) WithCallback(callback func([]*SecondaryIndexQueryResult) error) *SecondaryIndexQueryCommandBuilder {
 	builder.callback = callback
 	return builder
@@ -1381,11 +1409,17 @@ func (builder *MapReduceCommandBuilder) WithQuery(query string) *MapReduceComman
 	return builder
 }
 
+// WithStreaming sets the command to provide a streamed response
+//
+// If true, a callback must be provided via WithCallback()
 func (builder *MapReduceCommandBuilder) WithStreaming(streaming bool) *MapReduceCommandBuilder {
 	builder.streaming = streaming
 	return builder
 }
 
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *MapReduceCommandBuilder) WithCallback(callback func([]byte) error) *MapReduceCommandBuilder {
 	builder.callback = callback
 	return builder
