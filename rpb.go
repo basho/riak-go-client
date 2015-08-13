@@ -1,11 +1,8 @@
 package riak
 
 import (
-	"errors"
 	"fmt"
 )
-
-var ErrZeroLength error = errors.New("[Command] 0 byte data response")
 
 func rpbValidateResp(data []byte, expected byte) (err error) {
 	if len(data) == 0 {
@@ -20,7 +17,7 @@ func rpbValidateResp(data []byte, expected byte) (err error) {
 
 func rpbEnsureCode(expected byte, actual byte) (err error) {
 	if expected != actual {
-		err = fmt.Errorf("expected response code %d, got: %d", expected, actual)
+		err = newClientError(fmt.Sprintf("expected response code %d, got: %d", expected, actual))
 	}
 	return
 }

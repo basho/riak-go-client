@@ -1,6 +1,6 @@
 package riak
 
-import "errors"
+import "fmt"
 
 // Constants identifying Cluster state
 const (
@@ -64,8 +64,7 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 
 // String returns a formatted string that lists status information for the Cluster
 func (c *Cluster) String() string {
-	// return fmt.Sprintf("%v|%d", c.addr)
-	return "TODO cluster"
+	return fmt.Sprintf("%v", c.nodes)
 }
 
 // Start opens connections with your configured nodes and adds them to
@@ -143,18 +142,22 @@ func (c *Cluster) Stop() (err error) {
 // Execute the provided Command against the active pooled Nodes using the
 // NodeManager
 func (c *Cluster) Execute(command Command) (err error) {
-	// TODO retries
-	// TODO command queueing
 	executed := false
-
-	if executed, err = c.nodeManager.ExecuteOnNode(c.nodes, command, nil); err != nil {
-		return
+	command.setRemainingTries(c.executionAttempts)
+	for command.hasRemainingTries() {
+		if executed, err = c.nodeManager.ExecuteOnNode(c.nodes, command, nil); err == nil && executed == true {
+			break
+		} else {
+			// NB: retry since either error occurred *or* command was not executed
+			logDebug("[Cluster]", "retrying command '%s'", command.Name())
+			command.decrementRemainingTries()
+		}
 	}
-
-	if !executed {
-		err = errors.New("No nodes available to execute command.")
-	}
-
+	// NB: do *not* call command.onError here as it will have been called in connection
+	// TODO
+	// if !executed and command has remaining tries, queue command?
+	// or, reset tries and queue?
+	// if queue fails, command.onError(ErrNoNodesAvailable)
 	return
 }
 

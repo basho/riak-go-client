@@ -171,7 +171,7 @@ func (n *Node) Stop() (err error) {
 
 // Execute retrieves an available connection from the pool and executes the Command operation against
 // Riak
-func (n *Node) Execute(cmd Command) (executed bool, err error) {
+func (n *Node) execute(cmd Command) (executed bool, err error) {
 	executed = false
 
 	if err = n.stateCheck(nodeRunning, nodeHealthChecking); err != nil {
@@ -186,8 +186,8 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 			if n.currentNumConnections < n.maxConnections {
 				if conn, err = n.createNewConnection(nil, true); conn == nil || err != nil {
 					logErr("[Node]", err)
-					executed = false
 					n.doHealthCheck()
+					executed = false
 					return
 				}
 			} else {
@@ -204,20 +204,63 @@ func (n *Node) Execute(cmd Command) (executed bool, err error) {
 		}
 
 		logDebug("[Node]", "(%v) - executing command '%v'", n, cmd.Name())
-		if err = conn.execute(cmd); err == nil {
-			executed = true
+		executed = true
+		err = conn.execute(cmd)
+		if err == nil {
+			// NB: basically the success path of _responseReceived in Node.js client
 			n.returnConnectionToPool(conn, true)
 		} else {
-			// NB: basically, this is _connectionClosed in Node.js client
-			n.connMtx.Lock()
-			defer n.connMtx.Unlock()
-			logDebug("[Node]", "(%v) - closing connection due to error: '%v'", n, err)
-			executed = false
-			if err := conn.close(); err != nil {
-				logErr("[Node]", err)
+			// NB: basically, this is _connectionClosed / _responseReceived in Node.js client
+			// must differentiate between Riak and non-Riak errors here and within execute() in connection
+			// TODO type switch?
+			if _, ok := err.(RiakError); ok {
+				// Riak Errors will not close connection
+				n.returnConnectionToPool(conn, true)
+				/* TODO
+				   logger.debug("[RiakNode] node (%s:%d): command '%s' recevied RpbErrorResp: %s",
+				       this.remoteAddress, this.remotePort, command.PbRequestName, decoded.getErrmsg().toString('utf8'));
+				   if (command.remainingTries) {
+				       this.emit(EVT_RC, command, this);
+				   } else {
+				       command.onRiakError(decoded);
+				   }
+				*/
+			} else if _, ok := err.(ClientError); ok {
+				// Client errors will not close connection
+				n.returnConnectionToPool(conn, true)
+			} else {
+				// NB: must be a non-Riak, non-Client error
+				n.connMtx.Lock()
+				defer n.connMtx.Unlock()
+				logDebug("[Node]", "(%v) - closing connection due to non-Riak error: '%v'", n, err)
+				if err := conn.close(); err != nil {
+					logErr("[Node]", err)
+				}
+				n.currentNumConnections--
+				n.doHealthCheck()
+				/* TODO evaluate from riaknode.js
+				   this._currentNumConnections--;
+				   // See if a command was being handled
+				   logger.debug("[RiakNode] node (%s:%d): Connection closed; inFlight: %d", this.remoteAddress, this.remotePort, conn.inFlight);
+				   if (conn.inFlight) {
+				       var command = conn.command;
+				       command.remainingTries--;
+				       if (command.remainingTries) {
+				           this.emit(EVT_RC, command, this);
+				       } else {
+				           command.onError("Connection closed while executing command");
+				       }
+				   }
+
+				   if (this.state !== State.SHUTTING_DOWN) {
+				       // PB connections don't time out. If one disconnects it's highly likely
+				       // the node went down or there's a network issue
+				       if (this.state !== State.HEALTH_CHECKING) {
+				           this._doHealthCheck();
+				       }
+				   }
+				*/
 			}
-			n.currentNumConnections--
-			n.doHealthCheck()
 		}
 	}
 

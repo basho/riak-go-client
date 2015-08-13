@@ -30,6 +30,10 @@ type Command interface {
 	onSuccess(proto.Message) error // NB: important for streaming commands to "do the right thing" here
 	getResponseCode() byte
 	getResponseProtobufMessage() proto.Message
+	// command re-try
+	setRemainingTries(byte)
+	decrementRemainingTries()
+	hasRemainingTries() bool
 }
 
 func getRiakMessage(cmd Command) (msg []byte, err error) {

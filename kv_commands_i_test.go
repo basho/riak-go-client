@@ -389,6 +389,7 @@ func addDataToIndexes() {
 }
 
 func TestIntQueryAgainstDefaultType(t *testing.T) {
+	addDataToIndexes()
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -415,6 +416,7 @@ func TestIntQueryAgainstDefaultType(t *testing.T) {
 }
 
 func TestIntQueryAgainstNonDefaultType(t *testing.T) {
+	addDataToIndexes()
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().

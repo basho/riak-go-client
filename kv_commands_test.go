@@ -1134,7 +1134,7 @@ func TestBuildRpbIndexReqCorrectlyViaBuilder(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	} else {
-		if expected, actual := "either WithIndexKey or WithRange are required", err.Error(); expected != actual {
+		if expected, actual := "ClientError|either WithIndexKey or WithRange are required", err.Error(); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 	}

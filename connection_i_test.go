@@ -171,8 +171,8 @@ func TestHealthCheckFail(t *testing.T) {
 		if err := conn.connect(); err == nil {
 			t.Error("expected to see error")
 		} else {
-			if riakError, ok := err.(Error); ok == true {
-				if expected, actual := "riak error - errcode '1', errmsg 'this is an error'", riakError.Error(); expected != actual {
+			if riakError, ok := err.(RiakError); ok == true {
+				if expected, actual := "RiakError|1|this is an error", riakError.Error(); expected != actual {
 					t.Errorf("expected %v, got %v", expected, actual)
 				}
 			} else {

@@ -81,7 +81,7 @@ func readClientMessage(c net.Conn) (err error) {
 			err = fmt.Errorf("[readClientMessage] message length: %d, only read: %d", messageLength, count)
 		}
 	} else {
-		err = errors.New("error reading command size into sizeBuf")
+		err = errors.New(fmt.Sprintf("error reading command size into sizeBuf: count %d, err %s", count, err))
 	}
 	return
 }

@@ -128,9 +128,10 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	node.Start()
 
 	ping := &PingCommand{}
-	executed, err := node.Execute(ping)
-	if executed == true {
-		t.Fatal("expected error executing")
+	var executed bool
+	executed, err = node.execute(ping)
+	if executed == false {
+		t.Fatal("expected ping to be executed")
 	}
 	if err == nil {
 		t.Fatal("expected non-nil error")

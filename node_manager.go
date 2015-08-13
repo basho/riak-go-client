@@ -35,11 +35,8 @@ func (nm *defaultNodeManager) ExecuteOnNode(nodes []*Node, command Command, prev
 			continue
 		}
 
-		if executed, err = node.Execute(command); err != nil {
-			executed = false
-			logErr("[DefaultNodeManager]", err)
-		} else {
-			executed = true
+		if executed, err = node.execute(command); executed == true {
+			logDebug("[DefaultNodeManager]", "executed '%s' on node '%s', err '%s'", command.Name(), node, err)
 			break
 		}
 

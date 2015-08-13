@@ -25,7 +25,8 @@ func TestExecuteCommandOnCluster(t *testing.T) {
 
 	nodes := []*Node{node}
 	opts := &ClusterOptions{
-		Nodes: nodes,
+		Nodes:             nodes,
+		ExecutionAttempts: 3,
 	}
 
 	if expected, actual := 1, len(opts.Nodes); expected != actual {
@@ -59,6 +60,12 @@ func TestExecuteCommandOnCluster(t *testing.T) {
 		t.Error(err.Error())
 	}
 
+	if expected, actual := true, command.hasRemainingTries(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := byte(3), command.remainingTries; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
 	if expected, actual := true, command.Successful(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
@@ -202,7 +209,7 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 		select {
 		case <-listenerChan:
 			j++
-		case <-time.After(1 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("test timed out")
 		}
 	}

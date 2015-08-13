@@ -3,6 +3,7 @@ package riak
 import (
 	"crypto/tls"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -10,6 +11,12 @@ import (
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
+)
+
+// Connection errors
+var (
+	ErrCannotRead  = errors.New("Cannot read from a non-active or closed connection")
+	ErrCannotWrite = errors.New("Cannot write to a non-active or closed connection")
 )
 
 // AuthOptions object contains the authentication credentials and tls config
@@ -179,6 +186,7 @@ func (c *connection) execute(cmd Command) (err error) {
 	for {
 		response, err = c.read() // NB: response *will* have entire pb message
 		if err != nil {
+			cmd.onError(err)
 			return
 		}
 
@@ -189,11 +197,13 @@ func (c *connection) execute(cmd Command) (err error) {
 		}
 
 		if decoded, err = decodeRiakMessage(cmd, response); err != nil {
+			cmd.onError(err)
 			return
 		}
 
 		err = cmd.onSuccess(decoded)
 		if err != nil {
+			cmd.onError(err)
 			return
 		}
 
@@ -251,7 +261,8 @@ func (c *connection) read() (data []byte, err error) {
 
 func (c *connection) write(data []byte) (err error) {
 	if !c.available() {
-		return ErrCannotWrite
+		err = ErrCannotWrite
+		return
 	}
 	// TODO: we should also take currently executing Command (Riak operation)
 	// timeout into account
