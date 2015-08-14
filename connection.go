@@ -42,7 +42,6 @@ const (
 	connActive
 )
 
-// TODO authentication
 type connection struct {
 	addr           *net.TCPAddr
 	conn           net.Conn
@@ -77,7 +76,7 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		healthCheck:    options.healthCheck,
 		authOptions:    options.authOptions,
 		sizeBuf:        make([]byte, 4),
-		inFlight:       false, // TODO: inFlight may not be necessary
+		inFlight:       false,
 		lastUsed:       time.Now(),
 		state:          connInactive,
 	}, nil

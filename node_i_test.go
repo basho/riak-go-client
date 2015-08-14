@@ -43,7 +43,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if err := node.Start(); err != nil {
+	if err := node.start(); err != nil {
 		t.Error(err)
 	}
 	if expected, actual := node.minConnections, uint16(len(node.available)); expected != actual {
@@ -70,7 +70,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 			t.Errorf("expected %v, got: %v", expected, actual)
 		}
 	}
-	if err := node.Stop(); err != nil {
+	if err := node.stop(); err != nil {
 		t.Error(err)
 	}
 }
@@ -125,7 +125,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	node.Start()
+	node.start()
 
 	ping := &PingCommand{}
 	var executed bool
@@ -155,7 +155,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	}
 
 	logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
-	node.Stop()
+	node.stop()
 
 	nodeState = <-stateChan
 	if expected, actual := nodeShuttingDown, nodeState; expected != actual {

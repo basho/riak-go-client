@@ -44,7 +44,7 @@ type Node struct {
 	healthCheckBuilder  CommandBuilder
 	authOptions         *AuthOptions
 	// Health Check stop channel / timer
-	stop         chan bool
+	stopChan     chan bool
 	expireTicker *time.Ticker
 	// Connection Pool
 	connMtx               sync.RWMutex
@@ -93,7 +93,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 	resolvedAddress, err := net.ResolveTCPAddr("tcp", options.RemoteAddress)
 	if err == nil {
 		n := &Node{
-			stop:                make(chan bool),
+			stopChan:            make(chan bool),
 			addr:                resolvedAddress,
 			minConnections:      options.MinConnections,
 			maxConnections:      options.MaxConnections,
@@ -121,7 +121,7 @@ func (n *Node) String() string {
 
 // Start opens a connection with Riak at the configured remoteAddress and adds the connections to the
 // active pool
-func (n *Node) Start() (err error) {
+func (n *Node) start() (err error) {
 	if err = n.stateCheck(nodeCreated); err != nil {
 		return
 	}
@@ -156,14 +156,14 @@ func (n *Node) Start() (err error) {
 
 // Stop closes the connections with Riak at the configured remoteAddress and removes the connections
 // from the active pool
-func (n *Node) Stop() (err error) {
+func (n *Node) stop() (err error) {
 	if err = n.stateCheck(nodeRunning, nodeHealthChecking); err != nil {
 		return
 	}
 	n.setState(nodeShuttingDown)
-	n.stop <- true
+	n.stopChan <- true
 	n.expireTicker.Stop()
-	close(n.stop)
+	close(n.stopChan)
 	logDebug("[Node]", "(%v) shutting down.", n)
 	n.shutdown()
 	return
@@ -213,22 +213,11 @@ func (n *Node) execute(cmd Command) (executed bool, err error) {
 			// NB: basically, this is _connectionClosed / _responseReceived in Node.js client
 			// must differentiate between Riak and non-Riak errors here and within execute() in connection
 			// TODO type switch?
-			if _, ok := err.(RiakError); ok {
-				// Riak Errors will not close connection
+			switch err.(type) {
+			case RiakError, ClientError:
+				// Riak and Client errors will not close connection
 				n.returnConnectionToPool(conn, true)
-				/* TODO
-				   logger.debug("[RiakNode] node (%s:%d): command '%s' recevied RpbErrorResp: %s",
-				       this.remoteAddress, this.remotePort, command.PbRequestName, decoded.getErrmsg().toString('utf8'));
-				   if (command.remainingTries) {
-				       this.emit(EVT_RC, command, this);
-				   } else {
-				       command.onRiakError(decoded);
-				   }
-				*/
-			} else if _, ok := err.(ClientError); ok {
-				// Client errors will not close connection
-				n.returnConnectionToPool(conn, true)
-			} else {
+			default:
 				// NB: must be a non-Riak, non-Client error
 				n.connMtx.Lock()
 				defer n.connMtx.Unlock()
@@ -238,28 +227,7 @@ func (n *Node) execute(cmd Command) (executed bool, err error) {
 				}
 				n.currentNumConnections--
 				n.doHealthCheck()
-				/* TODO evaluate from riaknode.js
-				   this._currentNumConnections--;
-				   // See if a command was being handled
-				   logger.debug("[RiakNode] node (%s:%d): Connection closed; inFlight: %d", this.remoteAddress, this.remotePort, conn.inFlight);
-				   if (conn.inFlight) {
-				       var command = conn.command;
-				       command.remainingTries--;
-				       if (command.remainingTries) {
-				           this.emit(EVT_RC, command, this);
-				       } else {
-				           command.onError("Connection closed while executing command");
-				       }
-				   }
-
-				   if (this.state !== State.SHUTTING_DOWN) {
-				       // PB connections don't time out. If one disconnects it's highly likely
-				       // the node went down or there's a network issue
-				       if (this.state !== State.HEALTH_CHECKING) {
-				           this._doHealthCheck();
-				       }
-				   }
-				*/
+				// TODO evaluate _connectionClosed code in riaknode.js
 			}
 		}
 	}
@@ -409,7 +377,7 @@ func (n *Node) healthCheck() {
 	for {
 		if n.ensureHealthCheckCanContinue() {
 			select {
-			case <-n.stop:
+			case <-n.stopChan:
 				logDebug("[Node]", "(%v) health check quitting", n)
 				return
 			case t := <-healthCheckTicker.C:
@@ -435,7 +403,7 @@ func (n *Node) expireIdleConnections() {
 	logDebug("[Node]", "(%v) idle connection expiration routine is starting", n)
 	for {
 		select {
-		case <-n.stop:
+		case <-n.stopChan:
 			logDebug("[Node]", "(%v) idle connection expiration routine is quitting", n)
 			return
 		case t := <-n.expireTicker.C:
@@ -464,7 +432,7 @@ func (n *Node) expireIdleConnections() {
 						n.available[i], n.available[l], n.available =
 							n.available[l], nil, n.available[:l]
 						n.currentNumConnections--
-						conn.close() // TODO error
+						conn.close() // TODO log error?
 						count++
 					} else {
 						i++

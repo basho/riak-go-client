@@ -81,7 +81,7 @@ func (c *Cluster) Start() (err error) {
 	logDebug("[Cluster]", "starting")
 
 	for _, node := range c.nodes {
-		if err = node.Start(); err != nil {
+		if err = node.start(); err != nil {
 			return
 		}
 	}
@@ -103,7 +103,7 @@ func (c *Cluster) Stop() (err error) {
 	logDebug("[Cluster]", "shutting down")
 	c.setState(clusterShuttingDown)
 	for _, node := range c.nodes {
-		err = node.Stop() // TODO multiple errors?
+		err = node.stop() // TODO multiple errors?
 	}
 
 	allStopped := true
@@ -119,21 +119,9 @@ func (c *Cluster) Stop() (err error) {
 	if allStopped {
 		c.setState(clusterShutdown)
 		logDebug("[Cluster]", "cluster shut down")
-		/* TODO
-		if (this._commandQueue.length) {
-			logger.warn('[RiakCluster] There were %d commands in the queue at shutdown',
-				this._commandQueue.length);
-		}
-		*/
+		// TODO queueing check for commands still in the queue
 	} else {
-		// TODO is this even possible?
-		logDebug("[Cluster]", "nodes still running")
-		/*
-			var self = this;
-			setTimeout(function() {
-				self._shutdown();
-			}, 1000);
-		*/
+		panic("[Cluster] nodes still running when all should be stopped")
 	}
 
 	return
