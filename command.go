@@ -91,3 +91,42 @@ func buildRiakMessage(code byte, data []byte) []byte {
 	buf.Write(data)
 	return buf.Bytes()
 }
+
+type commandQueue struct {
+	queueSize   uint16
+	commandChan chan Command
+}
+
+func newCommandQueue(queueSize uint16) *commandQueue {
+	return &commandQueue{
+		queueSize:   queueSize,
+		commandChan: make(chan Command, queueSize),
+	}
+}
+
+func (q *commandQueue) enqueue(cmd Command) error {
+	if cmd == nil {
+		panic("attempt to enqueue nil Command")
+	}
+	if len(q.commandChan) == int(q.queueSize) {
+		return newClientError("attempt to enqueue when queue is full")
+	}
+	q.commandChan <- cmd
+	return nil
+}
+
+func (q *commandQueue) dequeue() (Command, error) {
+	cmd, ok := <-q.commandChan
+	if !ok {
+		return nil, newClientError("attempt to dequeue from closed queue")
+	}
+	return cmd, nil
+}
+
+func (q *commandQueue) isEmpty() bool {
+	return len(q.commandChan) == 0
+}
+
+func (q *commandQueue) destroy() {
+	close(q.commandChan)
+}
