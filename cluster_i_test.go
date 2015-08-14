@@ -195,14 +195,14 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 		}
 	}()
 
-	fetch, err := NewFetchValueCommandBuilder().
+	cmd, err := NewFetchValueCommandBuilder().
 		WithBucket("b").
 		WithKey("k").
 		Build()
 	if err != nil {
 		t.Fatal(err)
 	}
-	cluster.Execute(fetch)
+	cluster.Execute(cmd)
 
 	j := 0
 	for j = 0; j < nodeCount; {
@@ -214,6 +214,10 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 		}
 	}
 	if expected, actual := nodeCount, j; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	fetch := cmd.(*FetchValueCommand)
+	if expected, actual := byte(0), fetch.remainingTries; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
