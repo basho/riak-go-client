@@ -194,16 +194,22 @@ func (builder *FetchValueCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchV
 	return builder
 }
 
-func (builder *FetchValueCommandBuilder) WithIfNotModified(ifNotModified []byte) *FetchValueCommandBuilder {
-	builder.protobuf.IfModified = ifNotModified
+// WithIfModified tells Riak to only return the object if the vclock in Riak differs from what is
+// provided
+func (builder *FetchValueCommandBuilder) WithIfModified(ifModified []byte) *FetchValueCommandBuilder {
+	builder.protobuf.IfModified = ifModified
 	return builder
 }
 
+// WithHeadOnly returns only the meta data for the value, useful when objects contain large amounts
+// of data
 func (builder *FetchValueCommandBuilder) WithHeadOnly(headOnly bool) *FetchValueCommandBuilder {
 	builder.protobuf.Head = &headOnly
 	return builder
 }
 
+// WithReturnDeletedVClock sets the command to return a Tombstone if any our found for the key across
+// all of the vnodes
 func (builder *FetchValueCommandBuilder) WithReturnDeletedVClock(returnDeletedVClock bool) *FetchValueCommandBuilder {
 	builder.protobuf.Deletedvclock = &returnDeletedVClock
 	return builder
@@ -216,6 +222,9 @@ func (builder *FetchValueCommandBuilder) WithTimeout(timeout time.Duration) *Fet
 	return builder
 }
 
+// WithSloppyQuorum sets the sloppy_quorum for this Command
+//
+// See http://docs.basho.com/riak/latest/theory/concepts/Eventual-Consistency/
 func (builder *FetchValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *FetchValueCommandBuilder {
 	builder.protobuf.SloppyQuorum = &sloppyQuorum
 	return builder
@@ -361,6 +370,8 @@ func NewStoreValueCommandBuilder() *StoreValueCommandBuilder {
 	return builder
 }
 
+// WithConflictResolver sets the ConflictResolver that should be used when sibling conflicts are found
+// for this operation
 func (builder *StoreValueCommandBuilder) WithConflictResolver(resolver ConflictResolver) *StoreValueCommandBuilder {
 	builder.resolver = resolver
 	return builder
@@ -441,16 +452,21 @@ func (builder *StoreValueCommandBuilder) WithReturnBody(returnBody bool) *StoreV
 	return builder
 }
 
+// WithIfNotModified tells Riak to only update the object in Riak if the vclock provided matches the
+// one currently in Riak
 func (builder *StoreValueCommandBuilder) WithIfNotModified(ifNotModified bool) *StoreValueCommandBuilder {
 	builder.protobuf.IfNotModified = &ifNotModified
 	return builder
 }
 
+// WithIfNoneMatch tells Riak to store the object only if it does not already exist in the database
 func (builder *StoreValueCommandBuilder) WithIfNoneMatch(ifNoneMatch bool) *StoreValueCommandBuilder {
 	builder.protobuf.IfNoneMatch = &ifNoneMatch
 	return builder
 }
 
+// WithReturnHead returns only the meta data for the value, useful when objects contain large amounts
+// of data
 func (builder *StoreValueCommandBuilder) WithReturnHead(returnHead bool) *StoreValueCommandBuilder {
 	builder.protobuf.ReturnHead = &returnHead
 	return builder
@@ -463,11 +479,17 @@ func (builder *StoreValueCommandBuilder) WithTimeout(timeout time.Duration) *Sto
 	return builder
 }
 
+// WithAsis sets the asis option
+// Please note, this is an advanced feature, only use with caution
 func (builder *StoreValueCommandBuilder) WithAsis(asis bool) *StoreValueCommandBuilder {
 	builder.protobuf.Asis = &asis
 	return builder
 }
 
+// WithSloppyQuorum sets the sloppy_quorum for this Command
+// Please note, this is an advanced feature, only use with caution
+//
+// See http://docs.basho.com/riak/latest/theory/concepts/Eventual-Consistency/
 func (builder *StoreValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *StoreValueCommandBuilder {
 	builder.protobuf.SloppyQuorum = &sloppyQuorum
 	return builder
@@ -1236,23 +1258,28 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithIndexName(indexName string
 	return builder
 }
 
+// WithRange sets the range of index values to return
 func (builder *SecondaryIndexQueryCommandBuilder) WithRange(min string, max string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.RangeMin = []byte(min)
 	builder.protobuf.RangeMax = []byte(max)
 	return builder
 }
 
+// WithIntRange sets the range of integer type index values to return, useful when you want 1,3,5,11
+// and not 1,11,3,5
 func (builder *SecondaryIndexQueryCommandBuilder) WithIntRange(min int64, max int64) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.RangeMin = []byte(strconv.FormatInt(min, 10))
 	builder.protobuf.RangeMax = []byte(strconv.FormatInt(max, 10))
 	return builder
 }
 
+// WithIndexKey defines the index to search against
 func (builder *SecondaryIndexQueryCommandBuilder) WithIndexKey(key string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// WithReturnKeyAndIndex set to true, the result set will include both index keys and object keys
 func (builder *SecondaryIndexQueryCommandBuilder) WithReturnKeyAndIndex(val bool) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.ReturnTerms = &val
 	return builder
@@ -1274,21 +1301,26 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithCallback(callback func([]*
 	return builder
 }
 
+// WithPaginationSort set to true, the results of a non-paginated query will return sorted from Riak
 func (builder *SecondaryIndexQueryCommandBuilder) WithPaginationSort(paginationSort bool) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.PaginationSort = &paginationSort
 	return builder
 }
 
+// WithMaxResults sets the maximum number of values to return in the result set
 func (builder *SecondaryIndexQueryCommandBuilder) WithMaxResults(maxResults uint32) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.MaxResults = &maxResults
 	return builder
 }
 
+// WithContinuation sets the position at which the result set should continue from, value can be
+// found within the result set of the previous page for the same query
 func (builder *SecondaryIndexQueryCommandBuilder) WithContinuation(cont []byte) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Continuation = cont
 	return builder
 }
 
+// WithTermRegex sets the regex pattern to filter the result set by
 func (builder *SecondaryIndexQueryCommandBuilder) WithTermRegex(regex string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.TermRegex = []byte(regex)
 	return builder
@@ -1413,6 +1445,7 @@ func NewMapReduceCommandBuilder() *MapReduceCommandBuilder {
 	}
 }
 
+// WithQuery sets the map reduce query to be executed on Riak
 func (builder *MapReduceCommandBuilder) WithQuery(query string) *MapReduceCommandBuilder {
 	builder.protobuf.Request = []byte(query)
 	return builder

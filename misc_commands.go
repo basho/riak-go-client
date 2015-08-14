@@ -521,6 +521,8 @@ func (builder *StoreBucketPropsCommandBuilder) AddPostCommit(commitHook *CommitH
 	return builder
 }
 
+// WithChashKeyFun sets the chash_keyfun property on the bucket which allows custom hashing functions
+// Please note, this is an advanced feature, only use with caution
 func (builder *StoreBucketPropsCommandBuilder) WithChashKeyFun(val *ModFun) *StoreBucketPropsCommandBuilder {
 	builder.props.ChashKeyfun = &rpbRiak.RpbModFun{
 		Module:   []byte(val.Module),
