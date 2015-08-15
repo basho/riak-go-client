@@ -61,35 +61,6 @@ func getRiakAddress() string {
 	return fmt.Sprintf("%s:%d", getRiakHost(), getRiakPort())
 }
 
-func integrationTestsBuildCluster() {
-	var err error
-	if cluster == nil {
-		nodeOpts := &NodeOptions{
-			RemoteAddress:  getRiakAddress(),
-			RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
-		}
-		var node *Node
-		node, err = NewNode(nodeOpts)
-		if err != nil {
-			panic(fmt.Sprintf("error building integration test node object: %s", err.Error()))
-		}
-		if node == nil {
-			panic("NewNode returned nil!")
-		}
-		nodes := []*Node{node}
-		opts := &ClusterOptions{
-			Nodes: nodes,
-		}
-		cluster, err = NewCluster(opts)
-		if err != nil {
-			panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
-		}
-		if err = cluster.Start(); err != nil {
-			panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
-		}
-	}
-}
-
 func getBasicObject() *Object {
 	return &Object{
 		ContentType:     "text/plain",
@@ -119,32 +90,18 @@ func TestDeleteFromSliceWhileIterating(t *testing.T) {
 	}
 }
 
-func writePingResp(t *testing.T, c net.Conn) (success bool) {
-	success = false
-	data := buildRiakMessage(rpbCode_RpbPingResp, nil)
-	count, err := c.Write(data)
-	if err != nil {
-		t.Error(err)
-	}
-	if count != len(data) {
-		t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
-	}
-	success = true
-	return
-}
-
 func jsonDump(val interface{}) {
 	EnableDebugLogging = true
 	defer func() {
 		EnableDebugLogging = false
 	}()
 	if val == nil {
-		logDebug("[jsonDump] NIL VAL")
+		logDebug("[jsonDump]", "NIL VAL")
 	} else {
 		if json, err := json.MarshalIndent(val, "", "  "); err != nil {
-			logDebug("[jsonDump] %s", err.Error())
+			logDebug("[jsonDump]", "%s", err.Error())
 		} else {
-			logDebug("[jsonDump] %s", string(json))
+			logDebug("[jsonDump]", "%s", string(json))
 		}
 	}
 }

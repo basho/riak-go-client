@@ -1,7 +1,6 @@
 package riak
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -1067,10 +1066,10 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	if builder.mapOperation == nil {
-		return nil, errors.New("UpdateMapCommandBuilder requires non-nil MapOperation. Use WithMapOperation()")
+		return nil, newClientError("UpdateMapCommandBuilder requires non-nil MapOperation. Use WithMapOperation()")
 	}
 	if builder.mapOperation.hasRemoves(true) && builder.protobuf.GetContext() == nil {
-		return nil, errors.New("When doing any removes a context must be provided.")
+		return nil, newClientError("When doing any removes a context must be provided.")
 	}
 	return &UpdateMapCommand{protobuf: builder.protobuf, op: builder.mapOperation}, nil
 }

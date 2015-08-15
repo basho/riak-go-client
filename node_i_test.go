@@ -43,7 +43,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if err := node.Start(); err != nil {
+	if err := node.start(); err != nil {
 		t.Error(err)
 	}
 	if expected, actual := node.minConnections, uint16(len(node.available)); expected != actual {
@@ -70,16 +70,17 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 			t.Errorf("expected %v, got: %v", expected, actual)
 		}
 	}
-	if err := node.Stop(); err != nil {
+	if err := node.stop(); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
-	stateChan := make(chan state, 4)
+	stateChan := make(chan state, 5)
 	origSetStateFunc := setStateFunc
 	setStateFunc = func(s *stateData, st state) {
 		origSetStateFunc(s, st)
+		logDebug("[TestRecoverViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
 		stateChan <- st
 	}
 	defer func() {
@@ -91,7 +92,6 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		t.Error(err)
 	}
 	defer ln.Close()
-	logDebug("[TestRecoverViaDefaultPingHealthCheck] listener started")
 
 	connects := 0
 
@@ -99,14 +99,19 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		for {
 			c, err := ln.Accept()
 			if err != nil {
-				break
+				if _, ok := err.(*net.OpError); ok {
+					return
+				} else {
+					t.Error(err)
+					return
+				}
 			}
 			connects++
 			if connects == 1 {
 				c.Close()
 			} else {
-				writePingResp(t, c)
-				break
+				readWritePingResp(t, c)
+				return
 			}
 		}
 	}()
@@ -114,24 +119,24 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	opts := &NodeOptions{
 		RemoteAddress:       "127.0.0.1:13337",
 		MinConnections:      0,
-		HealthCheckInterval: time.Second,
+		HealthCheckInterval: 50 * time.Millisecond,
 	}
 	node, err := NewNode(opts)
 	if err != nil {
 		t.Error(err)
 	}
-	node.Start()
-	defer node.Stop()
-	logDebug("[TestRecoverViaDefaultPingHealthCheck] node started")
+	node.start()
 
 	ping := &PingCommand{}
-	executed, err := node.Execute(ping)
-	if executed == true {
-		t.Error("expected error executing")
+	var executed bool
+	executed, err = node.execute(ping)
+	if executed == false {
+		t.Fatal("expected ping to be executed")
 	}
 	if err == nil {
-		t.Error("expected non-nil error")
+		t.Fatal("expected non-nil error")
 	}
+
 	nodeState := <-stateChan
 	if expected, actual := nodeCreated, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
@@ -148,4 +153,17 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	if expected, actual := nodeRunning, nodeState; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
+
+	logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
+	node.stop()
+
+	nodeState = <-stateChan
+	if expected, actual := nodeShuttingDown, nodeState; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	nodeState = <-stateChan
+	if expected, actual := nodeShutdown, nodeState; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	close(stateChan)
 }
