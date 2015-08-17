@@ -5,6 +5,7 @@ package riak
 import (
 	"net"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -218,6 +219,82 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	}
 	fetch := cmd.(*FetchValueCommand)
 	if expected, actual := byte(0), fetch.remainingTries; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestAsyncExecuteCommandOnCluster(t *testing.T) {
+	nodeOpts := &NodeOptions{
+		RemoteAddress: getRiakAddress(),
+	}
+
+	var node *Node
+	var err error
+	if node, err = NewNode(nodeOpts); err != nil {
+		t.Fatal(err.Error())
+	}
+	if node == nil {
+		t.FailNow()
+	}
+
+	nodes := []*Node{node}
+	opts := &ClusterOptions{
+		Nodes:             nodes,
+		ExecutionAttempts: 3,
+	}
+
+	cluster, err := NewCluster(opts)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	if err := cluster.Start(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	command := &PingCommand{}
+	args := &Async{
+		Command: command,
+		Done:    make(chan Command),
+	}
+	if err := cluster.ExecuteAsync(args); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	done := <-args.Done
+	pingDone := done.(*PingCommand)
+
+	if expected, actual := true, command == pingDone; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := true, command.hasRemainingTries(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := byte(3), command.remainingTries; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := true, command.Successful(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+
+	command = &PingCommand{}
+	wg := &sync.WaitGroup{}
+	args = &Async{
+		Command: command,
+		Wait:    wg,
+	}
+	if err := cluster.ExecuteAsync(args); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	wg.Wait()
+	if expected, actual := true, command.Successful(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }

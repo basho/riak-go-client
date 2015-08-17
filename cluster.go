@@ -1,6 +1,9 @@
 package riak
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 // Constants identifying Cluster state
 const (
@@ -29,9 +32,23 @@ type Cluster struct {
 	nodes             []*Node
 	nodeManager       NodeManager
 	executionAttempts byte
-	queueCommands bool
-	queueMaxDepth uint16
+	queueCommands     bool
+	queueMaxDepth     uint16
 }
+
+// Async object is used to
+type Async struct {
+	Command Command
+	Done    chan Command
+	Wait    *sync.WaitGroup
+	Error   error
+}
+
+// Cluster errors
+var (
+	ErrClusterCommandRequired                 = newClientError("[Cluster] Command must be non-nil")
+	ErrClusterAsyncRequiresChannelOrWaitGroup = newClientError("[Cluster] ExecuteAsync argument requires a channel or sync.WaitGroup to indicate completion")
+)
 
 var defaultClusterOptions = &ClusterOptions{
 	Nodes:             make([]*Node, 0),
@@ -136,13 +153,43 @@ func (c *Cluster) Stop() (err error) {
 	return
 }
 
-// Execute the provided Command against the active pooled Nodes using the
-// NodeManager
+// Asynchronously execute the provided Command against the active pooled Nodes using the NodeManager
+func (c *Cluster) ExecuteAsync(async *Async) (err error) {
+	if async.Command == nil {
+		return ErrClusterCommandRequired
+	}
+	if async.Done == nil && async.Wait == nil {
+		return ErrClusterAsyncRequiresChannelOrWaitGroup
+	}
+	if async.Wait != nil {
+		async.Wait.Add(1)
+	}
+	go execute(c, async)
+	return nil
+}
+
+// Synchronously execute the provided Command against the active pooled Nodes using the NodeManager
 func (c *Cluster) Execute(command Command) (err error) {
+	if command == nil {
+		return ErrClusterCommandRequired
+	}
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	async := &Async{
+		Command: command,
+		Wait:    wg,
+	}
+	go execute(c, async)
+	wg.Wait() // TODO: timeout?
+	return nil
+}
+
+func execute(c *Cluster, async *Async) {
 	executed := false
+	command := async.Command
 	command.setRemainingTries(c.executionAttempts)
 	for command.hasRemainingTries() {
-		if executed, err = c.nodeManager.ExecuteOnNode(c.nodes, command, nil); err == nil && executed == true {
+		if executed, async.Error = c.nodeManager.ExecuteOnNode(c.nodes, command, nil); async.Error == nil && executed == true {
 			break
 		} else {
 			// NB: retry since either error occurred *or* command was not executed
@@ -150,12 +197,19 @@ func (c *Cluster) Execute(command Command) (err error) {
 			command.decrementRemainingTries()
 		}
 	}
+	if async.Done != nil {
+		logDebug("[Cluster]", "signaling async.Done with '%s'", command.Name())
+		async.Done <- async.Command
+	}
+	if async.Wait != nil {
+		logDebug("[Cluster]", "signaling async.Wait")
+		async.Wait.Done()
+	}
 	// NB: do *not* call command.onError here as it will have been called in connection
 	// TODO
 	// if !executed and command has remaining tries, queue command?
 	// or, reset tries and queue?
 	// if queue fails, command.onError(ErrNoNodesAvailable)
-	return
 }
 
 func optNodes(nodes []*Node) (rv []*Node, err error) {
