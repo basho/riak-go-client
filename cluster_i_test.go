@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	// "runtime"
 )
 
 func TestExecuteCommandOnCluster(t *testing.T) {
@@ -163,7 +164,7 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 						}
 						return
 					}
-					go handleClientMessageWithRiakError(t, conn, listenerChan)
+					go handleClientMessageWithRiakError(t, conn, 1, listenerChan)
 				}
 			}()
 
@@ -298,3 +299,90 @@ func TestAsyncExecuteCommandOnCluster(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
+
+/*
+func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+	var err error
+	addr := "127.0.0.1:1340"
+	pingCount := uint16(3)
+
+	nodeOpts := &NodeOptions{
+		RemoteAddress: addr,
+		ConnectTimeout: 250 * time.Millisecond,
+		RequestTimeout: 250 * time.Millisecond,
+	}
+
+	var node *Node
+	if node, err = NewNode(nodeOpts); err != nil {
+		t.Fatal(err.Error())
+	}
+	if node == nil {
+		t.FailNow()
+	}
+
+	nodes := []*Node{node}
+	opts := &ClusterOptions{
+		Nodes:         nodes,
+		QueueMaxDepth: 0,
+	}
+
+	var cluster *Cluster
+	cluster, err = NewCluster(opts)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	if err = cluster.Start(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	command := &PingCommand{}
+	args := &Async{
+		Command: command,
+		Done:    make(chan Command),
+	}
+	if err = cluster.ExecuteAsync(args); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	listenerChan := make(chan bool, pingCount)
+	var ln net.Listener
+	ln, err = net.Listen("tcp", addr)
+	if err != nil {
+		t.Error(err)
+	}
+	defer ln.Close()
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				if _, ok := err.(*net.OpError); !ok {
+					t.Error(err)
+				}
+				return
+			}
+			logDebugln("[TestEnqueueCommandsAndRetryFromQueue]", "ACCEPT / HANDLING")
+			go handleClientMessageWithRiakError(t, conn, pingCount, listenerChan)
+		}
+	}()
+
+	done := <-args.Done
+	pingDone := done.(*PingCommand)
+	listened := <-listenerChan
+
+	if expected, actual := true, command == pingDone; expected != actual {
+		t.Errorf("listened: %v, expected %v, got %v", listened, expected, actual)
+	}
+	if expected, actual := true, command.Successful(); expected != actual {
+		t.Errorf("listened: %v, expected %v, got %v", listened, expected, actual)
+	}
+}
+*/

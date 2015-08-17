@@ -4,6 +4,7 @@ type CommandImpl struct {
 	Error          error
 	Success        bool
 	remainingTries byte
+	lastNode       *Node
 }
 
 func (cmd *CommandImpl) Successful() bool {
@@ -30,4 +31,15 @@ func (cmd *CommandImpl) decrementRemainingTries() {
 
 func (cmd *CommandImpl) hasRemainingTries() bool {
 	return cmd.remainingTries > 0
+}
+
+func (cmd *CommandImpl) setLastNode(lastNode *Node) {
+	if lastNode == nil {
+		panic("[CommandImpl] nil last node")
+	}
+	cmd.lastNode = lastNode
+}
+
+func (cmd *CommandImpl) getLastNode() *Node {
+	return cmd.lastNode
 }

@@ -14,7 +14,10 @@ func TestEnqueueDequeueCommandsConcurrently(t *testing.T) {
 		w.Add(1)
 		go func() {
 			cmd := &PingCommand{}
-			if err := queue.enqueue(cmd); err != nil {
+			async := &Async{
+				Command: cmd,
+			}
+			if err := queue.enqueue(async); err != nil {
 				t.Error(err)
 			}
 			w.Done()
@@ -24,7 +27,10 @@ func TestEnqueueDequeueCommandsConcurrently(t *testing.T) {
 	w.Wait()
 
 	cmd := &PingCommand{}
-	if err := queue.enqueue(cmd); err == nil {
+	async := &Async{
+		Command: cmd,
+	}
+	if err := queue.enqueue(async); err == nil {
 		t.Error("expected non-nil err when enqueueing one more command than max")
 	}
 	if expected, actual := false, queue.isEmpty(); expected != actual {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"runtime"
 	"testing"
 	"time"
 
@@ -17,37 +16,33 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
-func init() {
-	runtime.GOMAXPROCS(2)
-}
-
-func integrationTestsBuildCluster() {
+func integrationTestsBuildCluster() *Cluster {
+	var cluster *Cluster
 	var err error
-	if cluster == nil {
-		nodeOpts := &NodeOptions{
-			RemoteAddress:  getRiakAddress(),
-			RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
-		}
-		var node *Node
-		node, err = NewNode(nodeOpts)
-		if err != nil {
-			panic(fmt.Sprintf("error building integration test node object: %s", err.Error()))
-		}
-		if node == nil {
-			panic("NewNode returned nil!")
-		}
-		nodes := []*Node{node}
-		opts := &ClusterOptions{
-			Nodes: nodes,
-		}
-		cluster, err = NewCluster(opts)
-		if err != nil {
-			panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
-		}
-		if err = cluster.Start(); err != nil {
-			panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
-		}
+	nodeOpts := &NodeOptions{
+		RemoteAddress:  getRiakAddress(),
+		RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
 	}
+	var node *Node
+	node, err = NewNode(nodeOpts)
+	if err != nil {
+		panic(fmt.Sprintf("error building integration test node object: %s", err.Error()))
+	}
+	if node == nil {
+		panic("NewNode returned nil!")
+	}
+	nodes := []*Node{node}
+	opts := &ClusterOptions{
+		Nodes: nodes,
+	}
+	cluster, err = NewCluster(opts)
+	if err != nil {
+		panic(fmt.Sprintf("error building integration test cluster object: %s", err.Error()))
+	}
+	if err = cluster.Start(); err != nil {
+		panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
+	}
+	return cluster
 }
 
 func readWritePingResp(t *testing.T, c net.Conn) (success bool) {
@@ -86,36 +81,38 @@ func readClientMessage(c net.Conn) (err error) {
 	return
 }
 
-func handleClientMessageWithRiakError(t *testing.T, c net.Conn, respChan chan bool) {
+func handleClientMessageWithRiakError(t *testing.T, c net.Conn, msgCount uint16, respChan chan bool) {
 	defer func() {
 		if err := c.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
 
-	if err := readClientMessage(c); err != nil {
-		t.Error(err)
-	}
+	for i := 0; i < int(msgCount); i++ {
+		if err := readClientMessage(c); err != nil {
+			t.Error(err)
+		}
 
-	var errcode uint32 = 1
-	errmsg := bytes.NewBufferString("this is an error")
-	rpbErr := &rpb_riak.RpbErrorResp{
-		Errcode: &errcode,
-		Errmsg:  errmsg.Bytes(),
-	}
-	encoded, err := proto.Marshal(rpbErr)
-	if err != nil {
-		t.Error(err)
-	}
-	data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
-	count, err := c.Write(data)
-	if err != nil {
-		t.Error(err)
-	}
-	if count != len(data) {
-		t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
-	}
-	if respChan != nil {
-		respChan <- true
+		var errcode uint32 = 1
+		errmsg := bytes.NewBufferString("this is an error")
+		rpbErr := &rpb_riak.RpbErrorResp{
+			Errcode: &errcode,
+			Errmsg:  errmsg.Bytes(),
+		}
+		encoded, err := proto.Marshal(rpbErr)
+		if err != nil {
+			t.Error(err)
+		}
+		data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
+		count, err := c.Write(data)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != len(data) {
+			t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
+		}
+		if respChan != nil {
+			respChan <- true
+		}
 	}
 }

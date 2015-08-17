@@ -8,13 +8,16 @@ import (
 	"time"
 )
 
-func init() {
-	integrationTestsBuildCluster()
-}
-
 // UpdateCounter
 
 func TestUpdateAndFetchCounter(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var err error
 	var cmd Command
 
@@ -71,6 +74,13 @@ func TestUpdateAndFetchCounter(t *testing.T) {
 // UpdateSet
 
 func TestUpdateAndFetchSet(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var err error
 	var cmd Command
 
@@ -144,6 +154,13 @@ func TestUpdateAndFetchSet(t *testing.T) {
 // UpdateMap
 
 func TestUpdateAndFetchMap(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var err error
 	var cmd Command
 

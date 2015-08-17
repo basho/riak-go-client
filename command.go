@@ -31,6 +31,8 @@ type Command interface {
 	getResponseCode() byte
 	getResponseProtobufMessage() proto.Message
 	// command re-try
+	setLastNode(*Node)
+	getLastNode() *Node
 	setRemainingTries(byte)
 	decrementRemainingTries()
 	hasRemainingTries() bool
@@ -94,28 +96,28 @@ func buildRiakMessage(code byte, data []byte) []byte {
 
 type commandQueue struct {
 	queueSize   uint16
-	commandChan chan Command
+	commandChan chan *Async
 }
 
 func newCommandQueue(queueSize uint16) *commandQueue {
 	return &commandQueue{
 		queueSize:   queueSize,
-		commandChan: make(chan Command, queueSize),
+		commandChan: make(chan *Async, queueSize),
 	}
 }
 
-func (q *commandQueue) enqueue(cmd Command) error {
-	if cmd == nil {
-		panic("attempt to enqueue nil Command")
+func (q *commandQueue) enqueue(async *Async) error {
+	if async == nil {
+		panic("attempt to enqueue nil Async")
 	}
 	if len(q.commandChan) == int(q.queueSize) {
 		return newClientError("attempt to enqueue when queue is full")
 	}
-	q.commandChan <- cmd
+	q.commandChan <- async
 	return nil
 }
 
-func (q *commandQueue) dequeue() (Command, error) {
+func (q *commandQueue) dequeue() (*Async, error) {
 	cmd, ok := <-q.commandChan
 	if !ok {
 		return nil, newClientError("attempt to dequeue from closed queue")

@@ -3,6 +3,7 @@ package riak
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 // Constants identifying Cluster state
@@ -10,7 +11,6 @@ const (
 	clusterError state = iota
 	clusterCreated
 	clusterRunning
-	clusterQueueing
 	clusterShuttingDown
 	clusterShutdown
 )
@@ -21,7 +21,6 @@ type ClusterOptions struct {
 	Nodes             []*Node
 	NodeManager       NodeManager
 	ExecutionAttempts byte
-	QueueCommands     bool
 	QueueMaxDepth     uint16
 }
 
@@ -29,14 +28,16 @@ type ClusterOptions struct {
 // current stateData object of the cluster
 type Cluster struct {
 	stateData
-	nodes             []*Node
-	nodeManager       NodeManager
-	executionAttempts byte
-	queueCommands     bool
-	queueMaxDepth     uint16
+	stopChan           chan bool
+	nodes              []*Node
+	nodeManager        NodeManager
+	executionAttempts  byte
+	queueCommands      bool
+	commandQueue       *commandQueue
+	commandQueueTicker *time.Ticker
 }
 
-// Async object is used to
+// Async object is used to pass required arguments to execute a Command asynchronously
 type Async struct {
 	Command Command
 	Done    chan Command
@@ -44,10 +45,22 @@ type Async struct {
 	Error   error
 }
 
+func (a *Async) done() {
+	if a.Done != nil {
+		logDebug("[Cluster]", "signaling a.Done channel with '%s'", a.Command.Name())
+		a.Done <- a.Command
+	}
+	if a.Wait != nil {
+		logDebug("[Cluster]", "signaling a.Wait WaitGroup")
+		a.Wait.Done()
+	}
+}
+
 // Cluster errors
 var (
 	ErrClusterCommandRequired                 = newClientError("[Cluster] Command must be non-nil")
 	ErrClusterAsyncRequiresChannelOrWaitGroup = newClientError("[Cluster] ExecuteAsync argument requires a channel or sync.WaitGroup to indicate completion")
+	ErrClusterNoNodesAvailable                = newClientError("[Cluster] no nodes available to execute command")
 )
 
 var defaultClusterOptions = &ClusterOptions{
@@ -67,23 +80,28 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 	if options.ExecutionAttempts == 0 {
 		options.ExecutionAttempts = defaultExecutionAttempts
 	}
-	if options.QueueCommands && options.QueueMaxDepth == 0 {
-		options.QueueMaxDepth = defaultQueueMaxDepth
-	}
 
-	c = &Cluster{}
+	c = &Cluster{
+		executionAttempts: options.ExecutionAttempts,
+		nodeManager: options.NodeManager,
+	}
 
 	if c.nodes, err = optNodes(options.Nodes); err != nil {
 		c = nil
 		return
 	}
+	c.nodeManager.Init(c.nodes)
 
-	c.nodeManager = options.NodeManager
-	c.executionAttempts = options.ExecutionAttempts
-	c.queueCommands = options.QueueCommands
-	c.queueMaxDepth = options.QueueMaxDepth
+	if options.QueueMaxDepth > 0 {
+		c.queueCommands = true
+		c.stopChan = make(chan bool)
+		c.commandQueue = newCommandQueue(options.QueueMaxDepth)
+		// TODO configurable queue submit interval?
+		c.commandQueueTicker = time.NewTicker(500 * time.Millisecond)
+		go c.executeEnqueuedCommands()
+	}
 
-	c.setStateDesc("clusterError", "clusterCreated", "clusterRunning", "clusterQueueing", "clusterShuttingDown", "clusterShutdown")
+	c.setStateDesc("clusterError", "clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown")
 	c.setState(clusterCreated)
 	return
 }
@@ -121,13 +139,19 @@ func (c *Cluster) Start() (err error) {
 // Stop closes the connections with your configured nodes and removes them from
 // the active pool
 func (c *Cluster) Stop() (err error) {
-	if err = c.stateCheck(clusterRunning, clusterQueueing); err != nil {
+	if err = c.stateCheck(clusterRunning); err != nil {
 		logError("[Cluster]", "Stop: %s", err.Error())
 		return
 	}
-
-	logDebug("[Cluster]", "shutting down")
 	c.setState(clusterShuttingDown)
+	if c.queueCommands {
+		c.stopChan <- true
+		close(c.stopChan)
+		c.commandQueueTicker.Stop()
+		c.commandQueue.destroy()
+	}
+	logDebug("[Cluster]", "shutting down")
+
 	for _, node := range c.nodes {
 		err = node.stop() // TODO multiple errors?
 	}
@@ -164,7 +188,7 @@ func (c *Cluster) ExecuteAsync(async *Async) (err error) {
 	if async.Wait != nil {
 		async.Wait.Add(1)
 	}
-	go execute(c, async)
+	go c.execute(async, true)
 	return nil
 }
 
@@ -179,37 +203,97 @@ func (c *Cluster) Execute(command Command) (err error) {
 		Command: command,
 		Wait:    wg,
 	}
-	go execute(c, async)
+	go c.execute(async, true)
 	wg.Wait() // TODO: timeout?
 	return nil
 }
 
-func execute(c *Cluster, async *Async) {
+// NB: will be executed in a goroutine
+func (c *Cluster) execute(async *Async, shouldEnqueue bool) {
+	if c == nil {
+		panic("[Cluster] nil cluster argument")
+	}
+	if async == nil {
+		panic("[Cluster] nil async argument")
+	}
+	var err error
 	executed := false
+	enqueued := false
 	command := async.Command
 	command.setRemainingTries(c.executionAttempts)
 	for command.hasRemainingTries() {
-		if executed, async.Error = c.nodeManager.ExecuteOnNode(c.nodes, command, nil); async.Error == nil && executed == true {
+		if err = c.stateCheck(clusterRunning); err != nil {
 			break
+		}
+		executed, err = c.nodeManager.ExecuteOnNode(command, command.getLastNode())
+		// NB: do *not* call command.onError here as it will have been called in connection
+		if executed {
+			// NB: "executed" means that a node sent the data to Riak and received a response
+			if err == nil {
+				// No need to re-try
+				logDebug("[Cluster]", "successfully executed command '%s'", command.Name())
+				break
+			} else {
+				// NB: retry since error occurred
+				logDebug("[Cluster]", "executed command '%s': re-try due to error '%v'", command.Name(), err)
+				command.decrementRemainingTries()
+			}
 		} else {
-			// NB: retry since either error occurred *or* command was not executed
-			logDebug("[Cluster]", "retrying command '%s'", command.Name())
-			command.decrementRemainingTries()
+			logDebug("[Cluster]", "command '%s' did NOT execute, err '%v'", command.Name(), err)
+			// Command did NOT execute
+			if err == nil {
+				// Command did not execute but there was no error, so enqueue it
+				if c.queueCommands && shouldEnqueue {
+					if err = c.enqueueCommand(async); err == nil {
+						enqueued = true
+					}
+				} else {
+					err = ErrClusterNoNodesAvailable
+				}
+				break
+			} else {
+				// NB: retry since error occurred
+				logDebug("[Cluster]", "did NOT execute command '%s': re-try due to error '%v'", command.Name(), err)
+				command.decrementRemainingTries()
+			}
 		}
 	}
-	if async.Done != nil {
-		logDebug("[Cluster]", "signaling async.Done with '%s'", command.Name())
-		async.Done <- async.Command
+	if !enqueued {
+		async.Error = err
+		async.done()
 	}
-	if async.Wait != nil {
-		logDebug("[Cluster]", "signaling async.Wait")
-		async.Wait.Done()
-	}
-	// NB: do *not* call command.onError here as it will have been called in connection
-	// TODO
-	// if !executed and command has remaining tries, queue command?
-	// or, reset tries and queue?
+}
+
+func (c *Cluster) enqueueCommand(async *Async) error {
 	// if queue fails, command.onError(ErrNoNodesAvailable)
+	command := async.Command
+	logDebug("[Cluster]", "enqueuing command '%s'", command.Name())
+	return c.commandQueue.enqueue(async)
+}
+
+func (c *Cluster) executeEnqueuedCommands() {
+	logDebug("[Cluster]", "(%v) command queue routine is starting", c)
+	for {
+		select {
+		case <-c.stopChan:
+			logDebug("[Cluster]", "(%v) command queue routine is quitting", c)
+			return
+		case t := <-c.commandQueueTicker.C:
+			// NB: ensure we're not already shutting down
+			if tmpErr := c.stateCheck(clusterShuttingDown); tmpErr == nil {
+				logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
+				return
+			} else {
+				if async, err := c.commandQueue.dequeue(); err != nil {
+					async.Error = err
+					async.done()
+				} else {
+					logDebug("[Cluster]", "(%v) executing queued command at %v", c, t)
+					c.execute(async, false)
+				}
+			}
+		}
+	}
 }
 
 func optNodes(nodes []*Node) (rv []*Node, err error) {

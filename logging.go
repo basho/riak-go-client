@@ -10,7 +10,7 @@ import (
 )
 
 // If true, debug messages will be written to the log
-var EnableDebugLogging = false
+var EnableDebugLogging = true
 
 var errLogger = log.New(os.Stderr, "", log.LstdFlags)
 var logger = log.New(os.Stderr, "", log.LstdFlags)
