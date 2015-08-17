@@ -8,8 +8,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
-// Ping
-
+// PingCommandBuilder is the command builder required for PingCommand
 type PingCommandBuilder struct {
 }
 
@@ -18,7 +17,7 @@ func (builder *PingCommandBuilder) Build() (Command, error) {
 	return &PingCommand{}, nil
 }
 
-// PingCommand is used to verify Riak is active and the connection is working
+// PingCommand is used to verify Riak is online and reachable
 type PingCommand struct {
 	CommandImpl
 }
@@ -198,8 +197,10 @@ func (cmd *FetchBucketPropsCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiak.RpbGetBucketResp{}
 }
 
+// ReplMode contains the replication mode
 type ReplMode int32
 
+// Convenience constants for maintaining the replication mode
 const (
 	FALSE    ReplMode = 0
 	REALTIME ReplMode = 1
@@ -207,11 +208,14 @@ const (
 	TRUE     ReplMode = 3
 )
 
+// CommitHook object is used when fetching or updating pre- or post- commit hook bucket properties
+// on Riak
 type CommitHook struct {
 	Name   string
 	ModFun *ModFun
 }
 
+// ModFun is used when fetching or updating LinkFun or ChashKeyfun bucket properties on Riak
 type ModFun struct {
 	Module   string
 	Function string
@@ -248,6 +252,12 @@ type FetchBucketPropsResponse struct {
 	LinkFun       *ModFun
 }
 
+// FetchBucketPropsCommandBuilder type is required for creating new instances of FetchBucketPropsCommand
+//
+//	command := NewFetchBucketPropsCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		Build()
 type FetchBucketPropsCommandBuilder struct {
 	protobuf *rpbRiak.RpbGetBucketReq
 }
@@ -343,6 +353,13 @@ func (cmd *StoreBucketPropsCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// StoreBucketPropsCommandBuilder type is required for creating new instances of StoreBucketPropsCommand
+//
+//	command := NewStoreBucketPropsCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithAllowMult(true).
+//		Build()
 type StoreBucketPropsCommandBuilder struct {
 	protobuf *rpbRiak.RpbSetBucketReq
 	props    *rpbRiak.RpbBucketProps
@@ -379,31 +396,37 @@ func (builder *StoreBucketPropsCommandBuilder) WithNVal(nval uint32) *StoreBucke
 	return builder
 }
 
+// WithAllowMult sets whether or not to allow Riak to store siblings of an object when writes conflict
 func (builder *StoreBucketPropsCommandBuilder) WithAllowMult(allowMult bool) *StoreBucketPropsCommandBuilder {
 	builder.props.AllowMult = &allowMult
 	return builder
 }
 
+// WithLastWriteWins sets whether Riak should resolve conflicts using timestamp (most recent wins)
 func (builder *StoreBucketPropsCommandBuilder) WithLastWriteWins(lww bool) *StoreBucketPropsCommandBuilder {
 	builder.props.LastWriteWins = &lww
 	return builder
 }
 
+// WithOldVClock sets the old_vclock value representing an epoch time value
 func (builder *StoreBucketPropsCommandBuilder) WithOldVClock(oldVClock uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.OldVclock = &oldVClock
 	return builder
 }
 
+// WithYoungVClock sets the old_vclock value representing an epoch time value
 func (builder *StoreBucketPropsCommandBuilder) WithYoungVClock(youngVClock uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.YoungVclock = &youngVClock
 	return builder
 }
 
+// WithBigVClock sets the big_vclock value representing an epoch time value
 func (builder *StoreBucketPropsCommandBuilder) WithBigVClock(bigVClock uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.BigVclock = &bigVClock
 	return builder
 }
 
+// WithSmallVClock sets the old_vclock value representing an epoch time value
 func (builder *StoreBucketPropsCommandBuilder) WithSmallVClock(smallVClock uint32) *StoreBucketPropsCommandBuilder {
 	builder.props.SmallVclock = &smallVClock
 	return builder

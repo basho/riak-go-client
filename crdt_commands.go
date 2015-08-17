@@ -548,6 +548,13 @@ type FetchSetResponse struct {
 	SetValue   [][]byte
 }
 
+// FetchSetCommandBuilder type is required for creating new instances of FetchSetCommand
+//
+//	command := NewFetchSetCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchSetCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -823,6 +830,7 @@ func populate(mapOp *MapOperation, pbMapOp *rpbRiakDT.MapOp) {
 	}
 }
 
+// MapOperation contains the instructions to send to Riak what updates to the Map you want to complete
 type MapOperation struct {
 	incrementCounters map[string]int64
 	removeCounters    map[string]bool
@@ -1042,6 +1050,8 @@ func parsePbResponse(pbMapEntries []*rpbRiakDT.MapEntry) *Map {
 	return m
 }
 
+// Map object represents the Riak Map object and is returned within the Response objects for both
+// UpdateMapCommand and FetchMapCommand
 type Map struct {
 	Counters  map[string]int64
 	Sets      map[string][][]byte
@@ -1057,6 +1067,17 @@ type UpdateMapResponse struct {
 	Map          *Map
 }
 
+// UpdateMapCommandBuilder type is required for creating new instances of UpdateMapCommand
+//
+//	mapOp := &MapOperation{}
+//	mapOp.SetRegister("register_1", []byte("register_value_1"))
+//
+//	command := NewUpdateMapCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithMapOperation(mapOp).
+//		Build()
 type UpdateMapCommandBuilder struct {
 	mapOperation *MapOperation
 	protobuf     *rpbRiakDT.DtUpdateReq
@@ -1222,6 +1243,13 @@ type FetchMapResponse struct {
 	Map        *Map
 }
 
+// FetchMapCommandBuilder type is required for creating new instances of FetchMapCommand
+//
+//	command := NewFetchMapCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchMapCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }

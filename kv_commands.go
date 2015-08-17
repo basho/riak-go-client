@@ -1039,6 +1039,7 @@ func (cmd *FetchPreflistCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbGetBucketKeyPreflistResp{}
 }
 
+// PreflistItem represents an individual result from the FetchPreflistResponse result set
 type PreflistItem struct {
 	Partition int64
 	Node      string
@@ -1209,6 +1210,8 @@ func (cmd *SecondaryIndexQueryCommand) getResponseProtobufMessage() proto.Messag
 	return &rpbRiakKV.RpbIndexResp{}
 }
 
+// SecondaryIndexQueryResult represents an individual result of the SecondaryIndexQueryResponse
+// result set
 type SecondaryIndexQueryResult struct {
 	IndexKey  []byte
 	ObjectKey []byte
