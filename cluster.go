@@ -18,15 +18,19 @@ type ClusterOptions struct {
 	Nodes             []*Node
 	NodeManager       NodeManager
 	ExecutionAttempts byte
+	QueueCommands     bool
+	QueueMaxDepth     uint16
 }
 
 // Cluster object contains your pool of Node objects, the NodeManager and the
 // current stateData object of the cluster
 type Cluster struct {
+	stateData
 	nodes             []*Node
 	nodeManager       NodeManager
 	executionAttempts byte
-	stateData
+	queueCommands bool
+	queueMaxDepth uint16
 }
 
 var defaultClusterOptions = &ClusterOptions{
@@ -46,6 +50,9 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 	if options.ExecutionAttempts == 0 {
 		options.ExecutionAttempts = defaultExecutionAttempts
 	}
+	if options.QueueCommands && options.QueueMaxDepth == 0 {
+		options.QueueMaxDepth = defaultQueueMaxDepth
+	}
 
 	c = &Cluster{}
 
@@ -56,6 +63,8 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 
 	c.nodeManager = options.NodeManager
 	c.executionAttempts = options.ExecutionAttempts
+	c.queueCommands = options.QueueCommands
+	c.queueMaxDepth = options.QueueMaxDepth
 
 	c.setStateDesc("clusterError", "clusterCreated", "clusterRunning", "clusterQueueing", "clusterShuttingDown", "clusterShutdown")
 	c.setState(clusterCreated)

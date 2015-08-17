@@ -17,5 +17,6 @@ const defaultConnectTimeout = time.Second * 30
 const defaultRequestTimeout = time.Second * 5
 const defaultHealthCheckInterval = time.Second * 5
 const defaultExecutionAttempts = byte(3)
+const defaultQueueMaxDepth = uint16(512)
 
 const defaultBucketType = "default"
