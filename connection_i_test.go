@@ -3,15 +3,11 @@
 package riak
 
 import (
-	"bytes"
 	"io"
 	"net"
 	"reflect"
 	"testing"
 	"time"
-
-	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
-	proto "github.com/golang/protobuf/proto"
 )
 
 func TestSuccessfulConnection(t *testing.T) {
@@ -21,15 +17,14 @@ func TestSuccessfulConnection(t *testing.T) {
 	}
 	defer ln.Close()
 
-	sawConnection := false
-
+	connChan := make(chan bool)
 	go func() {
 		c, err := ln.Accept()
 		defer c.Close()
 		if err != nil {
-			t.Error(err.Error())
+			t.Log(err.Error())
 		}
-		sawConnection = true
+		connChan <- true
 	}()
 
 	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1337")
@@ -49,6 +44,8 @@ func TestSuccessfulConnection(t *testing.T) {
 	if err := conn.connect(); err != nil {
 		t.Error(err)
 	}
+
+	sawConnection := <-connChan
 
 	if err := conn.close(); err != nil {
 		t.Error(err)
@@ -147,31 +144,15 @@ func TestHealthCheckFail(t *testing.T) {
 	defer ln.Close()
 
 	go func() {
-		c, err := ln.Accept()
-		if err != nil {
-			t.Error(err)
-		}
-		defer c.Close()
-
-		var errcode uint32 = 1
-		errmsg := bytes.NewBufferString("this is an error")
-		rpbErr := &rpb_riak.RpbErrorResp{
-			Errcode: &errcode,
-			Errmsg:  errmsg.Bytes(),
-		}
-
-		encoded, err := proto.Marshal(rpbErr)
-		if err != nil {
-			t.Error(err)
-		}
-
-		data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
-		count, err := c.Write(data)
-		if err != nil {
-			t.Error(err)
-		}
-		if count != len(data) {
-			t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				if _, ok := err.(*net.OpError); !ok {
+					t.Error(err)
+				}
+				return
+			}
+			go handleClientMessageWithRiakError(t, conn, nil)
 		}
 	}()
 
@@ -190,8 +171,8 @@ func TestHealthCheckFail(t *testing.T) {
 		if err := conn.connect(); err == nil {
 			t.Error("expected to see error")
 		} else {
-			if riakError, ok := err.(Error); ok == true {
-				if expected, actual := "riak error - errcode '1', errmsg 'this is an error'", riakError.Error(); expected != actual {
+			if riakError, ok := err.(RiakError); ok == true {
+				if expected, actual := "RiakError|1|this is an error", riakError.Error(); expected != actual {
 					t.Errorf("expected %v, got %v", expected, actual)
 				}
 			} else {
@@ -211,12 +192,16 @@ func TestHealthCheckSuccess(t *testing.T) {
 	defer ln.Close()
 
 	go func() {
-		c, err := ln.Accept()
-		defer c.Close()
-		if err != nil {
-			t.Error(err)
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				if _, ok := err.(*net.OpError); !ok {
+					t.Error(err)
+				}
+				return
+			}
+			go readWritePingResp(t, conn)
 		}
-		writePingResp(t, c)
 	}()
 
 	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1340")

@@ -23,6 +23,9 @@ func TestCreateClusterWithDefaultOptions(t *testing.T) {
 	if cluster.nodeManager == nil {
 		t.Error("expected cluster to have a node manager")
 	}
+	if expected, actual := defaultExecutionAttempts, cluster.executionAttempts; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
 }
 
 func TestCreateClusterWithFourNodes(t *testing.T) {

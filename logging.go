@@ -3,6 +3,7 @@ package riak
 // Bare-bones logging to enable/disable debug logging
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -20,28 +21,33 @@ func setLogWriter(out io.Writer) {
 }
 
 // logDebug writes formatted string debug messages using Printf only if debug logging is enabled
-func logDebug(format string, v ...interface{}) {
+func logDebug(source, format string, v ...interface{}) {
 	if EnableDebugLogging {
-		logger.Printf(format, v...)
+		logger.Printf(fmt.Sprintf("[DEBUG] %s %s", source, format), v...)
 	}
 }
 
-// logWarnln writes string warning messages using Pringln
-func logWarnln(v string) {
-	logger.Println(v)
+// logWarn writes formatted string warning messages using Printf
+func logWarn(source, format string, v ...interface{}) {
+	logger.Printf(fmt.Sprintf("[WARNING] %s %s", source, format), v...)
+}
+
+// logWarnln writes string warning messages using Println
+func logWarnln(source, err string) {
+	logger.Println("[WARNING]", source, err)
 }
 
 // logError writes formatted string error messages using Printf
-func logError(format string, v ...interface{}) {
-	errLogger.Printf(format, v...)
+func logError(source, format string, v ...interface{}) {
+	errLogger.Printf(fmt.Sprintf("[ERROR] %s %s", source, format), v...)
 }
 
 // logErr writes err.Error() using Println
-func logErr(err error) {
-	errLogger.Println(err.Error())
+func logErr(source string, err error) {
+	errLogger.Println("[ERROR]", source, err)
 }
 
 // logErrorln writes a string error message using Println
-func logErrorln(v string) {
-	errLogger.Println(v)
+func logErrorln(source string, err string) {
+	errLogger.Println("[ERROR]", source, err)
 }

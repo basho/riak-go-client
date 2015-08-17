@@ -3,6 +3,7 @@ package riak
 import (
 	"crypto/tls"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -10,6 +11,12 @@ import (
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
+)
+
+// Connection errors
+var (
+	ErrCannotRead  = errors.New("Cannot read from a non-active or closed connection")
+	ErrCannotWrite = errors.New("Cannot write to a non-active or closed connection")
 )
 
 // AuthOptions object contains the authentication credentials and tls config
@@ -35,7 +42,6 @@ const (
 	connActive
 )
 
-// TODO authentication
 type connection struct {
 	addr           *net.TCPAddr
 	conn           net.Conn
@@ -70,7 +76,7 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		healthCheck:    options.healthCheck,
 		authOptions:    options.authOptions,
 		sizeBuf:        make([]byte, 4),
-		inFlight:       false, // TODO: inFlight may not be necessary
+		inFlight:       false,
 		lastUsed:       time.Now(),
 		state:          connInactive,
 	}, nil
@@ -83,10 +89,10 @@ func (c *connection) connect() (err error) {
 	}
 	c.conn, err = dialer.Dial("tcp", c.addr.String()) // NB: SetNoDelay() is true by default for TCP connections
 	if err != nil {
-		logError("[Connection] error when dialing %s: '%s'", c.addr.String(), err.Error())
+		logError("[Connection]", "error when dialing %s: '%s'", c.addr.String(), err.Error())
 		c.close()
 	} else {
-		logDebug("[Connection] connected to: %s", c.addr)
+		logDebug("[Connection]", "connected to: %s", c.addr)
 		if err = c.startTls(); err != nil {
 			c.state = connInactive
 			return
@@ -95,7 +101,7 @@ func (c *connection) connect() (err error) {
 		if c.healthCheck != nil {
 			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Successful() {
 				c.state = connInactive
-				logError("[Connection] initial health check error: '%s'", err.Error())
+				logError("[Connection]", "initial health check error: '%s'", err.Error())
 				c.close()
 			}
 		}
@@ -135,7 +141,7 @@ func (c *connection) startTls() (err error) {
 func (c *connection) available() bool {
 	defer func() {
 		if err := recover(); err != nil {
-			logErrorln("[Connection] available: connection panic!")
+			logErrorln("[Connection]", "available(): connection panic!")
 		}
 	}()
 	return (c.conn != nil && (c.state == connTlsStarting || c.state == connActive))
@@ -144,6 +150,7 @@ func (c *connection) available() bool {
 func (c *connection) close() (err error) {
 	if c.conn != nil {
 		err = c.conn.Close()
+		c.conn = nil
 	}
 	return
 }
@@ -158,7 +165,7 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
-	logDebug("[Connection] execute command: %v", cmd.Name())
+	logDebug("[Connection]", "execute command: %v", cmd.Name())
 	c.setInFlight(true)
 	defer c.setInFlight(false)
 	c.lastUsed = time.Now()
@@ -178,6 +185,7 @@ func (c *connection) execute(cmd Command) (err error) {
 	for {
 		response, err = c.read() // NB: response *will* have entire pb message
 		if err != nil {
+			cmd.onError(err)
 			return
 		}
 
@@ -188,11 +196,13 @@ func (c *connection) execute(cmd Command) (err error) {
 		}
 
 		if decoded, err = decodeRiakMessage(cmd, response); err != nil {
+			cmd.onError(err)
 			return
 		}
 
 		err = cmd.onSuccess(decoded)
 		if err != nil {
+			cmd.onError(err)
 			return
 		}
 
@@ -250,7 +260,8 @@ func (c *connection) read() (data []byte, err error) {
 
 func (c *connection) write(data []byte) (err error) {
 	if !c.available() {
-		return ErrCannotWrite
+		err = ErrCannotWrite
+		return
 	}
 	// TODO: we should also take currently executing Command (Riak operation)
 	// timeout into account

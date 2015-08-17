@@ -11,16 +11,19 @@ latency. Both Riak and this code is maintained by [Basho](http://www.basho.com/)
 4. [Roadmap](#roadmap)
 5. [License and Authors](#license-and-authors)
 
+## Build Status
+
+[![Build Status](https://travis-ci.org/basho/riak-go-client.svg?branch=master)](https://travis-ci.org/basho/riak-go-client)
+
 ## Installation
 
 `go get github.com/basho/riak-go-client`
 
 ## Documentation
 
-* Master: [![Build Status](https://travis-ci.org/basho/riak-go-client.svg?branch=master)](https://travis-ci.org/basho/riak-go-client)
-
-Most documentation is living in the
-[wiki](https://github.com/basho/riak-go-client/wiki). For specifics on our progress here, see the [release notes](https://github.com/basho/riak-go-client/blob/master/RELNOTES.md). 
+* [API documentation on Godoc](https://godoc.org/github.com/basho/riak-go-client)
+* [Wiki](https://github.com/basho/riak-go-client/wiki)
+* [Release Notes](https://github.com/basho/riak-go-client/blob/master/RELNOTES.md). 
 
 ## Contributing
 

@@ -1,7 +1,6 @@
 package riak
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -813,7 +812,7 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	if builder.protobuf.GetStream() && builder.callback == nil {
-		return nil, errors.New("ListBucketsCommand requires a callback when streaming.")
+		return nil, newClientError("ListBucketsCommand requires a callback when streaming.")
 	}
 	return &ListBucketsCommand{protobuf: builder.protobuf, callback: builder.callback}, nil
 }
@@ -973,7 +972,7 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	if builder.streaming && builder.callback == nil {
-		return nil, errors.New("ListKeysCommand requires a callback when streaming.")
+		return nil, newClientError("ListKeysCommand requires a callback when streaming.")
 	}
 	return &ListKeysCommand{
 		protobuf:  builder.protobuf,
@@ -1343,10 +1342,10 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 	}
 	if builder.protobuf.GetKey() == nil &&
 		(builder.protobuf.GetRangeMin() == nil || builder.protobuf.GetRangeMax() == nil) {
-		return nil, errors.New("either WithIndexKey or WithRange are required")
+		return nil, newClientError("either WithIndexKey or WithRange are required")
 	}
 	if builder.protobuf.GetStream() && builder.callback == nil {
-		return nil, errors.New("SecondaryIndexQueryCommand requires a callback when streaming.")
+		return nil, newClientError("SecondaryIndexQueryCommand requires a callback when streaming.")
 	}
 	return &SecondaryIndexQueryCommand{
 		protobuf: builder.protobuf,
@@ -1473,7 +1472,7 @@ func (builder *MapReduceCommandBuilder) Build() (Command, error) {
 		panic("builder.protobuf must not be nil")
 	}
 	if builder.streaming && builder.callback == nil {
-		return nil, errors.New("MapReduceCommand requires a callback when streaming.")
+		return nil, newClientError("MapReduceCommand requires a callback when streaming.")
 	}
 	return &MapReduceCommand{
 		protobuf:  builder.protobuf,
