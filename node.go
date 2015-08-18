@@ -129,23 +129,17 @@ func (n *Node) start() error {
 	logDebug("[Node]", "(%v) starting", n)
 
 	for i := uint16(0); i < n.minConnections; i++ {
-		var conn *connection
-		if conn, err = n.createNewConnection(nil, false); err == nil {
+		if conn, err := n.createNewConnection(nil, false); err == nil {
 			if conn == nil {
 				// Should never happen
 				panic(fmt.Sprintf("[Node] (%v) could not create connection in Start", n))
 			} else {
 				n.returnConnectionToPool(conn, false)
 			}
+		} else {
+			logErr("[Node]", err)
 		}
 	}
-
-	/*
-	* TODO
-	if err != nil {
-		return
-	}
-	*/
 
 	n.expireTicker = time.NewTicker(thirtySeconds)
 	go n.expireIdleConnections()

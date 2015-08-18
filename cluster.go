@@ -83,7 +83,7 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 
 	c = &Cluster{
 		executionAttempts: options.ExecutionAttempts,
-		nodeManager: options.NodeManager,
+		nodeManager:       options.NodeManager,
 	}
 
 	if c.nodes, err = optNodes(options.Nodes); err != nil {

@@ -4,6 +4,7 @@ package riak
 
 import (
 	"net"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -110,7 +111,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 			if connects == 1 {
 				c.Close()
 			} else {
-				readWritePingResp(t, c)
+				readWritePingResp(t, c, true)
 				return
 			}
 		}
@@ -166,4 +167,98 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	close(stateChan)
+}
+
+func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
+	port := 13338
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	stateChan := make(chan state)
+
+	origSetStateFunc := setStateFunc
+	defer func() {
+		setStateFunc = origSetStateFunc
+	}()
+
+	var node *Node
+	go func() {
+		setStateFunc = func(s *stateData, st state) {
+			origSetStateFunc(s, st)
+			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
+			stateChan <- st
+		}
+		opts := &NodeOptions{
+			RemoteAddress:       addr,
+			MinConnections:      0,
+			HealthCheckInterval: 250 * time.Millisecond,
+		}
+		var err error
+		node, err = NewNode(opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		node.start()
+		nodeIsRunningCount := 0
+		for i := 0; i < 10; i++ {
+			if node.isCurrentState(nodeRunning) {
+				nodeIsRunningCount++
+			}
+			if nodeIsRunningCount == 2 {
+				break
+			}
+			ping := &PingCommand{}
+			_, err = node.execute(ping)
+			if err != nil {
+				t.Log(err)
+			}
+			time.Sleep(time.Second)
+		}
+		node.stop()
+		close(stateChan)
+	}()
+
+	listenerStarted := false
+	nodeIsRunningCount := 0
+	for {
+		if nodeState, ok := <-stateChan; ok {
+			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "nodeState: '%v'", nodeState)
+			if node.isCurrentState(nodeRunning) {
+				nodeIsRunningCount++
+			}
+			if nodeIsRunningCount == 2 {
+				// This is the second time node has entered nodeRunning state, so it must have recovered via the health check
+				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SUCCESS node recovered via health check")
+				break
+			}
+			if !listenerStarted && nodeState == 3 {
+				listenerStarted = true
+				ln, err := net.Listen("tcp", addr)
+				if err != nil {
+					t.Error(err)
+				}
+				defer ln.Close()
+
+				go func() {
+					for {
+						c, err := ln.Accept()
+						if err != nil {
+							if _, ok := err.(*net.OpError); !ok {
+								t.Error(err)
+							}
+							return
+						}
+						go func() {
+							for {
+								if !readWritePingResp(t, c, false) {
+									break
+								}
+							}
+						}()
+					}
+				}()
+			}
+		} else {
+			t.Error("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck] stateChan closed before recovering via health check")
+			break
+		}
+	}
 }

@@ -21,7 +21,7 @@ func (nm *defaultNodeManager) Init(nodes []*Node) error {
 		panic("[defaultNodeManager] nil nodes argument")
 	}
 	if len(nodes) == 0 || nodes[0] == nil {
-		return ErrDefaultNodeManagerRequiresNode 
+		return ErrDefaultNodeManagerRequiresNode
 	}
 	nm.nodes = nodes
 	return nil

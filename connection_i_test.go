@@ -200,7 +200,7 @@ func TestHealthCheckSuccess(t *testing.T) {
 				}
 				return
 			}
-			go readWritePingResp(t, conn)
+			go readWritePingResp(t, conn, true)
 		}
 	}()
 
