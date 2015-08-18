@@ -70,3 +70,4 @@ These excellent community projects inspired this client and parts of their code 
 
 Thank you to all of our contributors!
 
+* [Ian Lozinski](https://github.com/i)
