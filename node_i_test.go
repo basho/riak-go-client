@@ -77,35 +77,26 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 }
 
 func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
-	stateChan := make(chan state, 5)
-	origSetStateFunc := setStateFunc
-	setStateFunc = func(s *stateData, st state) {
-		origSetStateFunc(s, st)
-		logDebug("[TestRecoverViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
-		stateChan <- st
-	}
-	defer func() {
-		setStateFunc = origSetStateFunc
-	}()
+	port := 13337
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	doneChan := make(chan struct{})
+	stateChan := make(chan state)
 
-	ln, err := net.Listen("tcp", "127.0.0.1:13337")
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		t.Error(err)
 	}
 	defer ln.Close()
 
 	connects := 0
-
 	go func() {
 		for {
 			c, err := ln.Accept()
 			if err != nil {
-				if _, ok := err.(*net.OpError); ok {
-					return
-				} else {
+				if _, ok := err.(*net.OpError); !ok {
 					t.Error(err)
-					return
 				}
+				return
 			}
 			connects++
 			if connects == 1 {
@@ -117,55 +108,64 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		}
 	}()
 
-	opts := &NodeOptions{
-		RemoteAddress:       "127.0.0.1:13337",
-		MinConnections:      0,
-		HealthCheckInterval: 50 * time.Millisecond,
-	}
-	node, err := NewNode(opts)
-	if err != nil {
-		t.Error(err)
-	}
-	node.start()
+	go func() {
+		opts := &NodeOptions{
+			RemoteAddress:       addr,
+			MinConnections:      0,
+			HealthCheckInterval: 50 * time.Millisecond,
+		}
+		node, err := NewNode(opts)
+		if err != nil {
+			t.Error(err)
+		}
 
-	ping := &PingCommand{}
-	var executed bool
-	executed, err = node.execute(ping)
-	if executed == false {
-		t.Fatal("expected ping to be executed")
-	}
-	if err == nil {
-		t.Fatal("expected non-nil error")
+		origSetStateFunc := node.setStateFunc
+		node.setStateFunc = func(sd *stateData, st state) {
+			origSetStateFunc(&node.stateData, st)
+			logDebug("[TestRecoverViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
+			stateChan <- st
+		}
+
+		node.start()
+		ping := &PingCommand{}
+		executed, err := node.execute(ping)
+		if executed == false {
+			t.Fatal("expected ping to be executed")
+		}
+		if err == nil {
+			t.Fatal("expected non-nil error")
+		}
+		logDebug("[TestRecoverViaDefaultPingHealthCheck]", "waiting to stop node")
+		<-doneChan
+		logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
+		node.stop()
+	}()
+
+	checkStatesFunc := func(states []state) {
+		for i := 0; i < len(states); i++ {
+			nodeState := <-stateChan
+			if expected, actual := states[i], nodeState; expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			} else {
+				logDebug("[TestRecoverViaDefaultPingHealthCheck]", "saw state %d", nodeState)
+			}
+		}
 	}
 
-	nodeState := <-stateChan
-	if expected, actual := nodeCreated, nodeState; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
-	nodeState = <-stateChan
-	if expected, actual := nodeRunning, nodeState; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
-	nodeState = <-stateChan
-	if expected, actual := nodeHealthChecking, nodeState; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
-	nodeState = <-stateChan
-	if expected, actual := nodeRunning, nodeState; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	expectedStates := []state{
+		nodeRunning, nodeHealthChecking, nodeRunning,
 	}
 
-	logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
-	node.stop()
+	checkStatesFunc(expectedStates)
 
-	nodeState = <-stateChan
-	if expected, actual := nodeShuttingDown, nodeState; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	close(doneChan)
+
+	expectedStates = []state{
+		nodeShuttingDown, nodeShutdown,
 	}
-	nodeState = <-stateChan
-	if expected, actual := nodeShutdown, nodeState; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
+
+	checkStatesFunc(expectedStates)
+
 	close(stateChan)
 }
 
@@ -174,18 +174,8 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 	stateChan := make(chan state)
 
-	origSetStateFunc := setStateFunc
-	defer func() {
-		setStateFunc = origSetStateFunc
-	}()
-
 	var node *Node
 	go func() {
-		setStateFunc = func(s *stateData, st state) {
-			origSetStateFunc(s, st)
-			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
-			stateChan <- st
-		}
 		opts := &NodeOptions{
 			RemoteAddress:       addr,
 			MinConnections:      0,
@@ -196,6 +186,14 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		origSetStateFunc := node.setStateFunc
+		node.setStateFunc = func(sd *stateData, st state) {
+			origSetStateFunc(&node.stateData, st)
+			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
+			stateChan <- st
+		}
+
 		node.start()
 		nodeIsRunningCount := 0
 		for i := 0; i < 10; i++ {

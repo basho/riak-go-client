@@ -105,7 +105,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			authOptions:         options.AuthOptions,
 			available:           make([]*connection, 0, options.MinConnections),
 		}
-		n.setStateDesc("nodeError", "nodeCreated", "nodeRunning", "nodeHealthChecking", "nodeShuttingDown", "nodeShutdown")
+		n.initStateData("nodeError", "nodeCreated", "nodeRunning", "nodeHealthChecking", "nodeShuttingDown", "nodeShutdown")
 		n.setState(nodeCreated)
 		return n, nil
 	}

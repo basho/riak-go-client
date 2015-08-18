@@ -21,9 +21,11 @@ const (
 
 func TestStateConsts(t *testing.T) {
 	data1 := &testStateData{}
+	data1.initStateData("STATE_ONE")
 	data1.setState(STATE_ONE)
 
 	data2 := &testStateData{}
+	data2.initStateData("OTHER_STATE_ONE")
 	data2.setState(OTHER_STATE_ONE)
 
 	if s1, s2 := data1.getState(), data2.getState(); s1 == s2 {
@@ -33,6 +35,7 @@ func TestStateConsts(t *testing.T) {
 
 func TestStateData(t *testing.T) {
 	data := &testStateData{}
+	data.initStateData("STATE_TWO")
 	data.setState(STATE_TWO)
 
 	if expected, actual := true, data.isCurrentState(STATE_TWO); expected != actual {
@@ -46,6 +49,7 @@ func TestStateData(t *testing.T) {
 
 func TestAllowedState(t *testing.T) {
 	data := &testStateData{}
+	data.initStateData("STATE_TWO")
 	data.setState(STATE_TWO)
 
 	if err := data.stateCheck(STATE_ONE, STATE_THREE); err == nil {
@@ -54,7 +58,8 @@ func TestAllowedState(t *testing.T) {
 }
 
 func TestStateDesc(t *testing.T) {
-	data := newStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
+	data := &testStateData{}
+	data.initStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
 
 	data.setState(STATE_ONE)
 	if expected, actual := "STATE_ONE", data.String(); expected != actual {
@@ -73,7 +78,8 @@ func TestStateDesc(t *testing.T) {
 }
 
 func TestStateDescUnknown(t *testing.T) {
-	data := newStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
+	data := &testStateData{}
+	data.initStateData("STATE_ONE", "STATE_TWO", "STATE_THREE")
 	data.setState(STATE_FOUR)
 
 	if expected, actual := "STATE_3", data.String(); expected != actual {

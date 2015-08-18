@@ -45,13 +45,17 @@ type Async struct {
 	Error   error
 }
 
-func (a *Async) done() {
+func (a *Async) done(err error) {
+	if err != nil {
+		logErr("[Async]", err)
+		a.Error = err
+	}
 	if a.Done != nil {
 		logDebug("[Cluster]", "signaling a.Done channel with '%s'", a.Command.Name())
 		a.Done <- a.Command
 	}
 	if a.Wait != nil {
-		logDebug("[Cluster]", "signaling a.Wait WaitGroup")
+		logDebug("[Cluster]", "signaling a.Wait WaitGroup for '%s'", a.Command.Name())
 		a.Wait.Done()
 	}
 }
@@ -85,6 +89,7 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		executionAttempts: options.ExecutionAttempts,
 		nodeManager:       options.NodeManager,
 	}
+	c.initStateData("clusterError", "clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown")
 
 	if c.nodes, err = optNodes(options.Nodes); err != nil {
 		c = nil
@@ -101,7 +106,6 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		go c.executeEnqueuedCommands()
 	}
 
-	c.setStateDesc("clusterError", "clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown")
 	c.setState(clusterCreated)
 	return
 }
@@ -239,9 +243,9 @@ func (c *Cluster) execute(async *Async, shouldEnqueue bool) {
 				command.decrementRemainingTries()
 			}
 		} else {
-			logDebug("[Cluster]", "command '%s' did NOT execute, err '%v'", command.Name(), err)
 			// Command did NOT execute
 			if err == nil {
+				logDebug("[Cluster]", "did NOT execute command '%s', nil err, enqueueing", command.Name())
 				// Command did not execute but there was no error, so enqueue it
 				if c.queueCommands && shouldEnqueue {
 					if err = c.enqueueCommand(async); err == nil {
@@ -259,8 +263,7 @@ func (c *Cluster) execute(async *Async, shouldEnqueue bool) {
 		}
 	}
 	if !enqueued {
-		async.Error = err
-		async.done()
+		async.done(err)
 	}
 }
 
@@ -285,11 +288,15 @@ func (c *Cluster) executeEnqueuedCommands() {
 				return
 			} else {
 				if async, err := c.commandQueue.dequeue(); err != nil {
-					async.Error = err
-					async.done()
+					async.done(err)
 				} else {
-					logDebug("[Cluster]", "(%v) executing queued command at %v", c, t)
-					c.execute(async, false)
+					if tmpErr := c.stateCheck(clusterShuttingDown); tmpErr == nil {
+						logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
+						return
+					} else {
+						logDebug("[Cluster]", "(%v) executing queued command at %v", c, t)
+						c.execute(async, false)
+					}
 				}
 			}
 		}
