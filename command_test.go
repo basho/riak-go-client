@@ -7,7 +7,7 @@ import (
 
 func TestEnqueueDequeueCommandsConcurrently(t *testing.T) {
 	queueSize := uint16(64)
-	queue := newCommandQueue(queueSize)
+	queue := newQueue(queueSize)
 
 	w := &sync.WaitGroup{}
 	for i := uint16(0); i < queueSize; i++ {

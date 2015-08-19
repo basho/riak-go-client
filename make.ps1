@@ -5,8 +5,12 @@
     This script ensures that your build environment is sane and will run 'go' correctly depending on parameters passed to this script.
 .PARAMETER Target
     Target to build. Can be one of the following:
-        * ProtoGen - generate *.pb.go files from *.proto files. Requires Go protoc utility (https://github.com/golang/protobuf)
-        * Format   - run *.go files through 'go fmt'
+        * ProtoGen        - generate *.pb.go files from *.proto files.
+                            Requires Go protoc utility (https://github.com/golang/protobuf)
+        * Format          - run *.go files through 'go fmt'
+        * Test            - Run all tests
+        * UnitTest        - Run unit tests
+        * IntegrationTest - Run live integration tests
 .PARAMETER Verbose
     Use to increase verbosity.
 .EXAMPLE
@@ -19,11 +23,13 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$False, Position=0)]
-    [ValidateSet('ProtoGen', 'Format', IgnoreCase = $True)]
-    [string]$Target = 'Format'
+    [ValidateSet('ProtoGen', 'Format', 'Test', 'UnitTest', 'IntegrationTest', IgnoreCase = $True)]
+    [string]$Target = 'Test'
 )
 
 Set-StrictMode -Version Latest
+
+$package = 'github.com/basho/riak-go-client'
 
 $IsDebug = $DebugPreference -ne 'SilentlyContinue'
 $IsVerbose = $VerbosePreference -ne 'SilentlyContinue'
@@ -92,10 +98,47 @@ function Do-ProtoGen {
     }
 }
 
+function Execute($cmd, $argz) {
+    Write-Verbose "$cmd $argz"
+    & $cmd $argz
+    if ($? -ne $True) {
+        throw "'$cmd $argz' failed: $LastExitCode"
+    }
+    Write-Debug "'$cmd $argz' exit code: $LastExitCode"
+}
+
 function Do-Format {
     $script_path = Get-ScriptPath
     Write-Verbose "go fmt $script_path"
-    & { gofmt -s -w $script_path }
+    $cmd = 'gofmt'
+    $argz = '-s', '-w', $script_path
+    Execute $cmd $argz
+}
+
+function Do-Vet {
+    $cmd = 'go.exe'
+    $argz = 'vet', $package
+    Execute $cmd $argz
+}
+
+function Do-UnitTest {
+    $v = ''
+    if ($IsVerbose) {
+        $v = '-v'
+    }
+    $cmd = 'go.exe'
+    $argz = 'test', $v, "$package/..."
+    Execute $cmd $argz
+}
+
+function Do-IntegrationTest {
+    $v = ''
+    if ($IsVerbose) {
+        $v = '-v'
+    }
+    $cmd = 'go.exe'
+    $argz = 'test', $v, '-tags=integration', "$package/..."
+    Execute $cmd $argz
 }
 
 Write-Debug "Target: $Target"
@@ -104,6 +147,9 @@ switch ($Target)
 {
     'ProtoGen' { Do-ProtoGen }
     'Format' { Do-Format }
+    'Test' { Do-Vet; Do-IntegrationTest }
+    'UnitTest' { Do-Vet; Do-UnitTest }
+    'IntegrationTest' { Do-Vet; Do-IntegrationTest }
      default { throw "Unknown target: $Target" }
 }
 

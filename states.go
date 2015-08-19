@@ -19,8 +19,8 @@ type stateful interface {
 
 type stateData struct {
 	sync.RWMutex
-	stateVal  state
-	stateDesc []string
+	stateVal     state
+	stateDesc    []string
 	setStateFunc func(sd *stateData, st state)
 }
 

@@ -59,7 +59,7 @@ func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool
 	data := buildRiakMessage(rpbCode_RpbPingResp, nil)
 	count, err := c.Write(data)
 	if err == nil {
-		logDebug("[readWritePingResp]", "wrote message '%v', count '%d'", data, count)
+		// logDebug("[readWritePingResp]", "wrote message '%v', count '%d'", data, count)
 		success = true
 	} else {
 		t.Error(err)
@@ -80,7 +80,7 @@ func readClientMessage(c net.Conn) (err error) {
 	var count int = 0
 	if count, err = io.ReadFull(c, sizeBuf); err == nil && count == 4 {
 		messageLength := binary.BigEndian.Uint32(sizeBuf)
-		logDebug("[readClientMessage]", "read size '%v', count '%d', messageLength '%d'", sizeBuf, count, messageLength)
+		// logDebug("[readClientMessage]", "read size '%v', count '%d', messageLength '%d'", sizeBuf, count, messageLength)
 		data := make([]byte, messageLength)
 		count, err = io.ReadFull(c, data)
 		if err != nil {
@@ -88,7 +88,7 @@ func readClientMessage(c net.Conn) (err error) {
 		} else if uint32(count) != messageLength {
 			err = fmt.Errorf("[readClientMessage] message length: %d, only read: %d", messageLength, count)
 		}
-		logDebug("[readClientMessage]", "read message '%v', count '%d'", data, count)
+		// logDebug("[readClientMessage]", "read message '%v', count '%d'", data, count)
 	} else {
 		err = errors.New(fmt.Sprintf("[readClientMessage] error reading command size into sizeBuf: count %d, err %s", count, err))
 	}

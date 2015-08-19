@@ -227,7 +227,7 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SUCCESS node recovered via health check")
 				break
 			}
-			if !listenerStarted && nodeState == 3 {
+			if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
 				listenerStarted = true
 				ln, err := net.Listen("tcp", addr)
 				if err != nil {

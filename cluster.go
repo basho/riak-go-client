@@ -18,10 +18,11 @@ const (
 // ClusterOptions object contains your pool of Node objects and the NodeManager
 // If the NodeManager is not defined, the defaultNodeManager is used
 type ClusterOptions struct {
-	Nodes             []*Node
-	NodeManager       NodeManager
-	ExecutionAttempts byte
-	QueueMaxDepth     uint16
+	Nodes                  []*Node
+	NodeManager            NodeManager
+	ExecutionAttempts      byte
+	QueueMaxDepth          uint16
+	QueueExecutionInterval time.Duration
 }
 
 // Cluster object contains your pool of Node objects, the NodeManager and the
@@ -33,7 +34,7 @@ type Cluster struct {
 	nodeManager        NodeManager
 	executionAttempts  byte
 	queueCommands      bool
-	commandQueue       *commandQueue
+	commandQueue       *queue
 	commandQueueTicker *time.Ticker
 }
 
@@ -98,11 +99,14 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 	c.nodeManager.Init(c.nodes)
 
 	if options.QueueMaxDepth > 0 {
+		if options.QueueExecutionInterval == 0 {
+			options.QueueExecutionInterval = defaultQueueExecutionInterval
+		}
 		c.queueCommands = true
 		c.stopChan = make(chan bool)
-		c.commandQueue = newCommandQueue(options.QueueMaxDepth)
+		c.commandQueue = newQueue(options.QueueMaxDepth)
 		// TODO configurable queue submit interval?
-		c.commandQueueTicker = time.NewTicker(500 * time.Millisecond)
+		c.commandQueueTicker = time.NewTicker(options.QueueExecutionInterval)
 		go c.executeEnqueuedCommands()
 	}
 
@@ -192,7 +196,7 @@ func (c *Cluster) ExecuteAsync(async *Async) (err error) {
 	if async.Wait != nil {
 		async.Wait.Add(1)
 	}
-	go c.execute(async, true)
+	go c.execute(async)
 	return nil
 }
 
@@ -207,13 +211,13 @@ func (c *Cluster) Execute(command Command) (err error) {
 		Command: command,
 		Wait:    wg,
 	}
-	go c.execute(async, true)
+	go c.execute(async)
 	wg.Wait() // TODO: timeout?
 	return nil
 }
 
 // NB: will be executed in a goroutine
-func (c *Cluster) execute(async *Async, shouldEnqueue bool) {
+func (c *Cluster) execute(async *Async) {
 	if c == nil {
 		panic("[Cluster] nil cluster argument")
 	}
@@ -245,9 +249,9 @@ func (c *Cluster) execute(async *Async, shouldEnqueue bool) {
 		} else {
 			// Command did NOT execute
 			if err == nil {
-				logDebug("[Cluster]", "did NOT execute command '%s', nil err, enqueueing", command.Name())
+				logDebug("[Cluster]", "did NOT execute command '%s', nil err", command.Name())
 				// Command did not execute but there was no error, so enqueue it
-				if c.queueCommands && shouldEnqueue {
+				if c.queueCommands {
 					if err = c.enqueueCommand(async); err == nil {
 						enqueued = true
 					}
@@ -287,15 +291,17 @@ func (c *Cluster) executeEnqueuedCommands() {
 				logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
 				return
 			} else {
-				if async, err := c.commandQueue.dequeue(); err != nil {
+				if value, err := c.commandQueue.dequeue(); err != nil {
+					async := value.(*Async)
 					async.done(err)
 				} else {
 					if tmpErr := c.stateCheck(clusterShuttingDown); tmpErr == nil {
 						logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
 						return
 					} else {
+						async := value.(*Async)
 						logDebug("[Cluster]", "(%v) executing queued command at %v", c, t)
-						c.execute(async, false)
+						c.execute(async)
 					}
 				}
 			}

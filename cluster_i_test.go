@@ -299,9 +299,8 @@ func TestAsyncExecuteCommandOnCluster(t *testing.T) {
 	}
 }
 
-/*
 func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
-	pingCommandCount := 10
+	pingCommandCount := uint16(8)
 	port := 13339
 	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 	stateChan := make(chan state)
@@ -312,9 +311,8 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 	go func() {
 		var err error
 		nodeOpts := &NodeOptions{
-			RemoteAddress:       addr,
-			MinConnections:      0,
-			HealthCheckInterval: 250 * time.Millisecond,
+			RemoteAddress:  addr,
+			MinConnections: 0,
 		}
 		node, err = NewNode(nodeOpts)
 		if err != nil {
@@ -324,16 +322,16 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 			t.FailNow()
 		}
 		origNodeSetStateFunc := node.setStateFunc
-		node.setStateFunc = func(st state) {
-			origNodeSetStateFunc(st)
+		node.setStateFunc = func(sd *stateData, st state) {
+			origNodeSetStateFunc(&node.stateData, st)
 			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "sending state '%v' down stateChan", st)
 			stateChan <- st
 		}
 		nodes := []*Node{node}
 		clusterOpts := &ClusterOptions{
 			Nodes:             nodes,
-			ExecutionAttempts: 1,
-			QueueMaxDepth:     0,
+			ExecutionAttempts: 3,
+			QueueMaxDepth:     pingCommandCount,
 		}
 		cluster, err := NewCluster(clusterOpts)
 		if err != nil {
@@ -342,42 +340,30 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 		if err := cluster.Start(); err != nil {
 			t.Fatal(err.Error())
 		}
-		// wg := &sync.WaitGroup{}
-		for i := 0; i < pingCommandCount; i++ {
+		wg := &sync.WaitGroup{}
+		for i := uint16(0); i < pingCommandCount; i++ {
 			ping := &PingCommand{}
 			pingCommands[i] = ping
-			if err := cluster.Execute(ping); err != nil {
-				t.Log(err)
-			}
 			args := &Async{
 				Command: ping,
-				Wait: wg,
+				Wait:    wg,
 			}
 			if err := cluster.ExecuteAsync(args); err != nil {
-				t.Log(err)
+				t.Error(err)
 			}
-			time.Sleep(time.Second)
 		}
-		// wg.Wait()
-		// setStateFunc = origSetStateFunc
+		wg.Wait()
+		node.setStateFunc = origNodeSetStateFunc
+		close(stateChan)
 		if err := cluster.Stop(); err != nil {
 			t.Error(err.Error())
 		}
-		close(stateChan)
 	}()
 
 	listenerStarted := false
-	nodeIsRunningCount := 0
 	for {
 		if nodeState, ok := <-stateChan; ok {
 			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "got nodeState: '%v'", nodeState)
-			if node.isCurrentState(nodeRunning) {
-				nodeIsRunningCount++
-			}
-			if nodeIsRunningCount == 2 {
-				// This is the second time node has entered nodeRunning state, so it must have recovered via the health check
-				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "SUCCESS node recovered via health check")
-			}
 			if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
 				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "starting listener")
 				listenerStarted = true
@@ -405,11 +391,12 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 						}()
 					}
 				}()
+
+				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "listener is started")
 			}
 		} else {
-			t.Log("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck] stateChan CLOSED")
+			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "stateChan CLOSED")
 			break
 		}
 	}
 }
-*/
