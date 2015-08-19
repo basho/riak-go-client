@@ -8,14 +8,17 @@ import (
 	"time"
 )
 
-func init() {
-	integrationTestsBuildCluster()
-}
-
 // FetchIndex
 // StoreIndex
 
 func TestStoreFetchAndDeleteAYokozunaIndex(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var err error
 	var cmd Command
 	indexName := "indexName"
@@ -82,6 +85,13 @@ func TestStoreFetchAndDeleteAYokozunaIndex(t *testing.T) {
 // StoreSchema
 
 func TestStoreFetchAndDeleteAYokozunaSchema(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var err error
 	var cmd Command
 	defaultSchemaName := "_yz_default"
@@ -129,6 +139,13 @@ func TestStoreFetchAndDeleteAYokozunaSchema(t *testing.T) {
 // Search
 
 func TestSearchViaYokozunaIndex(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var err error
 	var cmd Command
 	indexName := "myIndex"

@@ -19,15 +19,18 @@ type stateful interface {
 
 type stateData struct {
 	sync.RWMutex
-	stateVal  state
-	stateDesc []string
+	stateVal     state
+	stateDesc    []string
+	setStateFunc func(sd *stateData, st state)
 }
 
-func newStateData(desc ...string) *stateData {
-	sd := &stateData{
-		stateDesc: desc,
-	}
-	return sd
+var defaultSetStateFunc = func(sd *stateData, st state) {
+	sd.stateVal = st
+}
+
+func (s *stateData) initStateData(desc ...string) {
+	s.stateDesc = desc
+	s.setStateFunc = defaultSetStateFunc
 }
 
 func (s *stateData) String() string {
@@ -37,10 +40,6 @@ func (s *stateData) String() string {
 	} else {
 		return fmt.Sprintf("STATE_%v", stateIdx)
 	}
-}
-
-func (s *stateData) setStateDesc(desc ...string) {
-	s.stateDesc = desc
 }
 
 func (s *stateData) isCurrentState(st state) (rv bool) {
@@ -66,14 +65,10 @@ func (s *stateData) getState() (st state) {
 	return
 }
 
-var setStateFunc = func(s *stateData, st state) {
+func (s *stateData) setState(st state) {
 	s.Lock()
 	defer s.Unlock()
-	s.stateVal = st
-}
-
-func (s *stateData) setState(st state) {
-	setStateFunc(s, st)
+	s.setStateFunc(s, st)
 }
 
 func (s *stateData) stateCheck(allowed ...state) (err error) {

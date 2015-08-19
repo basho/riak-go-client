@@ -31,6 +31,8 @@ type Command interface {
 	getResponseCode() byte
 	getResponseProtobufMessage() proto.Message
 	// command re-try
+	setLastNode(*Node)
+	getLastNode() *Node
 	setRemainingTries(byte)
 	decrementRemainingTries()
 	hasRemainingTries() bool

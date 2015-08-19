@@ -10,13 +10,16 @@ import (
 	"time"
 )
 
-func init() {
-	integrationTestsBuildCluster()
-}
-
 // FetchValue
 
 func TestFetchANotFoundFromRiakUsingDefaultBucketType(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var err error
 	var cmd Command
 	builder := NewFetchValueCommandBuilder()
@@ -52,6 +55,13 @@ func TestFetchANotFoundFromRiakUsingDefaultBucketType(t *testing.T) {
 }
 
 func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	obj := getBasicObject()
 	store, err := NewStoreValueCommandBuilder().
 		WithBucket(testBucketName).
@@ -113,6 +123,13 @@ func TestFetchAValueFromRiakUsingDefaultBucketType(t *testing.T) {
 
 // StoreValue
 func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	obj := getBasicObject()
 	cmd, err := NewStoreValueCommandBuilder().
 		WithBucket(testBucketName).
@@ -142,6 +159,13 @@ func TestStoreValueWithRiakGeneratedKey(t *testing.T) {
 // ListBuckets
 
 func TestListBucketsInDefaultBucketType(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	totalCount := 50
 	bucketPrefix := fmt.Sprintf("LBDT_%d", time.Now().Unix())
 	obj := getBasicObject()
@@ -220,6 +244,13 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 // ListKeys
 
 func TestListKeysInDefaultBucketType(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	totalCount := 50
 	keyPrefix := fmt.Sprintf("LKDT_%d", time.Now().Unix())
 	obj := getBasicObject()
@@ -297,6 +328,13 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 // FetchPreflist
 
 func TestFetchPreflistForAValue(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	key := fmt.Sprintf("FetchPreflist_%d", time.Now().Unix())
 	obj := getBasicObject()
 	store, err := NewStoreValueCommandBuilder().
@@ -339,10 +377,17 @@ func TestFetchPreflistForAValue(t *testing.T) {
 
 var indexDataAdded = false
 
-func addDataToIndexes() {
+func addDataToIndexes(t *testing.T) {
 	if indexDataAdded {
 		return
 	}
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var store Command
 	var err error
 	for i := 0; i < 25; i++ {
@@ -389,7 +434,14 @@ func addDataToIndexes() {
 }
 
 func TestIntQueryAgainstDefaultType(t *testing.T) {
-	addDataToIndexes()
+	addDataToIndexes(t)
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -416,7 +468,14 @@ func TestIntQueryAgainstDefaultType(t *testing.T) {
 }
 
 func TestIntQueryAgainstNonDefaultType(t *testing.T) {
-	addDataToIndexes()
+	addDataToIndexes(t)
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -444,7 +503,14 @@ func TestIntQueryAgainstNonDefaultType(t *testing.T) {
 }
 
 func TestBinQueryAgainstDefaultType(t *testing.T) {
-	addDataToIndexes()
+	addDataToIndexes(t)
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -471,7 +537,14 @@ func TestBinQueryAgainstDefaultType(t *testing.T) {
 }
 
 func TestBinQueryAgainstNonDefaultType(t *testing.T) {
-	addDataToIndexes()
+	addDataToIndexes(t)
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -499,7 +572,14 @@ func TestBinQueryAgainstNonDefaultType(t *testing.T) {
 }
 
 func TestSetContinuationOnPaginatedQuery(t *testing.T) {
-	addDataToIndexes()
+	addDataToIndexes(t)
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	var cmd Command
 	var err error
 	cmd, err = NewSecondaryIndexQueryCommandBuilder().
@@ -532,6 +612,13 @@ func TestSetContinuationOnPaginatedQuery(t *testing.T) {
 
 // MapReduceCommand
 func TestMapReduceCommand(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
 	bucket := fmt.Sprintf("%s_mr", testBucketName)
 	stuffToStore := [...]string{
 		"Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice 'without pictures or conversation?",

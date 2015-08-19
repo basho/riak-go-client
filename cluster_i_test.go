@@ -5,6 +5,7 @@ package riak
 import (
 	"net"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -162,7 +163,7 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 						}
 						return
 					}
-					go handleClientMessageWithRiakError(t, conn, listenerChan)
+					go handleClientMessageWithRiakError(t, conn, 1, listenerChan)
 				}
 			}()
 
@@ -219,5 +220,183 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	fetch := cmd.(*FetchValueCommand)
 	if expected, actual := byte(0), fetch.remainingTries; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestAsyncExecuteCommandOnCluster(t *testing.T) {
+	nodeOpts := &NodeOptions{
+		RemoteAddress: getRiakAddress(),
+	}
+
+	var node *Node
+	var err error
+	if node, err = NewNode(nodeOpts); err != nil {
+		t.Fatal(err.Error())
+	}
+	if node == nil {
+		t.FailNow()
+	}
+
+	nodes := []*Node{node}
+	opts := &ClusterOptions{
+		Nodes:             nodes,
+		ExecutionAttempts: 3,
+	}
+
+	cluster, err := NewCluster(opts)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	if err := cluster.Start(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	command := &PingCommand{}
+	args := &Async{
+		Command: command,
+		Done:    make(chan Command),
+	}
+	if err := cluster.ExecuteAsync(args); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	done := <-args.Done
+	pingDone := done.(*PingCommand)
+
+	if expected, actual := true, command == pingDone; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := true, command.hasRemainingTries(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := byte(3), command.remainingTries; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := true, command.Successful(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+
+	command = &PingCommand{}
+	wg := &sync.WaitGroup{}
+	args = &Async{
+		Command: command,
+		Wait:    wg,
+	}
+	if err := cluster.ExecuteAsync(args); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	wg.Wait()
+	if expected, actual := true, command.Successful(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
+	pingCommandCount := uint16(8)
+	port := 13339
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	stateChan := make(chan state)
+
+	var node *Node
+	pingCommands := make([]*PingCommand, pingCommandCount)
+
+	go func() {
+		var err error
+		nodeOpts := &NodeOptions{
+			RemoteAddress:  addr,
+			MinConnections: 0,
+		}
+		node, err = NewNode(nodeOpts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if node == nil {
+			t.FailNow()
+		}
+		origNodeSetStateFunc := node.setStateFunc
+		node.setStateFunc = func(sd *stateData, st state) {
+			origNodeSetStateFunc(&node.stateData, st)
+			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "sending state '%v' down stateChan", st)
+			stateChan <- st
+		}
+		nodes := []*Node{node}
+		clusterOpts := &ClusterOptions{
+			Nodes:             nodes,
+			ExecutionAttempts: 3,
+			QueueMaxDepth:     pingCommandCount,
+		}
+		cluster, err := NewCluster(clusterOpts)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		if err := cluster.Start(); err != nil {
+			t.Fatal(err.Error())
+		}
+		wg := &sync.WaitGroup{}
+		for i := uint16(0); i < pingCommandCount; i++ {
+			ping := &PingCommand{}
+			pingCommands[i] = ping
+			args := &Async{
+				Command: ping,
+				Wait:    wg,
+			}
+			if err := cluster.ExecuteAsync(args); err != nil {
+				t.Error(err)
+			}
+		}
+		wg.Wait()
+		node.setStateFunc = origNodeSetStateFunc
+		close(stateChan)
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	listenerStarted := false
+	for {
+		if nodeState, ok := <-stateChan; ok {
+			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "got nodeState: '%v'", nodeState)
+			if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
+				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "starting listener")
+				listenerStarted = true
+				ln, err := net.Listen("tcp", addr)
+				if err != nil {
+					t.Error(err)
+				}
+				defer ln.Close()
+
+				go func() {
+					for {
+						c, err := ln.Accept()
+						if err != nil {
+							if _, ok := err.(*net.OpError); !ok {
+								t.Error(err)
+							}
+							return
+						}
+						go func() {
+							for {
+								if !readWritePingResp(t, c, false) {
+									break
+								}
+							}
+						}()
+					}
+				}()
+
+				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "listener is started")
+			}
+		} else {
+			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "stateChan CLOSED")
+			break
+		}
 	}
 }

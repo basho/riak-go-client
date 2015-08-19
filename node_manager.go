@@ -1,46 +1,63 @@
 package riak
 
-import "sync"
-
 // NodeManager enforces the structure needed to if going to implement your own NodeManager
 type NodeManager interface {
-	ExecuteOnNode(nodes []*Node, command Command, previous *Node) (executed bool, err error)
+	Init(nodes []*Node) error
+	ExecuteOnNode(command Command, previousNode *Node) (bool, error)
 }
 
+var ErrDefaultNodeManagerRequiresNode = newClientError("Must pass at least one node to default node manager")
+
 type defaultNodeManager struct {
-	nodeIndex uint16
-	mtx       sync.Mutex
+	qsz uint16
+	q   *queue
+}
+
+func (nm *defaultNodeManager) Init(nodes []*Node) error {
+	if nodes == nil {
+		panic("[defaultNodeManager] nil nodes argument")
+	}
+	if len(nodes) == 0 || nodes[0] == nil {
+		return ErrDefaultNodeManagerRequiresNode
+	}
+	nm.qsz = uint16(len(nodes))
+	nm.q = newQueue(nm.qsz)
+	for _, n := range nodes {
+		nm.q.enqueue(n)
+	}
+	return nil
 }
 
 // ExecuteOnNode selects a Node from the pool and executes the provided Command on that Node. The
 // defaultNodeManager uses a simple round robin approach to distributing load
-func (nm *defaultNodeManager) ExecuteOnNode(nodes []*Node, command Command, previous *Node) (executed bool, err error) {
-	nm.mtx.Lock()
-	defer nm.mtx.Unlock()
-
+func (nm *defaultNodeManager) ExecuteOnNode(command Command, previous *Node) (executed bool, err error) {
+	var val interface{}
 	executed = false
-	startingIndex := nm.nodeIndex
-
+	i := uint16(0)
 	for {
-		node := nodes[nm.nodeIndex]
-
-		nm.nodeIndex++
-
-		if int(nm.nodeIndex) == len(nodes) {
-			nm.nodeIndex = 0
+		val, err = nm.q.dequeue()
+		if err != nil {
+			nm.q.enqueue(val)
+			break
 		}
+		node := val.(*Node)
+		i++
 
 		// don't try the same node twice in a row if we have multiple nodes
-		if len(nodes) > 1 && previous != nil && previous == node {
+		if nm.qsz > 1 && previous != nil && previous == node {
+			nm.q.enqueue(node)
 			continue
 		}
 
 		if executed, err = node.execute(command); executed == true {
-			logDebug("[DefaultNodeManager]", "executed '%s' on node '%s', err '%s'", command.Name(), node, err)
+			logDebug("[DefaultNodeManager]", "executed '%s' on node '%s', err '%v'", command.Name(), node, err)
+			nm.q.enqueue(node)
 			break
 		}
 
-		if nm.nodeIndex == startingIndex {
+		if i >= nm.qsz {
+			logDebug("[DefaultNodeManager]", "tried all nodes to execute '%s'", command.Name())
+			nm.q.enqueue(node)
 			break
 		}
 	}

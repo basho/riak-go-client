@@ -9,13 +9,16 @@ const (
 	thirtyMinutes = time.Minute * 30
 )
 
-const defaultRemoteAddress = "127.0.0.1:8087"
-const defaultMinConnections = 1
-const defaultMaxConnections = 8096
-const defaultIdleTimeout = time.Second * 3
-const defaultConnectTimeout = time.Second * 30
-const defaultRequestTimeout = time.Second * 5
-const defaultHealthCheckInterval = time.Second * 5
-const defaultExecutionAttempts = byte(3)
+const (
+	defaultRemoteAddress          = "127.0.0.1:8087"
+	defaultMinConnections         = 1
+	defaultMaxConnections         = 8096
+	defaultIdleTimeout            = time.Second * 3
+	defaultConnectTimeout         = time.Second * 30
+	defaultRequestTimeout         = time.Second * 5
+	defaultHealthCheckInterval    = time.Second
+	defaultExecutionAttempts      = byte(3)
+	defaultQueueExecutionInterval = time.Second
 
-const defaultBucketType = "default"
+	defaultBucketType = "default"
+)

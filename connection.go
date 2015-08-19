@@ -251,6 +251,7 @@ func (c *connection) read() (data []byte, err error) {
 		}
 	}
 	if err != nil {
+		logDebug("[Connection]", "error in read: '%v'", err)
 		// TODO why not close() ?
 		c.state = connInactive
 		data = nil
@@ -270,6 +271,7 @@ func (c *connection) write(data []byte) (err error) {
 	// TODO evaluate/test error conditions
 	count, err = c.conn.Write(data)
 	if err != nil {
+		logDebug("[Connection]", "error in write: '%v'", err)
 		if err == syscall.EPIPE {
 			c.close()
 		}

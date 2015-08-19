@@ -105,7 +105,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			authOptions:         options.AuthOptions,
 			available:           make([]*connection, 0, options.MinConnections),
 		}
-		n.setStateDesc("nodeError", "nodeCreated", "nodeRunning", "nodeHealthChecking", "nodeShuttingDown", "nodeShutdown")
+		n.initStateData("nodeError", "nodeCreated", "nodeRunning", "nodeHealthChecking", "nodeShuttingDown", "nodeShutdown")
 		n.setState(nodeCreated)
 		return n, nil
 	}
@@ -121,16 +121,15 @@ func (n *Node) String() string {
 
 // Start opens a connection with Riak at the configured remoteAddress and adds the connections to the
 // active pool
-func (n *Node) start() (err error) {
-	if err = n.stateCheck(nodeCreated); err != nil {
-		return
+func (n *Node) start() error {
+	if err := n.stateCheck(nodeCreated); err != nil {
+		return err
 	}
 
 	logDebug("[Node]", "(%v) starting", n)
 
 	for i := uint16(0); i < n.minConnections; i++ {
-		var conn *connection
-		if conn, err = n.createNewConnection(nil, false); err == nil {
+		if conn, err := n.createNewConnection(nil, false); err == nil {
 			if conn == nil {
 				// Should never happen
 				panic(fmt.Sprintf("[Node] (%v) could not create connection in Start", n))
@@ -138,12 +137,8 @@ func (n *Node) start() (err error) {
 				n.returnConnectionToPool(conn, false)
 			}
 		} else {
-			break
+			logErr("[Node]", err)
 		}
-	}
-
-	if err != nil {
-		return
 	}
 
 	n.expireTicker = time.NewTicker(thirtySeconds)
@@ -151,7 +146,7 @@ func (n *Node) start() (err error) {
 
 	n.setState(nodeRunning)
 	logDebug("[Node]", "(%v) started", n)
-	return
+	return nil
 }
 
 // Stop closes the connections with Riak at the configured remoteAddress and removes the connections
@@ -162,8 +157,8 @@ func (n *Node) stop() (err error) {
 	}
 	n.setState(nodeShuttingDown)
 	n.stopChan <- true
-	n.expireTicker.Stop()
 	close(n.stopChan)
+	n.expireTicker.Stop()
 	logDebug("[Node]", "(%v) shutting down.", n)
 	n.shutdown()
 	return
@@ -177,6 +172,8 @@ func (n *Node) execute(cmd Command) (executed bool, err error) {
 	if err = n.stateCheck(nodeRunning, nodeHealthChecking); err != nil {
 		return
 	}
+
+	cmd.setLastNode(n)
 
 	if n.isCurrentState(nodeRunning) {
 		var conn *connection
