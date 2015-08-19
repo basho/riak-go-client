@@ -8,17 +8,21 @@ import (
 	rpbRiakKV "github.com/basho/riak-go-client/rpb/riak_kv"
 )
 
+// Link is used to represent a Riak KV object link, which is a one way link to another object within
+// Riak
 type Link struct {
 	Bucket string
 	Key    string
 	Tag    string
 }
 
+// Pair is used to store user defined meta data with a key and value
 type Pair struct {
 	Key   string
 	Value string
 }
 
+// Object structure used for representing a KV Riak object
 type Object struct {
 	BucketType      string
 	Bucket          string
@@ -36,22 +40,29 @@ type Object struct {
 	VClock          []byte
 }
 
+// HasIndexes is a bool check to determine if the object contains any secondary indexes for searching
 func (o *Object) HasIndexes() bool {
 	return len(o.Indexes) > 0
 }
 
+// HasUserMeta is a bool check to determine if the object contains any user defined meta data
 func (o *Object) HasUserMeta() bool {
 	return len(o.UserMeta) > 0
 }
 
+// HasLinks is a bool check to determine if the object contains any links
 func (o *Object) HasLinks() bool {
 	return len(o.Links) > 0
 }
 
+// AddToIntIndex adds the object to the specified secondary index with the integer value to be used
+// for index searches
 func (o *Object) AddToIntIndex(indexName string, indexValue int) {
 	o.AddToIndex(indexName, fmt.Sprintf("%v", indexValue))
 }
 
+// AddToIndex adds the object to the specified secondary index with the string value to be used for
+// index searches
 func (o *Object) AddToIndex(indexName string, indexValue string) {
 	if o.Indexes == nil {
 		o.Indexes = make(map[string][]string)

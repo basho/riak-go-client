@@ -23,7 +23,7 @@ func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
 		WithPr(1).
 		WithBasicQuorum(true).
 		WithNotFoundOk(true).
-		WithIfNotModified(vclockBytes).
+		WithIfModified(vclockBytes).
 		WithHeadOnly(true).
 		WithReturnDeletedVClock(true).
 		WithTimeout(time.Second * 20).

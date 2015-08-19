@@ -10,12 +10,14 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
+// SearchIndex object representing the solr index that is returned from Riak
 type SearchIndex struct {
 	Name   string
 	Schema string
 	NVal   uint32
 }
 
+// Schema object representing the solr schema that is returned from Riak
 type Schema struct {
 	Name    string
 	Content string
@@ -25,6 +27,7 @@ type Schema struct {
 // RpbYokozunaIndexPutReq
 // RpbPutResp
 
+// StoreIndexCommand is sused to store a new search index on Riak
 type StoreIndexCommand struct {
 	CommandImpl
 	Response bool
@@ -60,10 +63,10 @@ func (cmd *StoreIndexCommand) getResponseProtobufMessage() proto.Message {
 
 // StoreIndexCommandBuilder type is required for creating new instances of StoreIndexCommand
 //
-//    command := NewStoreIndexCommandBuilder().
-//        WithIndexName("myIndexName").
-//        WithSchemaName("mySchemaName").
-//        Build()
+//	command := NewStoreIndexCommandBuilder().
+//		WithIndexName("myIndexName").
+//		WithSchemaName("mySchemaName").
+//		Build()
 type StoreIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
@@ -83,6 +86,7 @@ func (builder *StoreIndexCommandBuilder) WithIndexName(indexName string) *StoreI
 	return builder
 }
 
+// WithSchemaName sets the schema that the command will use
 func (builder *StoreIndexCommandBuilder) WithSchemaName(schemaName string) *StoreIndexCommandBuilder {
 	builder.protobuf.Index.Schema = []byte(schemaName)
 	return builder
@@ -116,6 +120,7 @@ func (builder *StoreIndexCommandBuilder) Build() (Command, error) {
 // RpbYokozunaIndexGetReq
 // RpbYokozunaIndexGetResp
 
+// FetchIndexCommand is used to fetch a search index from Riak
 type FetchIndexCommand struct {
 	CommandImpl
 	Response []*SearchIndex
@@ -168,9 +173,9 @@ func (cmd *FetchIndexCommand) getResponseProtobufMessage() proto.Message {
 
 // FetchIndexCommandBuilder type is required for creating new instances of FetchIndexCommand
 //
-//    command := NewFetchIndexCommandBuilder().
-//        WithIndexName("myIndexName").
-//        Build()
+//	command := NewFetchIndexCommandBuilder().
+//		WithIndexName("myIndexName").
+//		Build()
 type FetchIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexGetReq
 }
@@ -199,6 +204,7 @@ func (builder *FetchIndexCommandBuilder) Build() (Command, error) {
 // RpbYokozunaIndexDeleteReq
 // RpbDelResp
 
+// DeleteIndexCommand is used to delete a search index from Riak
 type DeleteIndexCommand struct {
 	CommandImpl
 	Response bool
@@ -232,6 +238,11 @@ func (cmd *DeleteIndexCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// DeleteIndexCommandBuilder type is required for creating new instances of DeleteIndexCommand
+//
+//	command := NewDeleteIndexCommandBuilder().
+//		WithIndexName("myIndexName").
+//		Build()
 type DeleteIndexCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaIndexDeleteReq
 }
@@ -260,6 +271,7 @@ func (builder *DeleteIndexCommandBuilder) Build() (Command, error) {
 // RpbYokozunaSchemaPutReq
 // RpbPutResp
 
+// StoreSchemaCommand is used to store / update a search schema in Riak
 type StoreSchemaCommand struct {
 	CommandImpl
 	Response bool
@@ -293,6 +305,12 @@ func (cmd *StoreSchemaCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// StoreSchemaCommandBuilder type is required for creating new instances of StoreSchemaCommand
+//
+//	command := NewStoreSchemaCommandBuilder().
+//		WithSchemaName("mySchemaName").
+//		WithSchema("mySchemaXML").
+//		Build()
 type StoreSchemaCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaPutReq
 }
@@ -306,11 +324,13 @@ func NewStoreSchemaCommandBuilder() *StoreSchemaCommandBuilder {
 	return builder
 }
 
+// WithSchemaName sets the name for the schema to be stored
 func (builder *StoreSchemaCommandBuilder) WithSchemaName(schemaName string) *StoreSchemaCommandBuilder {
 	builder.protobuf.Schema.Name = []byte(schemaName)
 	return builder
 }
 
+// WithSchema sets the actual schema that solr will use for indexing and queries
 func (builder *StoreSchemaCommandBuilder) WithSchema(schema string) *StoreSchemaCommandBuilder {
 	builder.protobuf.Schema.Content = []byte(schema)
 	return builder
@@ -328,6 +348,7 @@ func (builder *StoreSchemaCommandBuilder) Build() (Command, error) {
 // RpbYokozunaSchemaPutReq
 // RpbPutResp
 
+// FetchSchemaCommand is used to GET a search schema from Riak
 type FetchSchemaCommand struct {
 	CommandImpl
 	Response *Schema
@@ -373,6 +394,11 @@ func (cmd *FetchSchemaCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakYZ.RpbYokozunaSchemaGetResp{}
 }
 
+// FetchSchemaCommandBuilder type is required for creating new instances of FetchSchemaCommand
+//
+//	command := NewFetchSchemaCommandBuilder().
+//		WithSchemaName("mySchemaName").
+//		Build()
 type FetchSchemaCommandBuilder struct {
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaGetReq
 }
@@ -383,6 +409,7 @@ func NewFetchSchemaCommandBuilder() *FetchSchemaCommandBuilder {
 	return builder
 }
 
+// WithSchemaName sets the schema that the command will use
 func (builder *FetchSchemaCommandBuilder) WithSchemaName(schemaName string) *FetchSchemaCommandBuilder {
 	builder.protobuf.Name = []byte(schemaName)
 	return builder
@@ -400,6 +427,7 @@ func (builder *FetchSchemaCommandBuilder) Build() (Command, error) {
 // RpbSearchQueryReq
 // RpbSearchQueryResp
 
+// SearchCommand is used to search Riak for values using search indexes & schemas
 type SearchCommand struct {
 	CommandImpl
 	Response *SearchResponse
@@ -486,6 +514,7 @@ const yzKeyFld = "_yz_rk"
 const yzIdFld = "_yz_id"
 const yzScoreFld = "score"
 
+// SearchDoc object representing solr document returned from Riak
 type SearchDoc struct {
 	BucketType string
 	Bucket     string
@@ -495,12 +524,20 @@ type SearchDoc struct {
 	Fields     map[string][]string
 }
 
+// SearchResponse contains the response data for a SearchCommand
 type SearchResponse struct {
 	Docs     []*SearchDoc
 	MaxScore float32
 	NumFound uint32
 }
 
+// SearchCommandBuilder type is required for creating new instances of SearchCommand
+//
+//	command := NewSearchCommandBuilder().
+//		WithIndexName("myIndexName").
+//		WithQuery("mySolrQuery").
+//		WithNumRows(100).
+//		Build()
 type SearchCommandBuilder struct {
 	protobuf *rpbRiakSCH.RpbSearchQueryReq
 }
@@ -517,41 +554,54 @@ func (builder *SearchCommandBuilder) WithIndexName(index string) *SearchCommandB
 	return builder
 }
 
+// WithQuery sets the solr query to be executed on Riak
 func (builder *SearchCommandBuilder) WithQuery(query string) *SearchCommandBuilder {
 	builder.protobuf.Q = []byte(query)
 	return builder
 }
 
+// WithNumRows sets the number of documents to be returned by Riak
 func (builder *SearchCommandBuilder) WithNumRows(numRows uint32) *SearchCommandBuilder {
 	builder.protobuf.Rows = &numRows
 	return builder
 }
 
+// WithStart sets the document to start the result set with
 func (builder *SearchCommandBuilder) WithStart(start uint32) *SearchCommandBuilder {
 	builder.protobuf.Start = &start
 	return builder
 }
 
+// WithSortField defines which field should be used for sorting the result set
 func (builder *SearchCommandBuilder) WithSortField(sortField string) *SearchCommandBuilder {
 	builder.protobuf.Sort = []byte(sortField)
 	return builder
 }
 
+// WithFilterQuery sets the solr filter query to be used, the main query runs first, the filter
+// query reduces the scope of the result set even further
 func (builder *SearchCommandBuilder) WithFilterQuery(filterQuery string) *SearchCommandBuilder {
 	builder.protobuf.Filter = []byte(filterQuery)
 	return builder
 }
 
+// WithDefaultField sets the default field to be used by Riak the search query
+//
+// See https://wiki.apache.org/solr/SolrQuerySyntax
 func (builder *SearchCommandBuilder) WithDefaultField(defaultField string) *SearchCommandBuilder {
 	builder.protobuf.Df = []byte(defaultField)
 	return builder
 }
 
+// WithDefaultOperation sets the default operation to be used by Riak for the search query
+//
+// See https://wiki.apache.org/solr/SolrQuerySyntax
 func (builder *SearchCommandBuilder) WithDefaultOperation(op string) *SearchCommandBuilder {
 	builder.protobuf.Op = []byte(op)
 	return builder
 }
 
+// WithReturnFields sets the fields to be returned within each document
 func (builder *SearchCommandBuilder) WithReturnFields(fields ...string) *SearchCommandBuilder {
 	builder.protobuf.Fl = make([][]byte, len(fields))
 	for i, f := range fields {
@@ -560,6 +610,7 @@ func (builder *SearchCommandBuilder) WithReturnFields(fields ...string) *SearchC
 	return builder
 }
 
+// WithPresort allows you to configure Riak to presort the result set by Key or Score
 func (builder *SearchCommandBuilder) WithPresort(presort string) *SearchCommandBuilder {
 	builder.protobuf.Presort = []byte(presort)
 	return builder

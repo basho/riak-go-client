@@ -19,7 +19,7 @@ type ConflictResolver interface {
 	Resolve([]*Object) []*Object
 }
 
-// FetchValueCommand is used to fetch / get a value from Riak
+// FetchValueCommand is used to fetch / get a value from Riak KV
 type FetchValueCommand struct {
 	CommandImpl
 	Response *FetchValueResponse
@@ -108,11 +108,11 @@ type FetchValueResponse struct {
 
 // FetchValueCommandBuilder type is required for creating new instances of FetchValueCommand
 //
-//    command := NewFetchValueCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//        Build()
+//	command := NewFetchValueCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
@@ -175,26 +175,40 @@ func (builder *FetchValueCommandBuilder) WithNVal(nval uint32) *FetchValueComman
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchValueCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchValueCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchValueCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchValueCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
-func (builder *FetchValueCommandBuilder) WithIfNotModified(ifNotModified []byte) *FetchValueCommandBuilder {
-	builder.protobuf.IfModified = ifNotModified
+// WithIfModified tells Riak to only return the object if the vclock in Riak differs from what is
+// provided
+func (builder *FetchValueCommandBuilder) WithIfModified(ifModified []byte) *FetchValueCommandBuilder {
+	builder.protobuf.IfModified = ifModified
 	return builder
 }
 
+// WithHeadOnly returns only the meta data for the value, useful when objects contain large amounts
+// of data
 func (builder *FetchValueCommandBuilder) WithHeadOnly(headOnly bool) *FetchValueCommandBuilder {
 	builder.protobuf.Head = &headOnly
 	return builder
 }
 
+// WithReturnDeletedVClock sets the command to return a Tombstone if any our found for the key across
+// all of the vnodes
 func (builder *FetchValueCommandBuilder) WithReturnDeletedVClock(returnDeletedVClock bool) *FetchValueCommandBuilder {
 	builder.protobuf.Deletedvclock = &returnDeletedVClock
 	return builder
@@ -207,6 +221,9 @@ func (builder *FetchValueCommandBuilder) WithTimeout(timeout time.Duration) *Fet
 	return builder
 }
 
+// WithSloppyQuorum sets the sloppy_quorum for this Command
+//
+// See http://docs.basho.com/riak/latest/theory/concepts/Eventual-Consistency/
 func (builder *FetchValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *FetchValueCommandBuilder {
 	builder.protobuf.SloppyQuorum = &sloppyQuorum
 	return builder
@@ -227,7 +244,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 // RpbPutReq
 // RpbPutResp
 
-// Command used to store a value from Riak KV.
+// StoreValueCommand used to store a value from Riak KV.
 type StoreValueCommand struct {
 	CommandImpl
 	Response *StoreValueResponse
@@ -287,19 +304,20 @@ func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
 			if pbContent := rpbPutResp.GetContent(); pbContent != nil && len(pbContent) > 0 {
 				response.Values = make([]*Object, len(pbContent))
 				for i, content := range pbContent {
-					if ro, err := fromRpbContent(content); err != nil {
+					ro, err := fromRpbContent(content)
+					if err != nil {
 						return err
-					} else {
-						ro.VClock = vclock
-						ro.BucketType = string(cmd.protobuf.Type)
-						ro.Bucket = string(cmd.protobuf.Bucket)
-						if responseKey == "" {
-							ro.Key = string(cmd.protobuf.Key)
-						} else {
-							ro.Key = responseKey
-						}
-						response.Values[i] = ro
 					}
+
+					ro.VClock = vclock
+					ro.BucketType = string(cmd.protobuf.Type)
+					ro.Bucket = string(cmd.protobuf.Bucket)
+					if responseKey == "" {
+						ro.Key = string(cmd.protobuf.Key)
+					} else {
+						ro.Key = responseKey
+					}
+					response.Values[i] = ro
 				}
 				if cmd.resolver != nil {
 					response.Values = cmd.resolver.Resolve(response.Values)
@@ -326,6 +344,7 @@ func (cmd *StoreValueCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbPutResp{}
 }
 
+// StoreValueResponse contains the response data for a StoreValueCommand
 type StoreValueResponse struct {
 	GeneratedKey string
 	VClock       []byte
@@ -334,10 +353,10 @@ type StoreValueResponse struct {
 
 // StoreValueCommandBuilder type is required for creating new instances of StoreValueCommand
 //
-//    command := NewStoreValueCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        Build()
+//	command := NewStoreValueCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		Build()
 type StoreValueCommandBuilder struct {
 	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
@@ -350,6 +369,8 @@ func NewStoreValueCommandBuilder() *StoreValueCommandBuilder {
 	return builder
 }
 
+// WithConflictResolver sets the ConflictResolver that should be used when sibling conflicts are found
+// for this operation
 func (builder *StoreValueCommandBuilder) WithConflictResolver(resolver ConflictResolver) *StoreValueCommandBuilder {
 	builder.resolver = resolver
 	return builder
@@ -373,11 +394,13 @@ func (builder *StoreValueCommandBuilder) WithKey(key string) *StoreValueCommandB
 	return builder
 }
 
+// WithVClock sets the vclock for the object to be stored, providing causal context for conflicts
 func (builder *StoreValueCommandBuilder) WithVClock(vclock []byte) *StoreValueCommandBuilder {
 	builder.protobuf.Vclock = vclock
 	return builder
 }
 
+// WithContent sets the object / value to be stored at the specified key
 func (builder *StoreValueCommandBuilder) WithContent(object *Object) *StoreValueCommandBuilder {
 	builder.value = object
 	return builder
@@ -428,16 +451,21 @@ func (builder *StoreValueCommandBuilder) WithReturnBody(returnBody bool) *StoreV
 	return builder
 }
 
+// WithIfNotModified tells Riak to only update the object in Riak if the vclock provided matches the
+// one currently in Riak
 func (builder *StoreValueCommandBuilder) WithIfNotModified(ifNotModified bool) *StoreValueCommandBuilder {
 	builder.protobuf.IfNotModified = &ifNotModified
 	return builder
 }
 
+// WithIfNoneMatch tells Riak to store the object only if it does not already exist in the database
 func (builder *StoreValueCommandBuilder) WithIfNoneMatch(ifNoneMatch bool) *StoreValueCommandBuilder {
 	builder.protobuf.IfNoneMatch = &ifNoneMatch
 	return builder
 }
 
+// WithReturnHead returns only the meta data for the value, useful when objects contain large amounts
+// of data
 func (builder *StoreValueCommandBuilder) WithReturnHead(returnHead bool) *StoreValueCommandBuilder {
 	builder.protobuf.ReturnHead = &returnHead
 	return builder
@@ -450,11 +478,17 @@ func (builder *StoreValueCommandBuilder) WithTimeout(timeout time.Duration) *Sto
 	return builder
 }
 
+// WithAsis sets the asis option
+// Please note, this is an advanced feature, only use with caution
 func (builder *StoreValueCommandBuilder) WithAsis(asis bool) *StoreValueCommandBuilder {
 	builder.protobuf.Asis = &asis
 	return builder
 }
 
+// WithSloppyQuorum sets the sloppy_quorum for this Command
+// Please note, this is an advanced feature, only use with caution
+//
+// See http://docs.basho.com/riak/latest/theory/concepts/Eventual-Consistency/
 func (builder *StoreValueCommandBuilder) WithSloppyQuorum(sloppyQuorum bool) *StoreValueCommandBuilder {
 	builder.protobuf.SloppyQuorum = &sloppyQuorum
 	return builder
@@ -475,7 +509,7 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 // RpbDelReq
 // RpbDelResp
 
-// Command used to delete a value from Riak KV.
+// DeleteValueCommand is used to delete a value from Riak KV.
 type DeleteValueCommand struct {
 	CommandImpl
 	Response bool
@@ -512,12 +546,12 @@ func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
 
 // DeleteValueCommandBuilder type is required for creating new instances of DeleteValueCommand
 //
-//    deleteValue := NewDeleteValueCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//        WithVClock(vclock).
-//        Build()
+//	deleteValue := NewDeleteValueCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithVClock(vclock).
+//		Build()
 type DeleteValueCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbDelReq
 }
@@ -546,7 +580,7 @@ func (builder *DeleteValueCommandBuilder) WithKey(key string) *DeleteValueComman
 	return builder
 }
 
-// Set the vector clock.
+// WithVClock sets the vector clock.
 //
 // If not set siblings may be created depending on bucket properties.
 func (builder *DeleteValueCommandBuilder) WithVClock(vclock []byte) *DeleteValueCommandBuilder {
@@ -601,9 +635,12 @@ func (builder *DeleteValueCommandBuilder) WithDw(dw uint32) *DeleteValueCommandB
 	return builder
 }
 
-// Set the RW value.
+// WithRw (delete quorum) sets the number of nodes that must report back a successful delete to
+// backend storage in order for the command operation to be considered a success by Riak. It
+// represents the read and write operations that are completed internal to Riak to complete a delete.
+// If ommitted, the bucket default is used.
 //
-// This represents the quorum for both get and put operations involved in deleting an object .
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *DeleteValueCommandBuilder) WithRw(rw uint32) *DeleteValueCommandBuilder {
 	builder.protobuf.Rw = &rw
 	return builder
@@ -631,7 +668,7 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 // RpbListBucketsReq
 // RpbListBucketsResp
 
-// Command used to list buckets in a bucket type.
+// ListBucketsCommand is used to list buckets in a bucket type
 type ListBucketsCommand struct {
 	CommandImpl
 	Response *ListBucketsResponse
@@ -645,12 +682,13 @@ func (cmd *ListBucketsCommand) Name() string {
 	return "ListBuckets"
 }
 
+// Done sets a flag on the Command identifying that the streaming operation is complete
 func (cmd *ListBucketsCommand) Done() bool {
 	if cmd.protobuf.GetStream() {
 		return cmd.done
-	} else {
-		return true
 	}
+
+	return true
 }
 
 func (cmd *ListBucketsCommand) constructPbRequest() (msg proto.Message, err error) {
@@ -709,21 +747,22 @@ func (cmd *ListBucketsCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbListBucketsResp{}
 }
 
+// ListBucketsResponse contains the response data for a ListBucketsCommand
 type ListBucketsResponse struct {
 	Buckets []string
 }
 
 // ListBucketsCommandBuilder type is required for creating new instances of ListBucketsCommand
 //
-//    cb := func(buckets []string) error {
-//        // Do something with buckets
-//        return nil
-//    }
-//    cmd := NewListBucketsCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithStreaming(true).
-//        WithCallback(cb).
-//        Build()
+//	cb := func(buckets []string) error {
+//		// Do something with the result
+//		return nil
+//	}
+//	cmd := NewListBucketsCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithStreaming(true).
+//		WithCallback(cb).
+//		Build()
 type ListBucketsCommandBuilder struct {
 	callback func(buckets []string) error
 	protobuf *rpbRiakKV.RpbListBucketsReq
@@ -741,7 +780,7 @@ func (builder *ListBucketsCommandBuilder) WithBucketType(bucketType string) *Lis
 	return builder
 }
 
-// Set to stream responses.
+// WithStreaming sets the command to provide a streamed response
 //
 // If true, a callback must be provided via WithCallback()
 func (builder *ListBucketsCommandBuilder) WithStreaming(streaming bool) *ListBucketsCommandBuilder {
@@ -749,7 +788,9 @@ func (builder *ListBucketsCommandBuilder) WithStreaming(streaming bool) *ListBuc
 	return builder
 }
 
-// Callback to use when streaming responses.
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *ListBucketsCommandBuilder) WithCallback(callback func([]string) error) *ListBucketsCommandBuilder {
 	builder.callback = callback
 	return builder
@@ -780,7 +821,7 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 // RpbListKeysReq
 // RpbListKeysResp
 
-// Command used to fetch a list of keys from Riak KV.
+// ListKeysCommand is used to fetch a list of keys within a bucket from Riak KV
 type ListKeysCommand struct {
 	CommandImpl
 	Response  *ListKeysResponse
@@ -795,6 +836,7 @@ func (cmd *ListKeysCommand) Name() string {
 	return "ListKeys"
 }
 
+// Done sets a flag on the Command identifying that the streaming operation is complete
 func (cmd *ListKeysCommand) Done() bool {
 	// NB: RpbListKeysReq is *always* streaming so no need to take
 	// cmd.streaming into account here, unlike RpbListBucketsReq
@@ -857,22 +899,23 @@ func (cmd *ListKeysCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbListKeysResp{}
 }
 
+// ListKeysResponse contains the response data for a ListKeysCommand
 type ListKeysResponse struct {
 	Keys []string
 }
 
 // ListKeysCommandBuilder type is required for creating new instances of ListKeysCommand
 //
-//    cb := func(keys []string) error {
-//        // Do something with keys
-//        return nil
-//    }
-//    cmd := NewListKeysCommandBuilder().
-//        WithBucketType("myBucketType").
-//				WithBucket("myBucket").
-//        WithStreaming(true).
-//        WithCallback(cb).
-//        Build()
+//	cb := func(buckets []string) error {
+//		// Do something with the result
+//		return nil
+//	}
+//	cmd := NewListKeysCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithStreaming(true).
+//		WithCallback(cb).
+//		Build()
 type ListKeysCommandBuilder struct {
 	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
@@ -897,11 +940,17 @@ func (builder *ListKeysCommandBuilder) WithBucket(bucket string) *ListKeysComman
 	return builder
 }
 
+// WithStreaming sets the command to provide a streamed response
+//
+// If true, a callback must be provided via WithCallback()
 func (builder *ListKeysCommandBuilder) WithStreaming(streaming bool) *ListKeysCommandBuilder {
 	builder.streaming = streaming
 	return builder
 }
 
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *ListKeysCommandBuilder) WithCallback(callback func([]string) error) *ListKeysCommandBuilder {
 	builder.callback = callback
 	return builder
@@ -936,7 +985,7 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 // RpbGetBucketKeyPreflistReq
 // RpbGetBucketKeyPreflistResp
 
-// Command used to fetch the preference list for a key from Riak KV
+// FetchPreflistCommand is used to fetch the preference list for a key from Riak KV
 type FetchPreflistCommand struct {
 	CommandImpl
 	Response *FetchPreflistResponse
@@ -990,23 +1039,25 @@ func (cmd *FetchPreflistCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbGetBucketKeyPreflistResp{}
 }
 
+// PreflistItem represents an individual result from the FetchPreflistResponse result set
 type PreflistItem struct {
 	Partition int64
 	Node      string
 	Primary   bool
 }
 
+// FetchPreflistResponse contains the response data for a FetchPreflistCommand
 type FetchPreflistResponse struct {
 	Preflist []*PreflistItem
 }
 
 // FetchPreflistCommandBuilder type is required for creating new instances of FetchPreflistCommand
 //
-//    preflist := NewFetchPreflistCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithKey("myKey").
-//        Build()
+//	preflist := NewFetchPreflistCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchPreflistCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
 }
@@ -1050,7 +1101,7 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 // RpbGetBucketKeyPreflistReq
 // RpbGetBucketKeyPreflistResp
 
-// Command used to query for keys from Riak KV using secondary indexes
+// SecondaryIndexQueryCommand is used to query for keys from Riak KV using secondary indexes
 type SecondaryIndexQueryCommand struct {
 	CommandImpl
 	Response *SecondaryIndexQueryResponse
@@ -1059,12 +1110,13 @@ type SecondaryIndexQueryCommand struct {
 	done     bool
 }
 
+// Done sets a flag on the Command identifying that the streaming operation is complete
 func (cmd *SecondaryIndexQueryCommand) Done() bool {
 	if cmd.protobuf.GetStream() {
 		return cmd.done
-	} else {
-		return true
 	}
+
+	return true
 }
 
 // Name identifies this command
@@ -1158,11 +1210,14 @@ func (cmd *SecondaryIndexQueryCommand) getResponseProtobufMessage() proto.Messag
 	return &rpbRiakKV.RpbIndexResp{}
 }
 
+// SecondaryIndexQueryResult represents an individual result of the SecondaryIndexQueryResponse
+// result set
 type SecondaryIndexQueryResult struct {
 	IndexKey  []byte
 	ObjectKey []byte
 }
 
+// SecondaryIndexQueryResponse contains the response data for a SecondaryIndexQueryCommand
 type SecondaryIndexQueryResponse struct {
 	Results      []*SecondaryIndexQueryResult
 	Continuation []byte
@@ -1170,12 +1225,12 @@ type SecondaryIndexQueryResponse struct {
 
 // SecondaryIndexQueryCommandBuilder type is required for creating new instances of SecondaryIndexQueryCommand
 //
-//    command := NewSecondaryIndexQueryCommandBuilder().
-//        WithBucketType("myBucketType").
-//        WithBucket("myBucket").
-//        WithIndexName("myIndexName").
-//        WithIndexKey("myIndexKey").
-//        Build()
+//	command := NewSecondaryIndexQueryCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithIndexName("myIndexName").
+//		WithIndexKey("myIndexKey").
+//		Build()
 type SecondaryIndexQueryCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbIndexReq
 	callback func([]*SecondaryIndexQueryResult) error
@@ -1205,53 +1260,69 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithIndexName(indexName string
 	return builder
 }
 
+// WithRange sets the range of index values to return
 func (builder *SecondaryIndexQueryCommandBuilder) WithRange(min string, max string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.RangeMin = []byte(min)
 	builder.protobuf.RangeMax = []byte(max)
 	return builder
 }
 
+// WithIntRange sets the range of integer type index values to return, useful when you want 1,3,5,11
+// and not 1,11,3,5
 func (builder *SecondaryIndexQueryCommandBuilder) WithIntRange(min int64, max int64) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.RangeMin = []byte(strconv.FormatInt(min, 10))
 	builder.protobuf.RangeMax = []byte(strconv.FormatInt(max, 10))
 	return builder
 }
 
+// WithIndexKey defines the index to search against
 func (builder *SecondaryIndexQueryCommandBuilder) WithIndexKey(key string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Key = []byte(key)
 	return builder
 }
 
+// WithReturnKeyAndIndex set to true, the result set will include both index keys and object keys
 func (builder *SecondaryIndexQueryCommandBuilder) WithReturnKeyAndIndex(val bool) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.ReturnTerms = &val
 	return builder
 }
 
+// WithStreaming sets the command to provide a streamed response
+//
+// If true, a callback must be provided via WithCallback()
 func (builder *SecondaryIndexQueryCommandBuilder) WithStreaming(streaming bool) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Stream = &streaming
 	return builder
 }
 
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *SecondaryIndexQueryCommandBuilder) WithCallback(callback func([]*SecondaryIndexQueryResult) error) *SecondaryIndexQueryCommandBuilder {
 	builder.callback = callback
 	return builder
 }
 
+// WithPaginationSort set to true, the results of a non-paginated query will return sorted from Riak
 func (builder *SecondaryIndexQueryCommandBuilder) WithPaginationSort(paginationSort bool) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.PaginationSort = &paginationSort
 	return builder
 }
 
+// WithMaxResults sets the maximum number of values to return in the result set
 func (builder *SecondaryIndexQueryCommandBuilder) WithMaxResults(maxResults uint32) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.MaxResults = &maxResults
 	return builder
 }
 
+// WithContinuation sets the position at which the result set should continue from, value can be
+// found within the result set of the previous page for the same query
 func (builder *SecondaryIndexQueryCommandBuilder) WithContinuation(cont []byte) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Continuation = cont
 	return builder
 }
 
+// WithTermRegex sets the regex pattern to filter the result set by
 func (builder *SecondaryIndexQueryCommandBuilder) WithTermRegex(regex string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.TermRegex = []byte(regex)
 	return builder
@@ -1289,7 +1360,7 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 // RpbMapRedReq
 // RpbMapRedResp
 
-// Command used to fetch keys or data from Riak KV using the MapReduce technique
+// MapReduceCommand is used to fetch keys or data from Riak KV using the MapReduce technique
 type MapReduceCommand struct {
 	CommandImpl
 	Response  [][]byte
@@ -1304,6 +1375,7 @@ func (cmd *MapReduceCommand) Name() string {
 	return "MapReduce"
 }
 
+// Done sets a flag on the Command identifying that the streaming operation is complete
 func (cmd *MapReduceCommand) Done() bool {
 	// NB: RpbMapRedReq is *always* streaming so no need to take
 	// cmd.streaming into account here, unlike RpbListBucketsReq
@@ -1357,9 +1429,9 @@ func (cmd *MapReduceCommand) getResponseProtobufMessage() proto.Message {
 
 // MapReduceCommandBuilder type is required for creating new instances of MapReduceCommand
 //
-//    command := NewMapReduceCommandBuilder().
-//        WithQuery("myMapReduceQuery").
-//        Build()
+//	command := NewMapReduceCommandBuilder().
+//		WithQuery("myMapReduceQuery").
+//		Build()
 type MapReduceCommandBuilder struct {
 	protobuf  *rpbRiakKV.RpbMapRedReq
 	streaming bool
@@ -1375,16 +1447,23 @@ func NewMapReduceCommandBuilder() *MapReduceCommandBuilder {
 	}
 }
 
+// WithQuery sets the map reduce query to be executed on Riak
 func (builder *MapReduceCommandBuilder) WithQuery(query string) *MapReduceCommandBuilder {
 	builder.protobuf.Request = []byte(query)
 	return builder
 }
 
+// WithStreaming sets the command to provide a streamed response
+//
+// If true, a callback must be provided via WithCallback()
 func (builder *MapReduceCommandBuilder) WithStreaming(streaming bool) *MapReduceCommandBuilder {
 	builder.streaming = streaming
 	return builder
 }
 
+// WithCallback sets the callback to be used when handling a streaming response
+//
+// Requires WithStreaming(true)
 func (builder *MapReduceCommandBuilder) WithCallback(callback func([]byte) error) *MapReduceCommandBuilder {
 	builder.callback = callback
 	return builder

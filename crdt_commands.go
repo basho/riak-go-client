@@ -62,6 +62,14 @@ type UpdateCounterResponse struct {
 	CounterValue int64
 }
 
+// UpdateCounterCommandBuilder type is required for creating new instances of UpdateCounterCommand
+//
+//	command := NewUpdateCounterCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithIncrement(1).
+//		Build()
 type UpdateCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
@@ -158,6 +166,7 @@ func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 // DtFetchReq
 // DtFetchResp
 
+// FetchCounterCommand fetches a counter CRDT from Riak
 type FetchCounterCommand struct {
 	CommandImpl
 	Response *FetchCounterResponse
@@ -204,11 +213,19 @@ func (cmd *FetchCounterCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtFetchResp{}
 }
 
+// FetchCounterResponse contains the response data for a FetchCounterCommand
 type FetchCounterResponse struct {
 	IsNotFound   bool
 	CounterValue int64
 }
 
+// FetchCounterCommandBuilder type is required for creating new instances of FetchCounterCommand
+//
+//	command := NewFetchCounterCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchCounterCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -254,11 +271,19 @@ func (builder *FetchCounterCommandBuilder) WithPr(pr uint32) *FetchCounterComman
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchCounterCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchCounterCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchCounterCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchCounterCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
@@ -286,6 +311,7 @@ func (builder *FetchCounterCommandBuilder) Build() (Command, error) {
 // DtUpdateReq
 // DtUpdateResp
 
+// UpdateSetCommand stores or updates a set CRDT in Riak
 type UpdateSetCommand struct {
 	CommandImpl
 	Response *UpdateSetResponse
@@ -330,12 +356,29 @@ func (cmd *UpdateSetCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtUpdateResp{}
 }
 
+// UpdateSetResponse contains the response data for a UpdateSetCommand
 type UpdateSetResponse struct {
 	GeneratedKey string
 	Context      []byte
 	SetValue     [][]byte
 }
 
+// UpdateSetCommandBuilder type is required for creating new instances of UpdateSetCommand
+//
+//	adds := [][]byte{
+//		[]byte("a1"),
+//		[]byte("a2"),
+//		[]byte("a3"),
+//		[]byte("a4"),
+//	}
+//
+//	command := NewUpdateSetCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithContext(setContext).
+//		WithAdditions(adds).
+//		 Build()
 type UpdateSetCommandBuilder struct {
 	protobuf *rpbRiakDT.DtUpdateReq
 }
@@ -369,11 +412,13 @@ func (builder *UpdateSetCommandBuilder) WithKey(key string) *UpdateSetCommandBui
 	return builder
 }
 
+// WithContext sets the causal context needed to identify the state of the set when removing elements
 func (builder *UpdateSetCommandBuilder) WithContext(context []byte) *UpdateSetCommandBuilder {
 	builder.protobuf.Context = context
 	return builder
 }
 
+// WithAdditions sets the set elements to be added to the CRDT set via this update operation
 func (builder *UpdateSetCommandBuilder) WithAdditions(adds ...[]byte) *UpdateSetCommandBuilder {
 	opAdds := builder.protobuf.Op.SetOp.Adds
 	opAdds = append(opAdds, adds...)
@@ -381,6 +426,7 @@ func (builder *UpdateSetCommandBuilder) WithAdditions(adds ...[]byte) *UpdateSet
 	return builder
 }
 
+// WithRemovals sets the set elements to be removed from the CRDT set via this update operation
 func (builder *UpdateSetCommandBuilder) WithRemovals(removals ...[]byte) *UpdateSetCommandBuilder {
 	opRemoves := builder.protobuf.Op.SetOp.Removes
 	opRemoves = append(opRemoves, removals...)
@@ -407,6 +453,11 @@ func (builder *UpdateSetCommandBuilder) WithPw(pw uint32) *UpdateSetCommandBuild
 	return builder
 }
 
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateSetCommandBuilder) WithDw(dw uint32) *UpdateSetCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
@@ -441,6 +492,7 @@ func (builder *UpdateSetCommandBuilder) Build() (Command, error) {
 // DtFetchReq
 // DtFetchResp
 
+// FetchSetCommand fetches a set CRDT from Riak
 type FetchSetCommand struct {
 	CommandImpl
 	Response *FetchSetResponse
@@ -489,12 +541,20 @@ func (cmd *FetchSetCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtFetchResp{}
 }
 
+// FetchSetResponse contains the response data for a FetchSetCommand
 type FetchSetResponse struct {
 	IsNotFound bool
 	Context    []byte
 	SetValue   [][]byte
 }
 
+// FetchSetCommandBuilder type is required for creating new instances of FetchSetCommand
+//
+//	command := NewFetchSetCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchSetCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -540,11 +600,19 @@ func (builder *FetchSetCommandBuilder) WithPr(pr uint32) *FetchSetCommandBuilder
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchSetCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchSetCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchSetCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchSetCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
@@ -572,6 +640,7 @@ func (builder *FetchSetCommandBuilder) Build() (Command, error) {
 // DtUpdateReq
 // DtUpdateResp
 
+// UpdateMapCommand updates a map CRDT in Riak
 type UpdateMapCommand struct {
 	CommandImpl
 	Response *UpdateMapResponse
@@ -761,6 +830,7 @@ func populate(mapOp *MapOperation, pbMapOp *rpbRiakDT.MapOp) {
 	}
 }
 
+// MapOperation contains the instructions to send to Riak what updates to the Map you want to complete
 type MapOperation struct {
 	incrementCounters map[string]int64
 	removeCounters    map[string]bool
@@ -779,6 +849,7 @@ type MapOperation struct {
 	removeMaps map[string]bool
 }
 
+// IncrementCounter increments a child counter CRDT of the map at the specified key
 func (mapOp *MapOperation) IncrementCounter(key string, increment int64) *MapOperation {
 	if mapOp.removeCounters != nil {
 		delete(mapOp.removeCounters, key)
@@ -790,6 +861,7 @@ func (mapOp *MapOperation) IncrementCounter(key string, increment int64) *MapOpe
 	return mapOp
 }
 
+// RemoveCounter removes a child counter CRDT from the map at the specified key
 func (mapOp *MapOperation) RemoveCounter(key string) *MapOperation {
 	if mapOp.incrementCounters != nil {
 		delete(mapOp.incrementCounters, key)
@@ -801,6 +873,7 @@ func (mapOp *MapOperation) RemoveCounter(key string) *MapOperation {
 	return mapOp
 }
 
+// AddToSet adds an element to the child set CRDT of the map at the specified key
 func (mapOp *MapOperation) AddToSet(key string, value []byte) *MapOperation {
 	if mapOp.removeSets != nil {
 		delete(mapOp.removeSets, key)
@@ -812,6 +885,7 @@ func (mapOp *MapOperation) AddToSet(key string, value []byte) *MapOperation {
 	return mapOp
 }
 
+// RemoveFromSet removes elements from the child set CRDT of the map at the specified key
 func (mapOp *MapOperation) RemoveFromSet(key string, value []byte) *MapOperation {
 	if mapOp.removeSets != nil {
 		delete(mapOp.removeSets, key)
@@ -823,6 +897,7 @@ func (mapOp *MapOperation) RemoveFromSet(key string, value []byte) *MapOperation
 	return mapOp
 }
 
+// RemoveSet removes the child set CRDT from the map
 func (mapOp *MapOperation) RemoveSet(key string) *MapOperation {
 	if mapOp.addToSets != nil {
 		delete(mapOp.addToSets, key)
@@ -837,6 +912,7 @@ func (mapOp *MapOperation) RemoveSet(key string) *MapOperation {
 	return mapOp
 }
 
+// SetRegister sets a register CRDT on the map with the provided value
 func (mapOp *MapOperation) SetRegister(key string, value []byte) *MapOperation {
 	if mapOp.removeRegisters != nil {
 		delete(mapOp.removeRegisters, key)
@@ -848,6 +924,7 @@ func (mapOp *MapOperation) SetRegister(key string, value []byte) *MapOperation {
 	return mapOp
 }
 
+// RemoveRegister removes a register CRDT from the map
 func (mapOp *MapOperation) RemoveRegister(key string) *MapOperation {
 	if mapOp.registersToSet != nil {
 		delete(mapOp.registersToSet, key)
@@ -859,6 +936,7 @@ func (mapOp *MapOperation) RemoveRegister(key string) *MapOperation {
 	return mapOp
 }
 
+// SetFlag sets a flag CRDT on the map
 func (mapOp *MapOperation) SetFlag(key string, value bool) *MapOperation {
 	if mapOp.removeFlags != nil {
 		delete(mapOp.removeFlags, key)
@@ -870,6 +948,7 @@ func (mapOp *MapOperation) SetFlag(key string, value bool) *MapOperation {
 	return mapOp
 }
 
+// RemoveFlag removes a flag CRDT from the map
 func (mapOp *MapOperation) RemoveFlag(key string) *MapOperation {
 	if mapOp.flagsToSet != nil {
 		delete(mapOp.flagsToSet, key)
@@ -881,6 +960,7 @@ func (mapOp *MapOperation) RemoveFlag(key string) *MapOperation {
 	return mapOp
 }
 
+// Map returns a nested map operation for manipulation
 func (mapOp *MapOperation) Map(key string) *MapOperation {
 	if mapOp.removeMaps != nil {
 		delete(mapOp.removeMaps, key)
@@ -888,15 +968,18 @@ func (mapOp *MapOperation) Map(key string) *MapOperation {
 	if mapOp.maps == nil {
 		mapOp.maps = make(map[string]*MapOperation)
 	}
-	if innerMapOp, ok := mapOp.maps[key]; ok {
-		return innerMapOp
-	} else {
-		innerMapOp = &MapOperation{}
-		mapOp.maps[key] = innerMapOp
+
+	innerMapOp, ok := mapOp.maps[key]
+	if ok {
 		return innerMapOp
 	}
+
+	innerMapOp = &MapOperation{}
+	mapOp.maps[key] = innerMapOp
+	return innerMapOp
 }
 
+// RemoveMap removes a nested map from the map
 func (mapOp *MapOperation) RemoveMap(key string) *MapOperation {
 	if mapOp.maps != nil {
 		delete(mapOp.maps, key)
@@ -967,6 +1050,8 @@ func parsePbResponse(pbMapEntries []*rpbRiakDT.MapEntry) *Map {
 	return m
 }
 
+// Map object represents the Riak Map object and is returned within the Response objects for both
+// UpdateMapCommand and FetchMapCommand
 type Map struct {
 	Counters  map[string]int64
 	Sets      map[string][][]byte
@@ -975,12 +1060,24 @@ type Map struct {
 	Maps      map[string]*Map
 }
 
+// UpdateMapResponse contains the response data for a UpdateMapCommand
 type UpdateMapResponse struct {
 	GeneratedKey string
 	Context      []byte
 	Map          *Map
 }
 
+// UpdateMapCommandBuilder type is required for creating new instances of UpdateMapCommand
+//
+//	mapOp := &MapOperation{}
+//	mapOp.SetRegister("register_1", []byte("register_value_1"))
+//
+//	command := NewUpdateMapCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithMapOperation(mapOp).
+//		Build()
 type UpdateMapCommandBuilder struct {
 	mapOperation *MapOperation
 	protobuf     *rpbRiakDT.DtUpdateReq
@@ -1009,11 +1106,13 @@ func (builder *UpdateMapCommandBuilder) WithKey(key string) *UpdateMapCommandBui
 	return builder
 }
 
+// WithContext sets the causal context needed to identify the state of the map when removing elements
 func (builder *UpdateMapCommandBuilder) WithContext(context []byte) *UpdateMapCommandBuilder {
 	builder.protobuf.Context = context
 	return builder
 }
 
+// WithMapOperation provides the details of what is supposed to be updated on the map
 func (builder *UpdateMapCommandBuilder) WithMapOperation(mapOperation *MapOperation) *UpdateMapCommandBuilder {
 	builder.mapOperation = mapOperation
 	return builder
@@ -1038,6 +1137,11 @@ func (builder *UpdateMapCommandBuilder) WithPw(pw uint32) *UpdateMapCommandBuild
 	return builder
 }
 
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateMapCommandBuilder) WithDw(dw uint32) *UpdateMapCommandBuilder {
 	builder.protobuf.Dw = &dw
 	return builder
@@ -1078,6 +1182,7 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 // DtFetchReq
 // DtFetchResp
 
+// FetchMapCommand fetches a map CRDT from Riak
 type FetchMapCommand struct {
 	CommandImpl
 	Response *FetchMapResponse
@@ -1131,12 +1236,20 @@ func (cmd *FetchMapCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakDT.DtFetchResp{}
 }
 
+// FetchMapResponse contains the response data for a FetchMapCommand
 type FetchMapResponse struct {
 	IsNotFound bool
 	Context    []byte
 	Map        *Map
 }
 
+// FetchMapCommandBuilder type is required for creating new instances of FetchMapCommand
+//
+//	command := NewFetchMapCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
 type FetchMapCommandBuilder struct {
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -1182,11 +1295,19 @@ func (builder *FetchMapCommandBuilder) WithPr(pr uint32) *FetchMapCommandBuilder
 	return builder
 }
 
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchMapCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchMapCommandBuilder {
 	builder.protobuf.NotfoundOk = &notFoundOk
 	return builder
 }
 
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
 func (builder *FetchMapCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchMapCommandBuilder {
 	builder.protobuf.BasicQuorum = &basicQuorum
 	return builder
