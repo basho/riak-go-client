@@ -8,12 +8,12 @@ import (
 
 // Constants identifying Node state
 const (
-	nodeError state = iota
-	nodeCreated
+	nodeCreated state = iota
 	nodeRunning
 	nodeHealthChecking
 	nodeShuttingDown
 	nodeShutdown
+	nodeError
 )
 
 // NodeOptions defines the RemoteAddress and operational configuration for connections to a Riak KV

@@ -9,11 +9,11 @@ import (
 
 // Constants identifying connectionManager state
 const (
-	cmError state = iota
-	cmCreated
+	cmCreated state = iota
 	cmRunning
 	cmShuttingDown
 	cmShutdown
+	cmError
 )
 
 type connectionManagerOptions struct {
@@ -244,10 +244,13 @@ func (cm *connectionManager) put(conn *connection) error {
 }
 
 func (cm *connectionManager) remove(conn *connection) error {
-	cm.Lock()
-	defer cm.Unlock()
-	cm.connectionCount--
-	return conn.close()
+	if cm.isStateLessThan(cmShuttingDown) {
+		cm.Lock()
+		defer cm.Unlock()
+		cm.connectionCount--
+		return conn.close()
+	}
+	return nil
 }
 
 func (cm *connectionManager) expireIdleConnections() {

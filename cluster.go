@@ -8,11 +8,11 @@ import (
 
 // Constants identifying Cluster state
 const (
-	clusterError state = iota
-	clusterCreated
+	clusterCreated state = iota
 	clusterRunning
 	clusterShuttingDown
 	clusterShutdown
+	clusterError
 )
 
 // ClusterOptions object contains your pool of Node objects and the NodeManager
