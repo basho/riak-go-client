@@ -139,6 +139,7 @@ func (c *connection) startTls() (err error) {
 }
 
 func (c *connection) available() bool {
+	// TODO: why is this recover() necessary?
 	defer func() {
 		if err := recover(); err != nil {
 			logErrorln("[Connection]", "available(): connection panic!")

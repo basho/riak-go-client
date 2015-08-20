@@ -35,25 +35,23 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if node.addr.Zone != "" {
 		t.Errorf("expected empty zone, got: %s", string(node.addr.Zone))
 	}
-	if expected, actual := node.minConnections, opts.MinConnections; expected != actual {
+	if expected, actual := opts.MinConnections, node.cm.minConnections; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := node.maxConnections, opts.MaxConnections; expected != actual {
+	if expected, actual := opts.MaxConnections, node.cm.maxConnections; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
+	if expected, actual := opts.IdleTimeout, node.cm.idleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 	if err := node.start(); err != nil {
 		t.Error(err)
 	}
-	if expected, actual := node.minConnections, uint16(len(node.available)); expected != actual {
-		t.Errorf("expected %v, got: %v", expected, actual)
-	}
-	for _, conn := range node.available {
+	var f = func(v interface{}) (bool, bool) {
+		conn := v.(*connection)
 		if conn == nil {
 			t.Error("got unexpected nil value")
-			continue
+			return true, false
 		}
 		if conn.addr.Port != int(expectedPort) {
 			t.Errorf("expected port %d, got: %d", expectedPort, node.addr.Port)
@@ -70,6 +68,10 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		if expected, actual := conn.requestTimeout, opts.RequestTimeout; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)
 		}
+		return true, true
+	}
+	if err := node.cm.q.iterate(f); err != nil {
+		t.Error(err)
 	}
 	if err := node.stop(); err != nil {
 		t.Error(err)

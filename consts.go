@@ -11,8 +11,8 @@ const (
 
 const (
 	defaultRemoteAddress          = "127.0.0.1:8087"
-	defaultMinConnections         = 1
-	defaultMaxConnections         = 8096
+	defaultMinConnections         = uint16(1)
+	defaultMaxConnections         = uint16(8096)
 	defaultIdleTimeout            = time.Second * 3
 	defaultConnectTimeout         = time.Second * 30
 	defaultRequestTimeout         = time.Second * 5

@@ -30,37 +30,37 @@ func (nm *defaultNodeManager) Init(nodes []*Node) error {
 
 // ExecuteOnNode selects a Node from the pool and executes the provided Command on that Node. The
 // defaultNodeManager uses a simple round robin approach to distributing load
-func (nm *defaultNodeManager) ExecuteOnNode(command Command, previous *Node) (executed bool, err error) {
-	var val interface{}
-	executed = false
+func (nm *defaultNodeManager) ExecuteOnNode(command Command, previous *Node) (bool, error) {
+	var err error
+	var executed bool = false
+
 	i := uint16(0)
-	for {
-		val, err = nm.q.dequeue()
-		if err != nil {
-			nm.q.enqueue(val)
-			break
-		}
-		node := val.(*Node)
+	var node *Node
+	var f = func(v interface{}) (bool, bool) {
 		i++
+		node = v.(*Node)
 
 		// don't try the same node twice in a row if we have multiple nodes
 		if nm.qsz > 1 && previous != nil && previous == node {
-			nm.q.enqueue(node)
-			continue
+			return false, true
 		}
 
 		if executed, err = node.execute(command); executed == true {
 			logDebug("[DefaultNodeManager]", "executed '%s' on node '%s', err '%v'", command.Name(), node, err)
-			nm.q.enqueue(node)
-			break
+			return true, true
 		}
 
-		if i >= nm.qsz {
+		if i == nm.qsz {
 			logDebug("[DefaultNodeManager]", "tried all nodes to execute '%s'", command.Name())
-			nm.q.enqueue(node)
-			break
+			return true, true
 		}
+
+		return false, true
 	}
 
-	return
+	if ierr := nm.q.iterate(f); ierr != nil {
+		logErr("[DefaultNodeManager] iteration error", ierr)
+	}
+
+	return executed, err
 }
