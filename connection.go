@@ -99,7 +99,7 @@ func (c *connection) connect() (err error) {
 		}
 		c.state = connActive
 		if c.healthCheck != nil {
-			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Successful() {
+			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Success() {
 				c.state = connInactive
 				logError("[Connection]", "initial health check error: '%s'", err.Error())
 				c.close()

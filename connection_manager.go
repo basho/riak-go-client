@@ -131,12 +131,19 @@ func (cm *connectionManager) stop() error {
 	defer cm.Unlock()
 
 	var f = func(v interface{}) (bool, bool) {
+		if v == nil {
+			return true, false
+		}
 		conn := v.(*connection)
 		if err := conn.close(); err != nil {
 			logErr("[connectionManager] error when closing connection in stop()", err)
 		}
 		cm.connectionCount--
-		return true, false
+		if cm.connectionCount == 0 {
+			return true, false
+		} else {
+			return false, false
+		}
 	}
 	err := cm.q.iterate(f)
 	cm.q.destroy()
@@ -187,17 +194,28 @@ func (cm *connectionManager) create(hc Command) (*connection, error) {
 
 func (cm *connectionManager) get() (*connection, error) {
 	var conn *connection
+	currentConnCount := cm.count()
+	c := uint16(0)
 	var f = func(v interface{}) (bool, bool) {
+		if v == nil {
+			// connection pool is empty
+			return true, false
+		}
+		c++
 		conn = v.(*connection)
 		if conn.available() {
 			// we found our connection, don't re-queue
 			return true, false
 		} else {
-			// keep going and re-queue
-			return false, true
+			if c == currentConnCount {
+				// stop searching and re-queue conn
+				return true, true
+			} else {
+				// keep going and re-queue conn
+				return false, true
+			}
 		}
 	}
-
 	err := cm.q.iterate(f)
 	if err != nil {
 		return nil, err
@@ -245,10 +263,18 @@ func (cm *connectionManager) expireIdleConnections() {
 			}
 
 			logDebug("[connectionManager]", "(%v) expiring idle connections at %v", cm, t)
-			count := 0
+
+			currentConnCount := cm.count()
+			c := uint16(0)
+			expiredCount := uint16(0)
 			now := time.Now()
 
 			var f = func(v interface{}) (bool, bool) {
+				if v == nil {
+					// connection pool is empty
+					return true, false
+				}
+				c++
 				if !cm.isStateLessThan(cmShuttingDown) {
 					return true, true
 				}
@@ -260,17 +286,21 @@ func (cm *connectionManager) expireIdleConnections() {
 					if err := conn.close(); err != nil {
 						logErr("[connectionManager]", err)
 					}
-					count++
+					expiredCount++
 					return false, false
 				}
-				return false, true
+				if c == currentConnCount {
+					return true, true
+				} else {
+					return false, true
+				}
 			}
 
 			if err := cm.q.iterate(f); err != nil {
 				logErr("[connectionManager]", err)
 			}
 
-			logDebug("[connectionManager]", "(%v) expired %d connections.", cm, count)
+			logDebug("[connectionManager]", "(%v) expired %d connections.", cm, expiredCount)
 
 			if !cm.isStateLessThan(cmShuttingDown) {
 				logDebug("[connectionManager]", "(%v) idle connection expiration routine is quitting.", cm)

@@ -44,7 +44,7 @@ func (cmd *StoreIndexCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *StoreIndexCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	cmd.Response = true
 	return nil
 }
@@ -137,7 +137,7 @@ func (cmd *FetchIndexCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchIndexCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbYokozunaIndexGetResp, ok := msg.(*rpbRiakYZ.RpbYokozunaIndexGetResp); ok {
 			rpbIndexes := rpbYokozunaIndexGetResp.GetIndex()
@@ -221,7 +221,7 @@ func (cmd *DeleteIndexCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *DeleteIndexCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	cmd.Response = true
 	return nil
 }
@@ -288,7 +288,7 @@ func (cmd *StoreSchemaCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *StoreSchemaCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	cmd.Response = true
 	return nil
 }
@@ -365,7 +365,7 @@ func (cmd *FetchSchemaCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchSchemaCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbYokozunaSchemaGetResp, ok := msg.(*rpbRiakYZ.RpbYokozunaSchemaGetResp); ok {
 			rpbSchema := rpbYokozunaSchemaGetResp.GetSchema()
@@ -444,7 +444,7 @@ func (cmd *SearchCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *SearchCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	cmd.Response = &SearchResponse{}
 	if msg != nil {
 		if rpbResp, ok := msg.(*rpbRiakSCH.RpbSearchQueryResp); ok {

@@ -159,7 +159,7 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(rpbGetResp)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 
@@ -167,7 +167,7 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 		if fetchValueCommand.Response == nil {
 			t.Fatal("unexpected nil object")
 		}
-		if expected, actual := true, fetchValueCommand.Success; expected != actual {
+		if expected, actual := true, fetchValueCommand.success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := 1, len(fetchValueCommand.Response.Values); expected != actual {
@@ -262,7 +262,7 @@ func TestParseRpbGetRespWithoutContentCorrectly(t *testing.T) {
 		t.Error(err.Error())
 	}
 	cmd.onSuccess(nil)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 	if fetchValueCommand, ok := cmd.(*FetchValueCommand); ok {
@@ -626,7 +626,7 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(rpbPutResp)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 
@@ -634,7 +634,7 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 		if storeValueCommand.Response == nil {
 			t.Fatal("unexpected nil object")
 		}
-		if expected, actual := true, storeValueCommand.Success; expected != actual {
+		if expected, actual := true, storeValueCommand.success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := 1, len(storeValueCommand.Response.Values); expected != actual {
@@ -1252,7 +1252,7 @@ func TestMultipleRpbIndexRespWithObjectKeysCorrectly(t *testing.T) {
 		}
 		cmd.onSuccess(rpbIndexResp)
 	}
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 	if siq, ok := cmd.(*SecondaryIndexQueryCommand); ok {
@@ -1305,7 +1305,7 @@ func TestMultipleRpbIndexRespWithTermKeyPairsCorrectly(t *testing.T) {
 		}
 		cmd.onSuccess(rpbIndexResp)
 	}
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 	if siq, ok := cmd.(*SecondaryIndexQueryCommand); ok {

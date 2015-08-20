@@ -37,6 +37,11 @@ func (nm *defaultNodeManager) ExecuteOnNode(command Command, previous *Node) (bo
 	i := uint16(0)
 	var node *Node
 	var f = func(v interface{}) (bool, bool) {
+		if v == nil {
+			// pool is empty now, re-try
+			// TODO: backoff on re-try, after X tries, log error, after more, error?
+			return false, false
+		}
 		i++
 		node = v.(*Node)
 

@@ -39,17 +39,14 @@ func (q *queue) dequeue() (interface{}, error) {
 }
 
 func (q *queue) iterate(f func(interface{}) (bool, bool)) error {
-	for i := uint16(0); i < q.queueSize; i++ {
+	for {
 		v, err := q.dequeue()
 		if err != nil {
 			return err
 		}
-		if v == nil {
-			// NB: empty queue
-			break
-		}
+		// NB: v may be nil if queue is currently empty
 		brk, re_queue := f(v)
-		if re_queue {
+		if re_queue && v != nil {
 			err = q.enqueue(v)
 			if err != nil {
 				return err

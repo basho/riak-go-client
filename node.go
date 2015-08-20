@@ -137,7 +137,7 @@ func (n *Node) stop() error {
 	close(n.stopChan)
 
 	err := n.cm.stop()
-	
+
 	if err == nil {
 		n.setState(nodeShutdown)
 		logDebug("[Node]", "(%v) shut down.", n)
@@ -233,17 +233,11 @@ func (n *Node) getHealthCheckCommand() (hc Command) {
 
 func (n *Node) ensureHealthCheckCanContinue() bool {
 	// ensure we ARE health checking
-	if n.isCurrentState(nodeHealthChecking) {
-		logDebug("[Node]", "(%v) expected to be in health checking state.", n)
+	if !n.isCurrentState(nodeHealthChecking) {
+		logDebug("[Node]", "(%v) expected health checking state, got %s", n, n.stateData.String())
 		return false
 	}
-	// ensure we're not shutting down
-	if !n.isStateLessThan(nodeShuttingDown) {
-		logDebug("[Node]", "(%v) is shutting down.", n)
-		return false
-	} else {
-		return true
-	}
+	return true
 }
 
 // private goroutine funcs

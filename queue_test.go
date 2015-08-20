@@ -25,13 +25,17 @@ func TestIterateEmptyQueue(t *testing.T) {
 	executed := false
 	var f = func(val interface{}) (bool, bool) {
 		executed = true
-		return false, true
+		if val == nil {
+			return true, true
+		} else {
+			return false, true
+		}
 	}
 	err := q.iterate(f)
 	if err != nil {
 		t.Error("expected nil error when iterating queue")
 	}
-	if expected, actual := false, executed; expected != actual {
+	if expected, actual := true, executed; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if expected, actual := uint16(0), q.count(); expected != actual {
@@ -53,6 +57,9 @@ func TestConcurrentIterateQueue(t *testing.T) {
 			c := uint16(0)
 			var f = func(val interface{}) (bool, bool) {
 				c++
+				if c == count {
+					return true, true
+				}
 				j := val.(uint16)
 				if j == 64 {
 					// won't re-enqueue value 64
