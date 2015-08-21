@@ -6,15 +6,17 @@ install-deps:
 	go get -t github.com/basho/riak-go-client/...
 
 lint: install-deps
+	go tool vet -shadow=true -shadowstrict=true $(PROJDIR)
 	go vet github.com/basho/riak-go-client/...
 
 unit-test: lint
 	go test -v github.com/basho/riak-go-client/...
 
+# runs unit tests as well
 integration-test: lint
 	go test -v -tags=integration github.com/basho/riak-go-client/...
 
-test: unit-test integration-test
+test: integration-test
 
 fmt:
 	gofmt -s -w .

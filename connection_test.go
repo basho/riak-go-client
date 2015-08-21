@@ -15,7 +15,8 @@ func TestCreateConnection(t *testing.T) {
 		connectTimeout: thirtySeconds,
 		requestTimeout: thirtySeconds,
 	}
-	if conn, err := newConnection(opts); err == nil {
+	var conn *connection
+	if conn, err = newConnection(opts); err == nil {
 		if conn.addr.Port != 8098 {
 			t.Errorf("expected port 8098, got: %s", string(conn.addr.Port))
 		}
@@ -58,7 +59,8 @@ func TestEnsureDefaultConnectionValues(t *testing.T) {
 		t.Error(err.Error())
 	}
 	opts := &connectionOptions{remoteAddress: addr}
-	if conn, err := newConnection(opts); err == nil {
+	var conn *connection
+	if conn, err = newConnection(opts); err == nil {
 		if conn.addr.Port != 8087 {
 			t.Errorf("expected port 8087, got: %s", string(conn.addr.Port))
 		}

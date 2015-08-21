@@ -916,9 +916,12 @@ func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
 	builder := NewListBucketsCommandBuilder()
 	// validate that Bucket and Key are NOT required
 	// and that type is "default"
-	cmd, err := builder.Build()
+	var err error
+	var cmd Command
+	var protobuf proto.Message
+	cmd, err = builder.Build()
 	if err == nil {
-		protobuf, err := cmd.constructPbRequest()
+		protobuf, err = cmd.constructPbRequest()
 		if err != nil {
 			t.Fatal(err.Error())
 		}
@@ -1049,9 +1052,12 @@ func TestValidationOfRpbListKeysReqViaBuilder(t *testing.T) {
 	builder := NewListKeysCommandBuilder().WithBucket("bucket")
 	// validate that Key is NOT required
 	// and that type is "default"
-	cmd, err := builder.Build()
+	var err error
+	var cmd Command
+	var protobuf proto.Message
+	cmd, err = builder.Build()
 	if err == nil {
-		protobuf, err := cmd.constructPbRequest()
+		protobuf, err = cmd.constructPbRequest()
 		if err != nil {
 			t.Fatal(err.Error())
 		}
@@ -1483,8 +1489,11 @@ func TestValidationOfRpbIndexReqViaBuilder(t *testing.T) {
 
 func TestBuildRpbMapRedReqCorrectlyViaBuilder(t *testing.T) {
 	query := "{\"inputs\":\"goog\",\"query\":[{\"map\":{\"language\":\"javascript\",\"source\":\"function(value, keyData, arg) { var data = Riak.mapValuesJson(value)[0]; if(data.High && parseFloat(data.High) > 600.00) return [value.key];else return [];}\",\"keep\":true}}]}"
-	if mr, err := NewMapReduceCommandBuilder().WithQuery(query).WithStreaming(false).Build(); err == nil {
-		if protobuf, err := mr.constructPbRequest(); err == nil {
+	var err error
+	var mr Command
+	var protobuf proto.Message
+	if mr, err = NewMapReduceCommandBuilder().WithQuery(query).WithStreaming(false).Build(); err == nil {
+		if protobuf, err = mr.constructPbRequest(); err == nil {
 			if req, ok := protobuf.(*rpbRiakKV.RpbMapRedReq); ok {
 				if expected, actual := query, string(req.GetRequest()); expected != actual {
 					t.Errorf("expected %v, actual %v", expected, actual)
