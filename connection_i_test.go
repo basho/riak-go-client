@@ -7,6 +7,7 @@ import (
 	"net"
 	"reflect"
 	"testing"
+	"sync"
 	"time"
 )
 
@@ -63,15 +64,23 @@ func TestConnectionClosed(t *testing.T) {
 	}
 	defer ln.Close()
 
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
+		wg.Done()
 		c, err := ln.Accept()
 		if err != nil {
 			t.Error(err)
+		}
+		if c == nil {
+			t.Error("expected non-nil conn")
 		}
 		if err := c.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
+
+	wg.Wait()
 
 	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1338")
 	if err != nil {
