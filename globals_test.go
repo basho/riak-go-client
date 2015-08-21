@@ -14,8 +14,6 @@ import (
 
 var localhost = net.ParseIP("127.0.0.1")
 
-var cluster *Cluster
-
 var vclock = bytes.NewBufferString("vclock123456789")
 var vclockBytes = vclock.Bytes()
 

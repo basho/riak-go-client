@@ -159,7 +159,7 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(rpbGetResp)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 
@@ -167,7 +167,7 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 		if fetchValueCommand.Response == nil {
 			t.Fatal("unexpected nil object")
 		}
-		if expected, actual := true, fetchValueCommand.Success; expected != actual {
+		if expected, actual := true, fetchValueCommand.success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := 1, len(fetchValueCommand.Response.Values); expected != actual {
@@ -262,7 +262,7 @@ func TestParseRpbGetRespWithoutContentCorrectly(t *testing.T) {
 		t.Error(err.Error())
 	}
 	cmd.onSuccess(nil)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 	if fetchValueCommand, ok := cmd.(*FetchValueCommand); ok {
@@ -626,7 +626,7 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(rpbPutResp)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 
@@ -634,7 +634,7 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 		if storeValueCommand.Response == nil {
 			t.Fatal("unexpected nil object")
 		}
-		if expected, actual := true, storeValueCommand.Success; expected != actual {
+		if expected, actual := true, storeValueCommand.success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if expected, actual := 1, len(storeValueCommand.Response.Values); expected != actual {
@@ -916,9 +916,12 @@ func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
 	builder := NewListBucketsCommandBuilder()
 	// validate that Bucket and Key are NOT required
 	// and that type is "default"
-	cmd, err := builder.Build()
+	var err error
+	var cmd Command
+	var protobuf proto.Message
+	cmd, err = builder.Build()
 	if err == nil {
-		protobuf, err := cmd.constructPbRequest()
+		protobuf, err = cmd.constructPbRequest()
 		if err != nil {
 			t.Fatal(err.Error())
 		}
@@ -1049,9 +1052,12 @@ func TestValidationOfRpbListKeysReqViaBuilder(t *testing.T) {
 	builder := NewListKeysCommandBuilder().WithBucket("bucket")
 	// validate that Key is NOT required
 	// and that type is "default"
-	cmd, err := builder.Build()
+	var err error
+	var cmd Command
+	var protobuf proto.Message
+	cmd, err = builder.Build()
 	if err == nil {
-		protobuf, err := cmd.constructPbRequest()
+		protobuf, err = cmd.constructPbRequest()
 		if err != nil {
 			t.Fatal(err.Error())
 		}
@@ -1252,7 +1258,7 @@ func TestMultipleRpbIndexRespWithObjectKeysCorrectly(t *testing.T) {
 		}
 		cmd.onSuccess(rpbIndexResp)
 	}
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 	if siq, ok := cmd.(*SecondaryIndexQueryCommand); ok {
@@ -1305,7 +1311,7 @@ func TestMultipleRpbIndexRespWithTermKeyPairsCorrectly(t *testing.T) {
 		}
 		cmd.onSuccess(rpbIndexResp)
 	}
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 	if siq, ok := cmd.(*SecondaryIndexQueryCommand); ok {
@@ -1483,8 +1489,11 @@ func TestValidationOfRpbIndexReqViaBuilder(t *testing.T) {
 
 func TestBuildRpbMapRedReqCorrectlyViaBuilder(t *testing.T) {
 	query := "{\"inputs\":\"goog\",\"query\":[{\"map\":{\"language\":\"javascript\",\"source\":\"function(value, keyData, arg) { var data = Riak.mapValuesJson(value)[0]; if(data.High && parseFloat(data.High) > 600.00) return [value.key];else return [];}\",\"keep\":true}}]}"
-	if mr, err := NewMapReduceCommandBuilder().WithQuery(query).WithStreaming(false).Build(); err == nil {
-		if protobuf, err := mr.constructPbRequest(); err == nil {
+	var err error
+	var mr Command
+	var protobuf proto.Message
+	if mr, err = NewMapReduceCommandBuilder().WithQuery(query).WithStreaming(false).Build(); err == nil {
+		if protobuf, err = mr.constructPbRequest(); err == nil {
 			if req, ok := protobuf.(*rpbRiakKV.RpbMapRedReq); ok {
 				if expected, actual := query, string(req.GetRequest()); expected != actual {
 					t.Errorf("expected %v, actual %v", expected, actual)

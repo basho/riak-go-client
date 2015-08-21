@@ -37,7 +37,7 @@ func (cmd *FetchValueCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchValueCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
 		cmd.Response = &FetchValueResponse{
 			IsNotFound:  true,
@@ -285,7 +285,7 @@ func (cmd *StoreValueCommand) constructPbRequest() (msg proto.Message, err error
 }
 
 func (cmd *StoreValueCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
 		cmd.Response = &StoreValueResponse{}
 	} else {
@@ -527,7 +527,7 @@ func (cmd *DeleteValueCommand) constructPbRequest() (msg proto.Message, err erro
 }
 
 func (cmd *DeleteValueCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	cmd.Response = true
 	return nil
 }
@@ -697,7 +697,7 @@ func (cmd *ListBucketsCommand) constructPbRequest() (msg proto.Message, err erro
 }
 
 func (cmd *ListBucketsCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
 		cmd.done = true
 		cmd.Response = &ListBucketsResponse{}
@@ -849,7 +849,7 @@ func (cmd *ListKeysCommand) constructPbRequest() (msg proto.Message, err error) 
 }
 
 func (cmd *ListKeysCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
 		cmd.done = true
 		cmd.Response = &ListKeysResponse{}
@@ -1002,7 +1002,7 @@ func (cmd *FetchPreflistCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchPreflistCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
 		cmd.Response = &FetchPreflistResponse{}
 	} else {
@@ -1135,7 +1135,7 @@ func (cmd *SecondaryIndexQueryCommand) constructPbRequest() (proto.Message, erro
 }
 
 func (cmd *SecondaryIndexQueryCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
 		cmd.Response = &SecondaryIndexQueryResponse{}
 		cmd.done = true
@@ -1388,7 +1388,7 @@ func (cmd *MapReduceCommand) constructPbRequest() (msg proto.Message, err error)
 }
 
 func (cmd *MapReduceCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
 		cmd.done = true
 	} else {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"syscall"
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
@@ -34,12 +33,11 @@ type connectionOptions struct {
 	authOptions    *AuthOptions
 }
 
-type connState byte
-
 const (
-	connInactive connState = iota
+	connCreated state = iota
 	connTlsStarting
 	connActive
+	connInactive
 )
 
 type connection struct {
@@ -53,7 +51,7 @@ type connection struct {
 	active         bool
 	inFlight       bool
 	lastUsed       time.Time
-	state          connState
+	stateData
 }
 
 func newConnection(options *connectionOptions) (*connection, error) {
@@ -69,7 +67,7 @@ func newConnection(options *connectionOptions) (*connection, error) {
 	if options.requestTimeout == 0 {
 		options.requestTimeout = defaultRequestTimeout
 	}
-	return &connection{
+	c := &connection{
 		addr:           options.remoteAddress,
 		connectTimeout: options.connectTimeout,
 		requestTimeout: options.requestTimeout,
@@ -78,8 +76,10 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		sizeBuf:        make([]byte, 4),
 		inFlight:       false,
 		lastUsed:       time.Now(),
-		state:          connInactive,
-	}, nil
+	}
+	c.initStateData("connCreated", "connTlsStarting", "connActive", "connInactive")
+	c.setState(connCreated)
+	return c, nil
 }
 
 func (c *connection) connect() (err error) {
@@ -94,13 +94,13 @@ func (c *connection) connect() (err error) {
 	} else {
 		logDebug("[Connection]", "connected to: %s", c.addr)
 		if err = c.startTls(); err != nil {
-			c.state = connInactive
+			c.setState(connInactive)
 			return
 		}
-		c.state = connActive
+		c.setState(connActive)
 		if c.healthCheck != nil {
-			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Successful() {
-				c.state = connInactive
+			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Success() {
+				c.setState(connInactive)
 				logError("[Connection]", "initial health check error: '%s'", err.Error())
 				c.close()
 			}
@@ -109,50 +109,44 @@ func (c *connection) connect() (err error) {
 	return
 }
 
-func (c *connection) startTls() (err error) {
+func (c *connection) startTls() error {
 	if c.authOptions == nil {
 		return nil
 	}
 	if c.authOptions.TlsConfig == nil {
 		return ErrAuthMissingConfig
 	}
-	c.state = connTlsStarting
+	c.setState(connTlsStarting)
 	startTlsCmd := &StartTlsCommand{}
-	if err = c.execute(startTlsCmd); err != nil {
-		return
+	if err := c.execute(startTlsCmd); err != nil {
+		return err
 	}
 	var tlsConn *tls.Conn
 	if tlsConn = tls.Client(c.conn, c.authOptions.TlsConfig); tlsConn == nil {
-		err = ErrAuthTLSUpgradeFailed
-		return
+		return ErrAuthTLSUpgradeFailed
 	}
-	if err = tlsConn.Handshake(); err != nil {
-		return
+	if err := tlsConn.Handshake(); err != nil {
+		return err
 	}
 	c.conn = tlsConn
 	authCmd := &AuthCommand{
 		User:     c.authOptions.User,
 		Password: c.authOptions.Password,
 	}
-	err = c.execute(authCmd)
-	return
+	return c.execute(authCmd)
 }
 
 func (c *connection) available() bool {
-	defer func() {
-		if err := recover(); err != nil {
-			logErrorln("[Connection]", "available(): connection panic!")
-		}
-	}()
-	return (c.conn != nil && (c.state == connTlsStarting || c.state == connActive))
+	return (c.conn != nil && c.isStateLessThan(connInactive))
 }
 
-func (c *connection) close() (err error) {
+func (c *connection) close() error {
 	if c.conn != nil {
-		err = c.conn.Close()
+		err := c.conn.Close()
 		c.conn = nil
+		return err
 	}
-	return
+	return nil
 }
 
 func (c *connection) setInFlight(inFlightVal bool) {
@@ -224,61 +218,55 @@ func (c *connection) setReadDeadline() {
 	c.conn.SetReadDeadline(time.Now().Add(c.requestTimeout))
 }
 
-/*
- * TODO: as coded, this will read one full pb message from Riak, or error in doing so
- * review for accuracy as well as error conditions
- */
-func (c *connection) read() (data []byte, err error) {
+// NB: This will read one full pb message from Riak, or error in doing so
+func (c *connection) read() ([]byte, error) {
 	if !c.available() {
-		err = ErrCannotRead
-		return
+		return nil, ErrCannotRead
 	}
-	c.setReadDeadline()
+	var err error
 	var count int
-	// TODO error conditions http://golang.org/pkg/io/#ReadFull, like EOF conditions
+	var data []byte
+	c.setReadDeadline()
 	if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
 		messageLength := binary.BigEndian.Uint32(c.sizeBuf)
 		// TODO: investigate using a bytes.Buffer on c instead of
 		// always making a new byte slice, more in-line with Node.js client
 		data = make([]byte, messageLength)
 		c.setReadDeadline()
-		// TODO error conditions http://golang.org/pkg/io/#ReadFull, like EOF conditions
 		count, err = io.ReadFull(c.conn, data)
-		if err != nil && err == syscall.EPIPE {
-			c.close()
-		} else if uint32(count) != messageLength {
-			err = fmt.Errorf("[Connection] message length: %d, only read: %d", messageLength, count)
+		if err == nil && uint32(count) != messageLength {
+			err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count))
 		}
 	}
 	if err != nil {
-		// TODO why not close() ?
-		c.state = connInactive
+		/*
+		* TODO: investigate type assertion to net.Error and Temporary()
+		* if nerr, ok := err.(net.Error); !ok || !nerr.Temporary() {
+		 */
+		logDebug("[Connection]", "error in read: '%v'", err)
+		// connection will eventually be expired
+		c.setState(connInactive)
 		data = nil
 	}
-	return
+	return data, err
 }
 
-func (c *connection) write(data []byte) (err error) {
+func (c *connection) write(data []byte) error {
 	if !c.available() {
-		err = ErrCannotWrite
-		return
+		return ErrCannotWrite
 	}
-	// TODO: we should also take currently executing Command (Riak operation)
-	// timeout into account
+	// TODO: we should also take currently executing Command (Riak operation) timeout into account
 	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
-	var count int
-	// TODO evaluate/test error conditions
-	count, err = c.conn.Write(data)
+	count, err := c.conn.Write(data)
 	if err != nil {
-		if err == syscall.EPIPE {
-			c.close()
-		}
-		c.state = connInactive
-		return
+		logDebug("[Connection]", "error in write: '%v'", err)
+		c.setState(connInactive)
+		return err
 	}
 	if count != len(data) {
-		c.state = connInactive
-		err = fmt.Errorf("[Connection] data length: %d, only wrote: %d", len(data), count)
+		// connection will eventually be expired
+		c.setState(connInactive)
+		return newClientError(fmt.Sprintf("[Connection] data length: %d, only wrote: %d", len(data), count))
 	}
-	return
+	return nil
 }

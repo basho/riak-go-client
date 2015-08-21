@@ -30,7 +30,7 @@ func (cmd *UpdateCounterCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *UpdateCounterCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
 			cmd.Response = &UpdateCounterResponse{
@@ -183,7 +183,7 @@ func (cmd *FetchCounterCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchCounterCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbDtFetchResp, ok := msg.(*rpbRiakDT.DtFetchResp); ok {
 			response := &FetchCounterResponse{}
@@ -328,7 +328,7 @@ func (cmd *UpdateSetCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *UpdateSetCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
 			response := &UpdateSetResponse{
@@ -509,7 +509,7 @@ func (cmd *FetchSetCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchSetCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbDtFetchResp, ok := msg.(*rpbRiakDT.DtFetchResp); ok {
 			response := &FetchSetResponse{
@@ -664,7 +664,7 @@ func (cmd *UpdateMapCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *UpdateMapCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
 			response := &UpdateMapResponse{
@@ -1199,7 +1199,7 @@ func (cmd *FetchMapCommand) constructPbRequest() (proto.Message, error) {
 }
 
 func (cmd *FetchMapCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg != nil {
 		if rpbDtFetchResp, ok := msg.(*rpbRiakDT.DtFetchResp); ok {
 			response := &FetchMapResponse{

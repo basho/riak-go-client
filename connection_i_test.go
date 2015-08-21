@@ -152,7 +152,7 @@ func TestHealthCheckFail(t *testing.T) {
 				}
 				return
 			}
-			go handleClientMessageWithRiakError(t, conn, nil)
+			go handleClientMessageWithRiakError(t, conn, 1, nil)
 		}
 	}()
 
@@ -200,7 +200,7 @@ func TestHealthCheckSuccess(t *testing.T) {
 				}
 				return
 			}
-			go readWritePingResp(t, conn)
+			go readWritePingResp(t, conn, true)
 		}
 	}()
 

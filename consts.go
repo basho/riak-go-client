@@ -1,21 +1,19 @@
 package riak
 
-import (
-	"time"
-)
+import "time"
 
 const (
-	thirtySeconds = time.Second * 30
-	thirtyMinutes = time.Minute * 30
+	threeSeconds                  = time.Second * 3
+	fiveSeconds                   = time.Second * 5
+	thirtySeconds                 = time.Second * 30
+	defaultBucketType             = "default"
+	defaultRemoteAddress          = "127.0.0.1:8087"
+	defaultMinConnections         = uint16(1)
+	defaultMaxConnections         = uint16(8096)
+	defaultIdleTimeout            = threeSeconds
+	defaultConnectTimeout         = thirtySeconds
+	defaultRequestTimeout         = fiveSeconds
+	defaultHealthCheckInterval    = time.Second
+	defaultExecutionAttempts      = byte(3)
+	defaultQueueExecutionInterval = time.Second
 )
-
-const defaultRemoteAddress = "127.0.0.1:8087"
-const defaultMinConnections = 1
-const defaultMaxConnections = 8096
-const defaultIdleTimeout = time.Second * 3
-const defaultConnectTimeout = time.Second * 30
-const defaultRequestTimeout = time.Second * 5
-const defaultHealthCheckInterval = time.Second * 5
-const defaultExecutionAttempts = byte(3)
-
-const defaultBucketType = "default"

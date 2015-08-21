@@ -2,16 +2,17 @@ package riak
 
 type CommandImpl struct {
 	Error          error
-	Success        bool
+	success        bool
 	remainingTries byte
+	lastNode       *Node
 }
 
-func (cmd *CommandImpl) Successful() bool {
-	return cmd.Success == true
+func (cmd *CommandImpl) Success() bool {
+	return cmd.success == true
 }
 
 func (cmd *CommandImpl) onError(err error) {
-	cmd.Success = false
+	cmd.success = false
 	// NB: only set error to the *last* error (retries)
 	// TODO: should we keep other errors around?
 	if !cmd.hasRemainingTries() {
@@ -30,4 +31,15 @@ func (cmd *CommandImpl) decrementRemainingTries() {
 
 func (cmd *CommandImpl) hasRemainingTries() bool {
 	return cmd.remainingTries > 0
+}
+
+func (cmd *CommandImpl) setLastNode(lastNode *Node) {
+	if lastNode == nil {
+		panic("[CommandImpl] nil last node")
+	}
+	cmd.lastNode = lastNode
+}
+
+func (cmd *CommandImpl) getLastNode() *Node {
+	return cmd.lastNode
 }
