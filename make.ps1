@@ -117,6 +117,9 @@ function Do-Format {
 
 function Do-Vet {
     $cmd = 'go.exe'
+    $script_path = Get-ScriptPath
+    $argz = 'tool', 'vet', '-shadow=true', '-shadowstrict=true', $script_path
+    Execute $cmd $argz
     $argz = 'vet', $package
     Execute $cmd $argz
 }
