@@ -58,7 +58,6 @@ func TestConcurrentIterateQueue(t *testing.T) {
 		go func() {
 			c := uint16(0)
 			var f = func(val interface{}) (bool, bool) {
-				// t.Logf("saw: %v", val)
 				c++
 				wg_inner.Add(1)
 				go func() {
@@ -80,17 +79,6 @@ func TestConcurrentIterateQueue(t *testing.T) {
 
 	wg.Wait()
 	wg_inner.Wait()
-
-	/*
-		var f = func(val interface{}) (bool, bool) {
-			t.Logf("saw: %v", val)
-			return false, true
-		}
-		err := q.iterate(f)
-		if err != nil {
-			t.Error("expected nil error when iterating queue")
-		}
-	*/
 
 	if expected, actual := uint16(4), q.count(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
