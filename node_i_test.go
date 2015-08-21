@@ -73,9 +73,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if err := node.start(); err != nil {
 		t.Error(err)
 	}
-	c := uint16(0)
 	var f = func(v interface{}) (bool, bool) {
-		c++
 		conn := v.(*connection)
 		if conn == nil {
 			t.Error("got unexpected nil value")
@@ -96,11 +94,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		if expected, actual := conn.requestTimeout, opts.RequestTimeout; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)
 		}
-		if c == count {
-			return true, true
-		} else {
-			return false, true
-		}
+		return false, true
 	}
 	if err := node.cm.q.iterate(f); err != nil {
 		t.Error(err)

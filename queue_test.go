@@ -35,7 +35,7 @@ func TestIterateEmptyQueue(t *testing.T) {
 	if err != nil {
 		t.Error("expected nil error when iterating queue")
 	}
-	if expected, actual := true, executed; expected != actual {
+	if expected, actual := false, executed; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if expected, actual := uint16(0), q.count(); expected != actual {
@@ -44,43 +44,55 @@ func TestIterateEmptyQueue(t *testing.T) {
 }
 
 func TestConcurrentIterateQueue(t *testing.T) {
-	count := uint16(128)
+	count := uint16(2)
 	wg := &sync.WaitGroup{}
-	q := newQueue(count)
+	q := newQueue(count + 2) // make room for 666
 	for i := uint16(0); i < count; i++ {
 		q.enqueue(i)
 	}
 
+	wg_inner := &sync.WaitGroup{}
 	for i := uint16(0); i < count; i++ {
 		wg.Add(1)
+		idx := i
 		go func() {
 			c := uint16(0)
 			var f = func(val interface{}) (bool, bool) {
+				// t.Logf("saw: %v", val)
 				c++
-				if c == count {
-					return true, true
-				}
-				j := val.(uint16)
-				if j == 64 {
-					// won't re-enqueue value 64
-					return false, false
-				} else {
-					return false, true
-				}
+				wg_inner.Add(1)
+				go func() {
+					q.enqueue(666)
+					wg_inner.Done()
+				}()
+				return false, true
 			}
 			err := q.iterate(f)
 			if err != nil {
 				t.Error("expected nil error when iterating queue")
 			}
 			if expected, actual := count, c; expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
+				t.Errorf("%d expected %v, got %v", idx, expected, actual)
 			}
 			wg.Done()
 		}()
 	}
 
 	wg.Wait()
-	if expected, actual := count-1, q.count(); expected != actual {
+	wg_inner.Wait()
+
+	/*
+		var f = func(val interface{}) (bool, bool) {
+			t.Logf("saw: %v", val)
+			return false, true
+		}
+		err := q.iterate(f)
+		if err != nil {
+			t.Error("expected nil error when iterating queue")
+		}
+	*/
+
+	if expected, actual := uint16(4), q.count(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }

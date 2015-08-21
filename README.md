@@ -62,6 +62,7 @@ These excellent community projects inspired this client and parts of their code 
 
 * [`goriakpbc`](https://github.com/tpjg/goriakpbc)
 * [`riaken-core`](https://github.com/riaken/riaken-core)
+* [`backoff`](https://github.com/jpillora/backoff)
 
 * Author: [Luke Bakken](https://github.com/lukebakken)
 * Author: [Christopher Mancini](https://github.com/christophermancini)

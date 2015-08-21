@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/basho/backoff"
 )
 
 // Constants identifying Cluster state
@@ -40,10 +42,24 @@ type Cluster struct {
 
 // Async object is used to pass required arguments to execute a Command asynchronously
 type Async struct {
-	Command Command
-	Done    chan Command
-	Wait    *sync.WaitGroup
-	Error   error
+	Command    Command
+	Done       chan Command
+	Wait       *sync.WaitGroup
+	Error      error
+	enqueuedAt time.Time
+	executeAt  time.Time
+	b          *backoff.Backoff
+}
+
+func (a *Async) onEnqueued() {
+	if a.b == nil {
+		a.enqueuedAt = time.Now()
+		a.b = &backoff.Backoff{
+			Factor: 1.5,
+			Jitter: true,
+		}
+	}
+	a.executeAt = a.enqueuedAt.Add(a.b.Duration())
 }
 
 func (a *Async) done(err error) {
@@ -66,6 +82,8 @@ var (
 	ErrClusterCommandRequired                 = newClientError("[Cluster] Command must be non-nil")
 	ErrClusterAsyncRequiresChannelOrWaitGroup = newClientError("[Cluster] ExecuteAsync argument requires a channel or sync.WaitGroup to indicate completion")
 	ErrClusterNoNodesAvailable                = newClientError("[Cluster] no nodes available to execute command")
+	ErrClusterEnqueueWhileShuttingDown        = newClientError("[Cluster] will not enqueue command, shutting down")
+	ErrClusterShuttingDown                    = newClientError("[Cluster] will not execute command, shutting down")
 )
 
 var defaultClusterOptions = &ClusterOptions{
@@ -105,7 +123,6 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		c.queueCommands = true
 		c.stopChan = make(chan bool)
 		c.cq = newQueue(options.QueueMaxDepth)
-		// TODO configurable queue submit interval?
 		c.commandQueueTicker = time.NewTicker(options.QueueExecutionInterval)
 		go c.executeEnqueuedCommands()
 	}
@@ -155,15 +172,35 @@ func (c *Cluster) Stop() (err error) {
 	logDebug("[Cluster]", "shutting down")
 
 	c.setState(clusterShuttingDown)
+
 	if c.queueCommands {
 		c.stopChan <- true
 		close(c.stopChan)
 		c.commandQueueTicker.Stop()
+		qc := c.cq.count()
+		if qc > 0 {
+			logWarn("[Cluster]", "commands in queue during shutdown: ", qc)
+			var f = func(v interface{}) (bool, bool) {
+				if v == nil {
+					return true, false
+				}
+				if a, ok := v.(*Async); ok {
+					a.done(ErrClusterShuttingDown)
+				}
+				return false, false
+			}
+			if qerr := c.cq.iterate(f); qerr != nil {
+				logErr("[Cluster]", qerr)
+			}
+		}
 		c.cq.destroy()
 	}
 
 	for _, node := range c.nodes {
-		err = node.stop() // TODO multiple errors?
+		err = node.stop()
+		if err != nil {
+			logErr("[Cluster]", err)
+		}
 	}
 
 	allStopped := true
@@ -179,7 +216,6 @@ func (c *Cluster) Stop() (err error) {
 	if allStopped {
 		c.setState(clusterShutdown)
 		logDebug("[Cluster]", "cluster shut down")
-		// TODO queueing check for commands still in the queue
 	} else {
 		panic("[Cluster] nodes still running when all should be stopped")
 	}
@@ -274,10 +310,20 @@ func (c *Cluster) execute(async *Async) {
 }
 
 func (c *Cluster) enqueueCommand(async *Async) error {
-	// if queue fails, command.onError(ErrNoNodesAvailable)
-	command := async.Command
-	logDebug("[Cluster]", "enqueuing command '%s'", command.Name())
-	return c.cq.enqueue(async)
+	var err error
+	if c.isStateLessThan(clusterShuttingDown) {
+		command := async.Command
+		logDebug("[Cluster]", "enqueuing command '%s'", command.Name())
+		async.onEnqueued()
+		err = c.cq.enqueue(async)
+		if err != nil {
+			async.done(err)
+		}
+	} else {
+		err = ErrClusterEnqueueWhileShuttingDown
+		async.done(err)
+	}
+	return err
 }
 
 func (c *Cluster) executeEnqueuedCommands() {
@@ -290,19 +336,28 @@ func (c *Cluster) executeEnqueuedCommands() {
 		case t := <-c.commandQueueTicker.C:
 			// NB: ensure we're not already shutting down
 			if c.isStateLessThan(clusterShuttingDown) {
-				v, err := c.cq.dequeue()
-				if v != nil {
-					async := v.(*Async)
-					if err != nil {
-						async.done(err)
-					}
-					if c.isStateLessThan(clusterShuttingDown) {
-						logDebug("[Cluster]", "(%v) executing queued command at %v", c, t)
-						c.execute(async)
-					} else {
+				var f = func(v interface{}) (bool, bool) {
+					if !c.isStateLessThan(clusterShuttingDown) {
 						logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
-						return
+						return true, false
 					}
+					if v == nil {
+						return true, false
+					}
+					var re_enqueue bool
+					async := v.(*Async)
+					if t.After(async.executeAt) {
+						re_enqueue = false
+						logDebug("[Cluster]", "(%v) executing queued command '%s' at %v", c, async.Command.Name(), t)
+						go c.execute(async) // NB: *may* re-enqueue, so goroutine required
+					} else {
+						re_enqueue = true
+						logDebug("[Cluster]", "(%v) skipping queued command '%s'", c, async.Command.Name())
+					}
+					return false, re_enqueue
+				}
+				if qerr := c.cq.iterate(f); qerr != nil {
+					logErr("[Cluster]", qerr)
 				}
 			} else {
 				logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
