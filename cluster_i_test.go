@@ -183,7 +183,8 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	}
 
 	clusterOptions := &ClusterOptions{
-		Nodes: nodes,
+		Nodes:             nodes,
+		ExecutionAttempts: 3,
 	}
 	cluster, err := NewCluster(clusterOptions)
 	if err != nil {

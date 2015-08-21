@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/basho/backoff"
 )
 
 // Constants identifying Cluster state
@@ -40,48 +38,11 @@ type Cluster struct {
 	commandQueueTicker *time.Ticker
 }
 
-// Async object is used to pass required arguments to execute a Command asynchronously
-type Async struct {
-	Command    Command
-	Done       chan Command
-	Wait       *sync.WaitGroup
-	Error      error
-	enqueuedAt time.Time
-	executeAt  time.Time
-	b          *backoff.Backoff
-}
-
-func (a *Async) onEnqueued() {
-	if a.b == nil {
-		a.enqueuedAt = time.Now()
-		a.b = &backoff.Backoff{
-			Factor: 1.5,
-			Jitter: true,
-		}
-	}
-	a.executeAt = a.enqueuedAt.Add(a.b.Duration())
-}
-
-func (a *Async) done(err error) {
-	if err != nil {
-		logErr("[Async]", err)
-		a.Error = err
-	}
-	if a.Done != nil {
-		logDebug("[Cluster]", "signaling a.Done channel with '%s'", a.Command.Name())
-		a.Done <- a.Command
-	}
-	if a.Wait != nil {
-		logDebug("[Cluster]", "signaling a.Wait WaitGroup for '%s'", a.Command.Name())
-		a.Wait.Done()
-	}
-}
-
 // Cluster errors
 var (
 	ErrClusterCommandRequired                 = newClientError("[Cluster] Command must be non-nil")
 	ErrClusterAsyncRequiresChannelOrWaitGroup = newClientError("[Cluster] ExecuteAsync argument requires a channel or sync.WaitGroup to indicate completion")
-	ErrClusterNoNodesAvailable                = newClientError("[Cluster] no nodes available to execute command")
+	ErrClusterNoNodesAvailable                = newClientError("[Cluster] all retries exhausted and/or no nodes available to execute command")
 	ErrClusterEnqueueWhileShuttingDown        = newClientError("[Cluster] will not enqueue command, shutting down")
 	ErrClusterShuttingDown                    = newClientError("[Cluster] will not execute command, shutting down")
 )
@@ -267,6 +228,7 @@ func (c *Cluster) execute(async *Async) {
 	enqueued := false
 	command := async.Command
 	command.setRemainingTries(c.executionAttempts)
+	async.onExecute()
 	for command.hasRemainingTries() {
 		if err = c.stateCheck(clusterRunning); err != nil {
 			break
@@ -282,7 +244,6 @@ func (c *Cluster) execute(async *Async) {
 			} else {
 				// NB: retry since error occurred
 				logDebug("[Cluster]", "executed command '%s': re-try due to error '%v'", command.Name(), err)
-				command.decrementRemainingTries()
 			}
 		} else {
 			// Command did NOT execute
@@ -293,15 +254,20 @@ func (c *Cluster) execute(async *Async) {
 					if err = c.enqueueCommand(async); err == nil {
 						enqueued = true
 					}
-				} else {
-					err = ErrClusterNoNodesAvailable
+					break
 				}
-				break
 			} else {
 				// NB: retry since error occurred
 				logDebug("[Cluster]", "did NOT execute command '%s': re-try due to error '%v'", command.Name(), err)
-				command.decrementRemainingTries()
 			}
+		}
+
+		command.decrementRemainingTries()
+
+		if command.hasRemainingTries() {
+			async.onRetry()
+		} else {
+			err = ErrClusterNoNodesAvailable
 		}
 	}
 	if !enqueued {
