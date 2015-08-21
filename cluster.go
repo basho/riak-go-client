@@ -8,11 +8,11 @@ import (
 
 // Constants identifying Cluster state
 const (
-	clusterError state = iota
-	clusterCreated
+	clusterCreated state = iota
 	clusterRunning
 	clusterShuttingDown
 	clusterShutdown
+	clusterError
 )
 
 // ClusterOptions object contains your pool of Node objects and the NodeManager
@@ -34,7 +34,7 @@ type Cluster struct {
 	nodeManager        NodeManager
 	executionAttempts  byte
 	queueCommands      bool
-	commandQueue       *queue
+	cq                 *queue
 	commandQueueTicker *time.Ticker
 }
 
@@ -90,7 +90,7 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		executionAttempts: options.ExecutionAttempts,
 		nodeManager:       options.NodeManager,
 	}
-	c.initStateData("clusterError", "clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown")
+	c.initStateData("clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown", "clusterError")
 
 	if c.nodes, err = optNodes(options.Nodes); err != nil {
 		c = nil
@@ -104,7 +104,7 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		}
 		c.queueCommands = true
 		c.stopChan = make(chan bool)
-		c.commandQueue = newQueue(options.QueueMaxDepth)
+		c.cq = newQueue(options.QueueMaxDepth)
 		// TODO configurable queue submit interval?
 		c.commandQueueTicker = time.NewTicker(options.QueueExecutionInterval)
 		go c.executeEnqueuedCommands()
@@ -121,44 +121,46 @@ func (c *Cluster) String() string {
 
 // Start opens connections with your configured nodes and adds them to
 // the active pool
-func (c *Cluster) Start() (err error) {
+func (c *Cluster) Start() error {
 	if c.isCurrentState(clusterRunning) {
 		logWarnln("[Cluster]", "cluster already running.")
-		return
+		return nil
 	}
-	if err = c.stateCheck(clusterCreated); err != nil {
-		return
+
+	if err := c.stateCheck(clusterCreated); err != nil {
+		return err
 	}
 
 	logDebug("[Cluster]", "starting")
 
 	for _, node := range c.nodes {
-		if err = node.start(); err != nil {
-			return
+		if err := node.start(); err != nil {
+			return err
 		}
 	}
 
 	c.setState(clusterRunning)
 	logDebug("[Cluster]", "cluster started")
 
-	return
+	return nil
 }
 
 // Stop closes the connections with your configured nodes and removes them from
 // the active pool
 func (c *Cluster) Stop() (err error) {
 	if err = c.stateCheck(clusterRunning); err != nil {
-		logError("[Cluster]", "Stop: %s", err.Error())
 		return
 	}
+
+	logDebug("[Cluster]", "shutting down")
+
 	c.setState(clusterShuttingDown)
 	if c.queueCommands {
 		c.stopChan <- true
 		close(c.stopChan)
 		c.commandQueueTicker.Stop()
-		c.commandQueue.destroy()
+		c.cq.destroy()
 	}
-	logDebug("[Cluster]", "shutting down")
 
 	for _, node := range c.nodes {
 		err = node.stop() // TODO multiple errors?
@@ -275,7 +277,7 @@ func (c *Cluster) enqueueCommand(async *Async) error {
 	// if queue fails, command.onError(ErrNoNodesAvailable)
 	command := async.Command
 	logDebug("[Cluster]", "enqueuing command '%s'", command.Name())
-	return c.commandQueue.enqueue(async)
+	return c.cq.enqueue(async)
 }
 
 func (c *Cluster) executeEnqueuedCommands() {
@@ -287,23 +289,24 @@ func (c *Cluster) executeEnqueuedCommands() {
 			return
 		case t := <-c.commandQueueTicker.C:
 			// NB: ensure we're not already shutting down
-			if tmpErr := c.stateCheck(clusterShuttingDown); tmpErr == nil {
-				logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
-				return
-			} else {
-				if value, err := c.commandQueue.dequeue(); err != nil {
-					async := value.(*Async)
-					async.done(err)
-				} else {
-					if tmpErr := c.stateCheck(clusterShuttingDown); tmpErr == nil {
-						logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
-						return
-					} else {
-						async := value.(*Async)
+			if c.isStateLessThan(clusterShuttingDown) {
+				v, err := c.cq.dequeue()
+				if v != nil {
+					async := v.(*Async)
+					if err != nil {
+						async.done(err)
+					}
+					if c.isStateLessThan(clusterShuttingDown) {
 						logDebug("[Cluster]", "(%v) executing queued command at %v", c, t)
 						c.execute(async)
+					} else {
+						logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
+						return
 					}
 				}
+			} else {
+				logDebug("[Cluster]", "(%v) shutting down, command queue routine is quitting")
+				return
 			}
 		}
 	}

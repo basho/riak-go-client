@@ -9,7 +9,7 @@
                             Requires Go protoc utility (https://github.com/golang/protobuf)
         * Format          - run *.go files through 'go fmt'
         * Test            - Run all tests
-        * UnitTest        - Run unit tests
+        * UnitTest        - Run unit tests (default target)
         * IntegrationTest - Run live integration tests
 .PARAMETER Verbose
     Use to increase verbosity.
@@ -24,7 +24,7 @@
 Param(
     [Parameter(Mandatory=$False, Position=0)]
     [ValidateSet('ProtoGen', 'Format', 'Test', 'UnitTest', 'IntegrationTest', IgnoreCase = $True)]
-    [string]$Target = 'Test'
+    [string]$Target = 'UnitTest'
 )
 
 Set-StrictMode -Version Latest

@@ -67,15 +67,16 @@ func TestExecuteCommandOnCluster(t *testing.T) {
 	if expected, actual := byte(3), command.remainingTries; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	if expected, actual := true, command.Successful(); expected != actual {
+	if expected, actual := true, command.Success(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
 
 func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
+	count := uint16(8)
 	nodeOpts := &NodeOptions{
-		MinConnections: 32,
-		MaxConnections: 64,
+		MinConnections: count,
+		MaxConnections: count,
 		RemoteAddress:  getRiakAddress(),
 	}
 
@@ -108,9 +109,8 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	count := 32
 	pingChan := make(chan *PingCommand, count)
-	for i := 0; i < count; i++ {
+	for i := uint16(0); i < count; i++ {
 		logDebug("[TestExecuteConcurrentCommandsOnCluster]", "i: %d", i)
 		go func() {
 			command := &PingCommand{}
@@ -121,11 +121,13 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 		}()
 	}
 
-	j := 0
-	for i := 0; i < count; i++ {
+	j := uint16(0)
+	for i := uint16(0); i < count; i++ {
 		select {
 		case pingCommand := <-pingChan:
-			logDebug("[TestExecuteConcurrentCommandsOnCluster]", "j: %d, pingCommand: %v", j, pingCommand)
+			if expected, actual := true, pingCommand.Success(); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
 			j++
 		}
 	}
@@ -279,7 +281,7 @@ func TestAsyncExecuteCommandOnCluster(t *testing.T) {
 	if expected, actual := byte(3), command.remainingTries; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	if expected, actual := true, command.Successful(); expected != actual {
+	if expected, actual := true, command.Success(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 
@@ -294,7 +296,7 @@ func TestAsyncExecuteCommandOnCluster(t *testing.T) {
 	}
 
 	wg.Wait()
-	if expected, actual := true, command.Successful(); expected != actual {
+	if expected, actual := true, command.Success(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
@@ -357,6 +359,11 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 		close(stateChan)
 		if err := cluster.Stop(); err != nil {
 			t.Error(err.Error())
+		}
+		for _, pc := range pingCommands {
+			if expected, actual := true, pc.Success(); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
 		}
 	}()
 

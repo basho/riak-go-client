@@ -11,7 +11,7 @@ func TestCreateNodeWithOptions(t *testing.T) {
 		RemoteAddress:       "8.8.8.8:1234",
 		MinConnections:      2,
 		MaxConnections:      2048,
-		IdleTimeout:         thirtyMinutes,
+		IdleTimeout:         thirtySeconds,
 		ConnectTimeout:      thirtySeconds,
 		RequestTimeout:      thirtySeconds,
 		HealthCheckInterval: thirtySeconds,
@@ -37,22 +37,19 @@ func TestCreateNodeWithOptions(t *testing.T) {
 	if !node.addr.IP.Equal(testIP) {
 		t.Errorf("expected %v, got: %v", testIP, node.addr.IP)
 	}
-	if expected, actual := node.minConnections, opts.MinConnections; expected != actual {
+	if expected, actual := node.cm.minConnections, opts.MinConnections; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := node.maxConnections, opts.MaxConnections; expected != actual {
+	if expected, actual := node.cm.maxConnections, opts.MaxConnections; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := node.idleTimeout, opts.IdleTimeout; expected != actual {
+	if expected, actual := node.cm.idleTimeout, opts.IdleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := node.connectTimeout, opts.ConnectTimeout; expected != actual {
+	if expected, actual := node.cm.connectTimeout, opts.ConnectTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := node.requestTimeout, opts.RequestTimeout; expected != actual {
-		t.Errorf("expected %v, got: %v", expected, actual)
-	}
-	if expected, actual := 0, len(node.available); expected != actual {
+	if expected, actual := node.cm.requestTimeout, opts.RequestTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 	if expected, actual := node.healthCheckInterval, opts.HealthCheckInterval; expected != actual {
@@ -77,25 +74,22 @@ func TestEnsureDefaultNodeValues(t *testing.T) {
 	if !node.addr.IP.Equal(localhost) {
 		t.Errorf("expected %v, got: %v", localhost, node.addr.IP)
 	}
-	if node.minConnections != defaultMinConnections {
-		t.Errorf("expected %v, got: %v", defaultMinConnections, node.minConnections)
-	}
-	if node.maxConnections != defaultMaxConnections {
-		t.Errorf("expected %v, got: %v", defaultMaxConnections, node.maxConnections)
-	}
-	if node.idleTimeout != defaultIdleTimeout {
-		t.Errorf("expected %v, got: %v", defaultIdleTimeout, node.idleTimeout)
-	}
-	if expected, actual := defaultConnectTimeout, node.connectTimeout; expected != actual {
+	if expected, actual := defaultMinConnections, node.cm.minConnections; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := defaultRequestTimeout, node.requestTimeout; expected != actual {
+	if expected, actual := defaultMaxConnections, node.cm.maxConnections; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := defaultConnectTimeout, node.connectTimeout; expected != actual {
+	if expected, actual := defaultIdleTimeout, node.cm.idleTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
-	if expected, actual := 0, len(node.available); expected != actual {
+	if expected, actual := defaultConnectTimeout, node.cm.connectTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := defaultRequestTimeout, node.cm.requestTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := defaultConnectTimeout, node.cm.connectTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 	if expected, actual := defaultHealthCheckInterval, node.healthCheckInterval; expected != actual {

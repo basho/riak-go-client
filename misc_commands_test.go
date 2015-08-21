@@ -97,7 +97,7 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(rpbGetBucketResp)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 
@@ -106,7 +106,7 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 			t.Error("unexpected nil object")
 			t.FailNow()
 		}
-		if expected, actual := true, fetchBucketPropsCommand.Success; expected != actual {
+		if expected, actual := true, fetchBucketPropsCommand.success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 		if fetchBucketPropsCommand.Response == nil {
@@ -370,12 +370,12 @@ func TestParseRpbStoreBucketRespCorrectly(t *testing.T) {
 	}
 
 	cmd.onSuccess(nil)
-	if expected, actual := true, cmd.Successful(); expected != actual {
+	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 
 	if storeBucketPropsCommand, ok := cmd.(*StoreBucketPropsCommand); ok {
-		if expected, actual := true, storeBucketPropsCommand.Success; expected != actual {
+		if expected, actual := true, storeBucketPropsCommand.success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
 	} else {

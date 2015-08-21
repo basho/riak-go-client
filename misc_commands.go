@@ -36,7 +36,7 @@ func (cmd *PingCommand) constructPbRequest() (msg proto.Message, err error) {
 }
 
 func (cmd *PingCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	return nil
 }
 
@@ -63,7 +63,7 @@ func (cmd *StartTlsCommand) constructPbRequest() (msg proto.Message, err error) 
 }
 
 func (cmd *StartTlsCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	return nil
 }
 
@@ -99,7 +99,7 @@ func (cmd *AuthCommand) constructPbRequest() (msg proto.Message, err error) {
 }
 
 func (cmd *AuthCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	return nil
 }
 
@@ -132,9 +132,9 @@ func (cmd *FetchBucketPropsCommand) constructPbRequest() (proto.Message, error) 
 }
 
 func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	if msg == nil {
-		cmd.Success = false
+		cmd.success = false
 	} else {
 		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
 			rpbBucketProps := rpbGetBucketResp.GetProps()
@@ -337,7 +337,7 @@ func (cmd *StoreBucketPropsCommand) constructPbRequest() (proto.Message, error) 
 }
 
 func (cmd *StoreBucketPropsCommand) onSuccess(msg proto.Message) error {
-	cmd.Success = true
+	cmd.success = true
 	return nil
 }
 

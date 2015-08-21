@@ -23,7 +23,7 @@ type StreamingCommand interface {
 // Command interface enforces proper structure of a Command object
 type Command interface {
 	Name() string
-	Successful() bool
+	Success() bool
 	getRequestCode() byte
 	constructPbRequest() (proto.Message, error)
 	onError(error)
