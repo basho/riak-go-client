@@ -13,7 +13,7 @@ func TestCreateConnection(t *testing.T) {
 	opts := &connectionOptions{
 		remoteAddress:  addr,
 		connectTimeout: thirtySeconds,
-		requestTimeout: thirtyMinutes,
+		requestTimeout: thirtySeconds,
 	}
 	if conn, err := newConnection(opts); err == nil {
 		if conn.addr.Port != 8098 {
@@ -28,8 +28,8 @@ func TestCreateConnection(t *testing.T) {
 		if conn.connectTimeout != thirtySeconds {
 			t.Errorf("expected %v, got: %v", thirtySeconds, conn.connectTimeout)
 		}
-		if conn.requestTimeout != thirtyMinutes {
-			t.Errorf("expected %v, got: %v", thirtyMinutes, conn.requestTimeout)
+		if conn.requestTimeout != thirtySeconds {
+			t.Errorf("expected %v, got: %v", thirtySeconds, conn.requestTimeout)
 		}
 		if expected, actual := false, conn.inFlight; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)

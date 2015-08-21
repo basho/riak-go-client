@@ -42,7 +42,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		RemoteAddress:       addr,
 		MinConnections:      count,
 		MaxConnections:      count,
-		IdleTimeout:         thirtyMinutes,
+		IdleTimeout:         thirtySeconds,
 		ConnectTimeout:      thirtySeconds,
 		RequestTimeout:      thirtySeconds,
 		HealthCheckInterval: time.Millisecond * 500,

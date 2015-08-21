@@ -90,7 +90,7 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		executionAttempts: options.ExecutionAttempts,
 		nodeManager:       options.NodeManager,
 	}
-	c.initStateData("clusterError", "clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown")
+	c.initStateData("clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown", "clusterError")
 
 	if c.nodes, err = optNodes(options.Nodes); err != nil {
 		c = nil

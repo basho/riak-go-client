@@ -93,7 +93,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 		var cm *connectionManager
 		if cm, err = newConnectionManager(connMgrOpts); err == nil {
 			n.cm = cm
-			n.initStateData("nodeError", "nodeCreated", "nodeRunning", "nodeHealthChecking", "nodeShuttingDown", "nodeShutdown")
+			n.initStateData("nodeCreated", "nodeRunning", "nodeHealthChecking", "nodeShuttingDown", "nodeShutdown", "nodeError")
 			n.setState(nodeCreated)
 			return n, nil
 		}

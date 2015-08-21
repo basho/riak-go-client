@@ -11,7 +11,7 @@ func TestCreateNodeWithOptions(t *testing.T) {
 		RemoteAddress:       "8.8.8.8:1234",
 		MinConnections:      2,
 		MaxConnections:      2048,
-		IdleTimeout:         thirtyMinutes,
+		IdleTimeout:         thirtySeconds,
 		ConnectTimeout:      thirtySeconds,
 		RequestTimeout:      thirtySeconds,
 		HealthCheckInterval: thirtySeconds,

@@ -107,8 +107,8 @@ func (cm *connectionManager) start() error {
 			logErr("[connectionManager]", err)
 		}
 	}
-	cm.expireTicker = time.NewTicker(thirtySeconds)
-	go cm.expireIdleConnections()
+	cm.expireTicker = time.NewTicker(fiveSeconds)
+	go cm.expireConnections()
 	cm.setState(cmRunning)
 	return nil
 }
@@ -253,19 +253,19 @@ func (cm *connectionManager) remove(conn *connection) error {
 	return nil
 }
 
-func (cm *connectionManager) expireIdleConnections() {
-	logDebug("[connectionManager]", "idle connection expiration routine is starting")
+func (cm *connectionManager) expireConnections() {
+	logDebug("[connectionManager]", "connection expiration routine is starting")
 	for {
 		select {
 		case <-cm.stopChan:
-			logDebug("[connectionManager]", "idle connection expiration routine is quitting")
+			logDebug("[connectionManager]", "connection expiration routine is quitting")
 			return
 		case t := <-cm.expireTicker.C:
 			if !cm.isStateLessThan(cmShuttingDown) {
-				logDebug("[connectionManager]", "(%v) idle connection expiration routine is quitting.", cm)
+				logDebug("[connectionManager]", "(%v) connection expiration routine is quitting.", cm)
 			}
 
-			logDebug("[connectionManager]", "(%v) expiring idle connections at %v", cm, t)
+			logDebug("[connectionManager]", "(%v) expiring connections at %v", cm, t)
 
 			currentConnCount := cm.count()
 			c := uint16(0)
@@ -282,7 +282,8 @@ func (cm *connectionManager) expireIdleConnections() {
 					return true, true
 				}
 				conn := v.(*connection)
-				if now.Sub(conn.lastUsed) >= cm.idleTimeout {
+				// expire connection if not available or if it has passed idle timeout
+				if !conn.available() || (now.Sub(conn.lastUsed) >= cm.idleTimeout) {
 					cm.Lock()
 					cm.connectionCount--
 					cm.Unlock()
@@ -306,7 +307,7 @@ func (cm *connectionManager) expireIdleConnections() {
 			logDebug("[connectionManager]", "(%v) expired %d connections.", cm, expiredCount)
 
 			if !cm.isStateLessThan(cmShuttingDown) {
-				logDebug("[connectionManager]", "(%v) idle connection expiration routine is quitting.", cm)
+				logDebug("[connectionManager]", "(%v) connection expiration routine is quitting.", cm)
 			}
 		}
 	}
