@@ -13,7 +13,7 @@ const (
 	defaultIdleTimeout            = threeSeconds
 	defaultConnectTimeout         = thirtySeconds
 	defaultRequestTimeout         = fiveSeconds
-	defaultHealthCheckInterval    = time.Second
+	defaultHealthCheckInterval    = 125 * time.Millisecond
 	defaultExecutionAttempts      = byte(3)
-	defaultQueueExecutionInterval = time.Second
+	defaultQueueExecutionInterval = 125 * time.Millisecond
 )

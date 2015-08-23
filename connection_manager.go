@@ -194,26 +194,18 @@ func (cm *connectionManager) create(hc Command) (*connection, error) {
 
 func (cm *connectionManager) get() (*connection, error) {
 	var conn *connection
-	currentConnCount := cm.count()
-	c := uint16(0)
 	var f = func(v interface{}) (bool, bool) {
 		if v == nil {
 			// connection pool is empty
 			return true, false
 		}
-		c++
 		conn = v.(*connection)
 		if conn.available() {
 			// we found our connection, don't re-queue
 			return true, false
 		} else {
-			if c == currentConnCount {
-				// stop searching and re-queue conn
-				return true, true
-			} else {
-				// keep going and re-queue conn
-				return false, true
-			}
+			// keep going and re-queue conn
+			return false, true
 		}
 	}
 	err := cm.q.iterate(f)
@@ -267,17 +259,13 @@ func (cm *connectionManager) expireConnections() {
 
 			logDebug("[connectionManager]", "(%v) expiring connections at %v", cm, t)
 
-			currentConnCount := cm.count()
-			c := uint16(0)
 			expiredCount := uint16(0)
 			now := time.Now()
-
 			var f = func(v interface{}) (bool, bool) {
 				if v == nil {
 					// connection pool is empty
 					return true, false
 				}
-				c++
 				if !cm.isStateLessThan(cmShuttingDown) {
 					return true, true
 				}
@@ -293,11 +281,7 @@ func (cm *connectionManager) expireConnections() {
 					expiredCount++
 					return false, false
 				}
-				if c == currentConnCount {
-					return true, true
-				} else {
-					return false, true
-				}
+				return false, true
 			}
 
 			if err := cm.q.iterate(f); err != nil {
