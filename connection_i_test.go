@@ -7,28 +7,28 @@ import (
 	"net"
 	"reflect"
 	"testing"
-	"sync"
 	"time"
 )
 
 func TestSuccessfulConnection(t *testing.T) {
-	ln, err := net.Listen("tcp4", "127.0.0.1:1337")
-	if err != nil {
-		t.Error(err)
-	}
-	defer ln.Close()
-
 	connChan := make(chan bool)
-	go func() {
-		c, err := ln.Accept()
-		defer c.Close()
-		if err != nil {
-			t.Log(err.Error())
-		}
-		connChan <- true
-	}()
 
-	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1337")
+	var onConn = func(c net.Conn) bool {
+		defer c.Close()
+		connChan <- true
+		return true
+	}
+	o := &testListenerOpts{
+		test:   t,
+		host:   "127.0.0.1",
+		port:   1337,
+		onConn: onConn,
+	}
+	tl := newTestListener(o)
+	defer tl.stop()
+	tl.start()
+
+	addr, err := net.ResolveTCPAddr("tcp4", tl.addr)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -58,31 +58,22 @@ func TestSuccessfulConnection(t *testing.T) {
 }
 
 func TestConnectionClosed(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:1338")
-	if err != nil {
-		t.Error(err)
-	}
-	defer ln.Close()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		wg.Done()
-		c, err := ln.Accept()
-		if err != nil {
-			t.Error(err)
-		}
-		if c == nil {
-			t.Error("expected non-nil conn")
-		}
+	var onConn = func(c net.Conn) bool {
 		if err := c.Close(); err != nil {
 			t.Error(err)
 		}
-	}()
+		return true
+	}
+	o := &testListenerOpts{
+		test:   t,
+		host:   "127.0.0.1",
+		port:   1338,
+		onConn: onConn,
+	}
+	tl := newTestListener(o)
+	tl.start()
 
-	wg.Wait()
-
-	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1338")
+	addr, err := net.ResolveTCPAddr("tcp4", tl.addr)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -99,9 +90,7 @@ func TestConnectionClosed(t *testing.T) {
 	if err := conn.connect(); err != nil {
 		t.Error("unexpected error in connect", err)
 	} else {
-		if err := ln.Close(); err != nil {
-			t.Error(err)
-		}
+		tl.stop()
 		cmd := &PingCommand{}
 		if err := conn.execute(cmd); err != nil {
 			if operr, ok := err.(*net.OpError); ok {
@@ -146,26 +135,21 @@ func TestConnectionTimeout(t *testing.T) {
 }
 
 func TestHealthCheckFail(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:1339")
-	if err != nil {
-		t.Error(err)
+	var onConn = func(c net.Conn) bool {
+		handleClientMessageWithRiakError(t, c, 1, nil)
+		return true
 	}
-	defer ln.Close()
+	o := &testListenerOpts{
+		test:   t,
+		host:   "127.0.0.1",
+		port:   1339,
+		onConn: onConn,
+	}
+	tl := newTestListener(o)
+	defer tl.stop()
+	tl.start()
 
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				if _, ok := err.(*net.OpError); !ok {
-					t.Error(err)
-				}
-				return
-			}
-			go handleClientMessageWithRiakError(t, conn, 1, nil)
-		}
-	}()
-
-	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1339")
+	addr, err := net.ResolveTCPAddr("tcp4", tl.addr)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -194,24 +178,14 @@ func TestHealthCheckFail(t *testing.T) {
 }
 
 func TestHealthCheckSuccess(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:1340")
-	if err != nil {
-		t.Error(err)
+	o := &testListenerOpts{
+		test: t,
+		host: "127.0.0.1",
+		port: 1340,
 	}
-	defer ln.Close()
-
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				if _, ok := err.(*net.OpError); !ok {
-					t.Error(err)
-				}
-				return
-			}
-			go readWritePingResp(t, conn, true)
-		}
-	}()
+	tl := newTestListener(o)
+	defer tl.stop()
+	tl.start()
 
 	addr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:1340")
 	if err != nil {

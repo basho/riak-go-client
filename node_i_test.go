@@ -4,42 +4,23 @@ package riak
 
 import (
 	"net"
-	"strconv"
 	"testing"
 	"time"
 )
 
 func TestCreateNodeWithOptionsAndStart(t *testing.T) {
-	port := 13340
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		t.Error(err)
+	o := &testListenerOpts{
+		test: t,
+		host: "127.0.0.1",
+		port: 13340,
 	}
-	defer ln.Close()
-
-	go func() {
-		for {
-			c, err := ln.Accept()
-			if err != nil {
-				if _, ok := err.(*net.OpError); !ok {
-					t.Error(err)
-				}
-				return
-			}
-			go func() {
-				for {
-					if !readWritePingResp(t, c, false) {
-						break
-					}
-				}
-			}()
-		}
-	}()
+	tl := newTestListener(o)
+	tl.start()
+	defer tl.stop()
 
 	count := uint16(16)
 	opts := &NodeOptions{
-		RemoteAddress:       addr,
+		RemoteAddress:       tl.addr,
 		MinConnections:      count,
 		MaxConnections:      count,
 		IdleTimeout:         thirtySeconds,
@@ -55,8 +36,8 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	if node == nil {
 		t.Fatal("expected non-nil node")
 	}
-	if node.addr.Port != int(port) {
-		t.Errorf("expected port %d, got: %d", port, node.addr.Port)
+	if node.addr.Port != int(tl.port) {
+		t.Errorf("expected port %d, got: %d", tl.port, node.addr.Port)
 	}
 	if node.addr.Zone != "" {
 		t.Errorf("expected empty zone, got: %s", string(node.addr.Zone))
@@ -79,8 +60,8 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 			t.Error("got unexpected nil value")
 			return true, false
 		}
-		if conn.addr.Port != port {
-			t.Errorf("expected port %d, got: %d", port, node.addr.Port)
+		if expected, actual := int(tl.port), conn.addr.Port; expected != actual {
+			t.Errorf("expected %d, got: %d", expected, actual)
 		}
 		if conn.addr.Zone != "" {
 			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
@@ -105,40 +86,32 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 }
 
 func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
-	port := 13337
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	connects := 0
+	var onConn = func(c net.Conn) bool {
+		connects++
+		if connects == 1 {
+			c.Close()
+		} else {
+			readWritePingResp(t, c, true)
+		}
+		return true
+	}
+	o := &testListenerOpts{
+		test:   t,
+		host:   "127.0.0.1",
+		port:   13337,
+		onConn: onConn,
+	}
+	tl := newTestListener(o)
+	tl.start()
+	defer tl.stop()
+
 	doneChan := make(chan struct{})
 	stateChan := make(chan state)
 
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		t.Error(err)
-	}
-	defer ln.Close()
-
-	connects := 0
-	go func() {
-		for {
-			c, err := ln.Accept()
-			if err != nil {
-				if _, ok := err.(*net.OpError); !ok {
-					t.Error(err)
-				}
-				return
-			}
-			connects++
-			if connects == 1 {
-				c.Close()
-			} else {
-				readWritePingResp(t, c, true)
-				return
-			}
-		}
-	}()
-
 	go func() {
 		opts := &NodeOptions{
-			RemoteAddress:       addr,
+			RemoteAddress:       tl.addr,
 			MinConnections:      0,
 			HealthCheckInterval: 50 * time.Millisecond,
 		}
@@ -198,93 +171,84 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 }
 
 func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
-	port := 13338
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	o := &testListenerOpts{
+		test: t,
+		host: "127.0.0.1",
+		port: 13338,
+	}
+	tl := newTestListener(o)
+	defer tl.stop()
+
 	stateChan := make(chan state)
+	recoveredChan := make(chan struct{})
 
 	var node *Node
-	go func() {
-		opts := &NodeOptions{
-			RemoteAddress:       addr,
-			MinConnections:      0,
-			HealthCheckInterval: 250 * time.Millisecond,
-		}
-		var err error
-		node, err = NewNode(opts)
-		if err != nil {
-			t.Fatal(err)
-		}
+	opts := &NodeOptions{
+		RemoteAddress:  tl.addr,
+		MinConnections: 0,
+	}
+	var err error
+	node, err = NewNode(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	origSetStateFunc := node.setStateFunc
 
-		origSetStateFunc := node.setStateFunc
+	go func() {
 		node.setStateFunc = func(sd *stateData, st state) {
 			origSetStateFunc(&node.stateData, st)
 			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
 			stateChan <- st
 		}
-
 		node.start()
-		nodeIsRunningCount := 0
-		for i := 0; i < 10; i++ {
-			if node.isCurrentState(nodeRunning) {
-				nodeIsRunningCount++
-			}
-			if nodeIsRunningCount == 2 {
+
+		pc := &PingCommand{}
+		node.execute(pc)
+		for {
+			select {
+			case <-recoveredChan:
 				break
+			case <-time.After(time.Second):
+				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "waiting for recovery...")
+				pc := &PingCommand{}
+				node.execute(pc)
 			}
-			ping := &PingCommand{}
-			_, err = node.execute(ping)
-			if err != nil {
-				t.Log(err)
-			}
-			time.Sleep(time.Second)
 		}
-		node.stop()
-		close(stateChan)
 	}()
 
-	listenerStarted := false
-	nodeIsRunningCount := 0
-	for {
-		if nodeState, ok := <-stateChan; ok {
-			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "nodeState: '%v'", nodeState)
-			if node.isCurrentState(nodeRunning) {
-				nodeIsRunningCount++
-			}
-			if nodeIsRunningCount == 2 {
-				// This is the second time node has entered nodeRunning state, so it must have recovered via the health check
-				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SUCCESS node recovered via health check")
+	go func() {
+		listenerStarted := false
+		nodeIsRunningCount := 0
+		for {
+			if nodeState, ok := <-stateChan; ok {
+				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "nodeState: '%v'", nodeState)
+				if node.isCurrentState(nodeRunning) {
+					nodeIsRunningCount++
+				}
+				if nodeIsRunningCount == 2 {
+					// This is the second time node has entered nodeRunning state, so it must have recovered via the health check
+					logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SUCCESS node recovered via health check")
+					close(recoveredChan)
+					break
+				}
+				if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
+					logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "STARTING LISTENER")
+					tl.start()
+				}
+			} else {
+				t.Error("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck] stateChan closed before recovering via health check")
 				break
 			}
-			if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
-				listenerStarted = true
-				ln, err := net.Listen("tcp", addr)
-				if err != nil {
-					t.Error(err)
-				}
-				defer ln.Close()
-
-				go func() {
-					for {
-						c, err := ln.Accept()
-						if err != nil {
-							if _, ok := err.(*net.OpError); !ok {
-								t.Error(err)
-							}
-							return
-						}
-						go func() {
-							for {
-								if !readWritePingResp(t, c, false) {
-									break
-								}
-							}
-						}()
-					}
-				}()
-			}
-		} else {
-			t.Error("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck] stateChan closed before recovering via health check")
-			break
 		}
+	}()
+
+	select {
+	case <-recoveredChan:
+		logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "recovered")
+		node.setStateFunc = origSetStateFunc
+		node.stop()
+		close(stateChan)
+	case <-time.After(5 * time.Second):
+		t.Error("test timed out")
 	}
 }

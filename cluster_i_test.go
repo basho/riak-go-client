@@ -4,7 +4,6 @@ package riak
 
 import (
 	"net"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -138,47 +137,43 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 
 func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	nodeCount := 3
-	port := 6666
+	port := uint16(6666)
 	listenerChan := make(chan bool, nodeCount)
-	servers := make([]net.Listener, nodeCount)
+	listeners := make([]*testListener, nodeCount)
 	defer func() {
-		for _, s := range servers {
-			s.Close()
+		for _, s := range listeners {
+			s.stop()
 		}
 	}()
 
 	nodes := make([]*Node, nodeCount)
 	for i := 0; i < nodeCount; i++ {
-		laddr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-		if l, err := net.Listen("tcp", laddr); err != nil {
-			t.Fatal(err)
+
+		var onConn = func(c net.Conn) bool {
+			handleClientMessageWithRiakError(t, c, 1, listenerChan)
+			return true
+		}
+		o := &testListenerOpts{
+			test:   t,
+			host:   "127.0.0.1",
+			port:   port,
+			onConn: onConn,
+		}
+		tl := newTestListener(o)
+		tl.start()
+
+		port++
+		listeners[i] = tl
+
+		nodeOptions := &NodeOptions{
+			RemoteAddress:  tl.addr,
+			MinConnections: 0,
+			MaxConnections: 1,
+		}
+		if node, err := NewNode(nodeOptions); err == nil {
+			nodes[i] = node
 		} else {
-			port++
-			servers[i] = l
-
-			go func() {
-				for {
-					conn, err := l.Accept()
-					if err != nil {
-						if _, ok := err.(*net.OpError); !ok {
-							t.Error(err)
-						}
-						return
-					}
-					go handleClientMessageWithRiakError(t, conn, 1, listenerChan)
-				}
-			}()
-
-			nodeOptions := &NodeOptions{
-				RemoteAddress:  laddr,
-				MinConnections: 0,
-				MaxConnections: 1,
-			}
-			if node, err := NewNode(nodeOptions); err == nil {
-				nodes[i] = node
-			} else {
-				t.Fatal(err)
-			}
+			t.Fatal(err)
 		}
 	}
 
@@ -303,9 +298,15 @@ func TestAsyncExecuteCommandOnCluster(t *testing.T) {
 }
 
 func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
+	o := &testListenerOpts{
+		test: t,
+		host: "127.0.0.1",
+		port: 13339,
+	}
+	tl := newTestListener(o)
+	defer tl.stop()
+
 	pingCommandCount := uint16(8)
-	port := 13339
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 	stateChan := make(chan state)
 
 	var node *Node
@@ -314,7 +315,7 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 	go func() {
 		var err error
 		nodeOpts := &NodeOptions{
-			RemoteAddress:  addr,
+			RemoteAddress:  tl.addr,
 			MinConnections: 0,
 		}
 		node, err = NewNode(nodeOpts)
@@ -375,31 +376,7 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 			if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
 				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "starting listener")
 				listenerStarted = true
-				ln, err := net.Listen("tcp", addr)
-				if err != nil {
-					t.Error(err)
-				}
-				defer ln.Close()
-
-				go func() {
-					for {
-						c, err := ln.Accept()
-						if err != nil {
-							if _, ok := err.(*net.OpError); !ok {
-								t.Error(err)
-							}
-							return
-						}
-						go func() {
-							for {
-								if !readWritePingResp(t, c, false) {
-									break
-								}
-							}
-						}()
-					}
-				}()
-
+				tl.start()
 				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "listener is started")
 			}
 		} else {

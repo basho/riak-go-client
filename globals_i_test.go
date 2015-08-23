@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -43,6 +45,98 @@ func integrationTestsBuildCluster() *Cluster {
 		panic(fmt.Sprintf("error starting integration test cluster object: %s", err.Error()))
 	}
 	return cluster
+}
+
+type testListenerOpts struct {
+	test   *testing.T
+	host   string
+	port   uint16
+	onConn func(c net.Conn) bool
+}
+
+type testListener struct {
+	test   *testing.T
+	host   string
+	port   uint16
+	addr   string
+	onConn func(c net.Conn) bool
+	ln     net.Listener
+}
+
+func newTestListener(o *testListenerOpts) *testListener {
+	if o.test == nil {
+		panic("testing object is required")
+	}
+	if o.host == "" {
+		o.test.Fatal("host is required")
+	}
+	if o.port == 0 {
+		o.test.Fatal("port is required")
+	}
+	if o.onConn == nil {
+		o.onConn = func(c net.Conn) bool {
+			if readWritePingResp(o.test, c, false) {
+				return false
+			}
+			return true
+		}
+	}
+	tl := &testListener{
+		test:   o.test,
+		host:   o.host,
+		port:   o.port,
+		addr:   net.JoinHostPort(o.host, strconv.Itoa(int(o.port))),
+		onConn: o.onConn,
+	}
+	return tl
+}
+
+func (t *testListener) start() {
+	if t.test == nil {
+		panic("testing object is required")
+	}
+	if t.addr == "" {
+		panic("addr is required")
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	ln, err := net.Listen("tcp", t.addr)
+	if err != nil {
+		t.test.Fatal(err)
+	} else {
+		t.ln = ln
+	}
+
+	go func() {
+		wg.Done()
+		for {
+			c, err := t.ln.Accept()
+			if err != nil {
+				if _, ok := err.(*net.OpError); !ok {
+					t.test.Log(err)
+				}
+				return
+			}
+			go func() {
+				for {
+					if t.onConn(c) {
+						break
+					}
+				}
+			}()
+		}
+	}()
+
+	wg.Wait()
+	return
+}
+
+func (t *testListener) stop() {
+	if err := t.ln.Close(); err != nil {
+		t.test.Error(err)
+	}
 }
 
 func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool) {
