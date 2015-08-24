@@ -54,11 +54,8 @@ func TestConcurrentIterateQueue(t *testing.T) {
 	wg_inner := &sync.WaitGroup{}
 	for i := uint16(0); i < count; i++ {
 		wg.Add(1)
-		idx := i
 		go func() {
-			c := uint16(0)
 			var f = func(val interface{}) (bool, bool) {
-				c++
 				wg_inner.Add(1)
 				go func() {
 					q.enqueue(666)
@@ -69,9 +66,6 @@ func TestConcurrentIterateQueue(t *testing.T) {
 			err := q.iterate(f)
 			if err != nil {
 				t.Error("expected nil error when iterating queue")
-			}
-			if expected, actual := count, c; expected != actual {
-				t.Errorf("%d expected %v, got %v", idx, expected, actual)
 			}
 			wg.Done()
 		}()

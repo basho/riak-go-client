@@ -184,8 +184,8 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 
 	var node *Node
 	opts := &NodeOptions{
+		ConnectTimeout: 125 * time.Millisecond,
 		RemoteAddress:  tl.addr,
-		MinConnections: 0,
 	}
 	var err error
 	node, err = NewNode(opts)

@@ -1,13 +1,16 @@
 package riak
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 const (
 	threeSeconds                  = time.Second * 3
 	fiveSeconds                   = time.Second * 5
 	thirtySeconds                 = time.Second * 30
 	defaultBucketType             = "default"
-	defaultRemoteAddress          = "127.0.0.1:8087"
+	defaultRemotePort             = uint16(8087)
 	defaultMinConnections         = uint16(1)
 	defaultMaxConnections         = uint16(8096)
 	defaultIdleTimeout            = threeSeconds
@@ -17,3 +20,5 @@ const (
 	defaultExecutionAttempts      = byte(3)
 	defaultQueueExecutionInterval = 125 * time.Millisecond
 )
+
+var defaultRemoteAddress = fmt.Sprintf("127.0.0.1:%d", defaultRemotePort)

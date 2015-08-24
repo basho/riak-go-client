@@ -14,7 +14,6 @@ func (cmd *CommandImpl) Success() bool {
 func (cmd *CommandImpl) onError(err error) {
 	cmd.success = false
 	// NB: only set error to the *last* error (retries)
-	// TODO: should we keep other errors around?
 	if !cmd.hasRemainingTries() {
 		cmd.Error = err
 	}

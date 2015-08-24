@@ -13,16 +13,14 @@ func TestExecuteCommandOnCluster(t *testing.T) {
 	nodeOpts := &NodeOptions{
 		RemoteAddress: getRiakAddress(),
 	}
-
 	var node *Node
 	var err error
 	if node, err = NewNode(nodeOpts); err != nil {
-		t.Error(err.Error())
+		t.Fatal(err)
 	}
 	if node == nil {
-		t.FailNow()
+		t.Fatal()
 	}
-
 	nodes := []*Node{node}
 	opts := &ClusterOptions{
 		Nodes:             nodes,

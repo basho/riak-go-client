@@ -180,7 +180,6 @@ func (n *Node) execute(cmd Command) (bool, error) {
 		} else {
 			// NB: basically, this is _connectionClosed / _responseReceived in Node.js client
 			// must differentiate between Riak and non-Riak errors here and within execute() in connection
-			// TODO type switch?
 			switch err.(type) {
 			case RiakError, ClientError:
 				// Riak and Client errors will not close connection
@@ -190,8 +189,15 @@ func (n *Node) execute(cmd Command) (bool, error) {
 				return true, err
 			default:
 				// NB: must be a non-Riak, non-Client error
-				if cmErr := n.cm.remove(conn); cmErr != nil {
-					logErr("[Node]", cmErr)
+				if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
+					// Don't nuke the connection on a Temporary error
+					if cmErr := n.cm.put(conn); cmErr != nil {
+						logErr("[Node]", cmErr)
+					}
+				} else {
+					if cmErr := n.cm.remove(conn); cmErr != nil {
+						logErr("[Node]", cmErr)
+					}
 				}
 				n.doHealthCheck()
 				return true, err
