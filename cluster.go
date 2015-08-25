@@ -45,6 +45,7 @@ var (
 	ErrClusterNoNodesAvailable                = newClientError("[Cluster] all retries exhausted and/or no nodes available to execute command")
 	ErrClusterEnqueueWhileShuttingDown        = newClientError("[Cluster] will not enqueue command, shutting down")
 	ErrClusterShuttingDown                    = newClientError("[Cluster] will not execute command, shutting down")
+	ErrClusterNodeMustBeNonNil                = newClientError("[Cluster] node argument must be non-nil")
 )
 
 var defaultClusterOptions = &ClusterOptions{
@@ -175,6 +176,7 @@ func (c *Cluster) Stop() (err error) {
 	}
 
 	if allStopped {
+		c.nodeManager.Stop()
 		c.setState(clusterShutdown)
 		logDebug("[Cluster]", "cluster shut down")
 	} else {
@@ -184,7 +186,47 @@ func (c *Cluster) Stop() (err error) {
 	return
 }
 
-// Asynchronously execute the provided Command against the active pooled Nodes using the NodeManager
+// Adds a node to the cluster and starts it
+func (c *Cluster) AddNode(n *Node) error {
+	if n == nil {
+		return ErrClusterNodeMustBeNonNil
+	}
+	for _, node := range c.nodes {
+		if n == node {
+			return nil
+		}
+	}
+	if c.isCurrentState(clusterRunning) {
+		if err := n.start(); err != nil {
+			return err
+		}
+	}
+	c.nodes = append(c.nodes, n)
+	return nil
+}
+
+// Stops the node and removes from the cluster
+func (c *Cluster) RemoveNode(n *Node) error {
+	if n == nil {
+		return ErrClusterNodeMustBeNonNil
+	}
+	cn := c.nodes
+	for i, node := range c.nodes {
+		if n == node {
+			l := len(cn) - 1
+			cn[i], cn[l], c.nodes = cn[l], nil, cn[:l]
+			if !node.isCurrentState(nodeCreated) {
+				if err := node.stop(); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+// Execute (asynchronously) the provided Command against the active pooled Nodes using the NodeManager
 func (c *Cluster) ExecuteAsync(async *Async) (err error) {
 	if async.Command == nil {
 		return ErrClusterCommandRequired
@@ -199,7 +241,7 @@ func (c *Cluster) ExecuteAsync(async *Async) (err error) {
 	return nil
 }
 
-// Synchronously execute the provided Command against the active pooled Nodes using the NodeManager
+// Execute (synchronously) the provided Command against the active pooled Nodes using the NodeManager
 func (c *Cluster) Execute(command Command) (err error) {
 	if command == nil {
 		return ErrClusterCommandRequired
@@ -211,7 +253,7 @@ func (c *Cluster) Execute(command Command) (err error) {
 		Wait:    wg,
 	}
 	go c.execute(async)
-	wg.Wait() // TODO: timeout?
+	wg.Wait()
 	return nil
 }
 

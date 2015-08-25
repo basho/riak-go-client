@@ -35,7 +35,7 @@ type Object struct {
 	VTag            string
 	LastModified    time.Time
 	UserMeta        []*Pair
-	Indexes         map[string][]string // TODO int indexes vs string
+	Indexes         map[string][]string
 	Links           []*Link
 	VClock          []byte
 }
@@ -84,7 +84,6 @@ func fromRpbContent(rpbContent *rpbRiakKV.RpbContent) (ro *Object, err error) {
 	if ro.IsTombstone {
 		ro.Value = nil
 	} else {
-		// TODO deserialization?
 		ro.Value = rpbContent.GetValue()
 	}
 
@@ -110,7 +109,6 @@ func fromRpbContent(rpbContent *rpbRiakKV.RpbContent) (ro *Object, err error) {
 		ro.Indexes = make(map[string][]string)
 		for _, index := range rpbIndexes {
 			indexName := string(index.Key)
-			// TODO int indexes
 			indexValue := string(index.Value)
 			if ro.Indexes[indexName] == nil {
 				ro.Indexes[indexName] = make([]string, 1)

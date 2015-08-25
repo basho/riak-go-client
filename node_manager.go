@@ -1,9 +1,16 @@
 package riak
 
+import (
+	"time"
+
+	"github.com/basho/backoff"
+)
+
 // NodeManager enforces the structure needed to if going to implement your own NodeManager
 type NodeManager interface {
 	Init(nodes []*Node) error
 	ExecuteOnNode(command Command, previousNode *Node) (bool, error)
+	Stop()
 }
 
 var ErrDefaultNodeManagerRequiresNode = newClientError("Must pass at least one node to default node manager")
@@ -11,6 +18,7 @@ var ErrDefaultNodeManagerRequiresNode = newClientError("Must pass at least one n
 type defaultNodeManager struct {
 	qsz uint16
 	q   *queue
+	b   *backoff.Backoff
 }
 
 func (nm *defaultNodeManager) Init(nodes []*Node) error {
@@ -22,6 +30,11 @@ func (nm *defaultNodeManager) Init(nodes []*Node) error {
 	}
 	nm.qsz = uint16(len(nodes))
 	nm.q = newQueue(nm.qsz)
+	nm.b = &backoff.Backoff{
+		Min:    10 * time.Millisecond,
+		Max:    100 * time.Millisecond,
+		Jitter: true,
+	}
 	for _, n := range nodes {
 		nm.q.enqueue(n)
 	}
@@ -35,15 +48,16 @@ func (nm *defaultNodeManager) ExecuteOnNode(command Command, previous *Node) (bo
 	var executed bool = false
 
 	i := uint16(0)
-	var node *Node
 	var f = func(v interface{}) (bool, bool) {
 		if v == nil {
 			// pool is empty now, re-try
-			// TODO: backoff on re-try, after X tries, log error, after more, error?
+			d := nm.b.Duration()
+			logDebug("[DefaultNodeManager]", "pool is empty, sleeping for '%v'", d)
+			time.Sleep(d)
 			return false, false
 		}
 		i++
-		node = v.(*Node)
+		node := v.(*Node)
 
 		// don't try the same node twice in a row if we have multiple nodes
 		if nm.qsz > 1 && previous != nil && previous == node {
@@ -68,4 +82,8 @@ func (nm *defaultNodeManager) ExecuteOnNode(command Command, previous *Node) (bo
 	}
 
 	return executed, err
+}
+
+func (nm *defaultNodeManager) Stop() {
+	nm.q.destroy()
 }

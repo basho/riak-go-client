@@ -212,7 +212,7 @@ func (c *connection) execute(cmd Command) (err error) {
 	}
 }
 
-// TODO: we should also take currently executing Command (Riak operation)
+// FUTURE: we should also take currently executing Command (Riak operation)
 // timeout into account
 func (c *connection) setReadDeadline() {
 	c.conn.SetReadDeadline(time.Now().Add(c.requestTimeout))
@@ -239,10 +239,6 @@ func (c *connection) read() ([]byte, error) {
 		}
 	}
 	if err != nil {
-		/*
-		* TODO: investigate type assertion to net.Error and Temporary()
-		* if nerr, ok := err.(net.Error); !ok || !nerr.Temporary() {
-		 */
 		logDebug("[Connection]", "error in read: '%v'", err)
 		// connection will eventually be expired
 		c.setState(connInactive)
@@ -255,7 +251,7 @@ func (c *connection) write(data []byte) error {
 	if !c.available() {
 		return ErrCannotWrite
 	}
-	// TODO: we should also take currently executing Command (Riak operation) timeout into account
+	// FUTURE: we should also take currently executing Command (Riak operation) timeout into account
 	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
 	count, err := c.conn.Write(data)
 	if err != nil {

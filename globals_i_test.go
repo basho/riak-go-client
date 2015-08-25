@@ -23,7 +23,7 @@ func integrationTestsBuildCluster() *Cluster {
 	var err error
 	nodeOpts := &NodeOptions{
 		RemoteAddress:  getRiakAddress(),
-		RequestTimeout: time.Second * 20, // TODO in the future, settable per-request
+		RequestTimeout: time.Second * 20,
 	}
 	var node *Node
 	node, err = NewNode(nodeOpts)

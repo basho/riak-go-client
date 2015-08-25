@@ -8,8 +8,8 @@
         * ProtoGen        - generate *.pb.go files from *.proto files.
                             Requires Go protoc utility (https://github.com/golang/protobuf)
         * Format          - run *.go files through 'go fmt'
-        * Test            - Run all tests
-        * UnitTest        - Run unit tests (default target)
+        * Test            - Run 'go vet' and all tests (default target)
+        * UnitTest        - Run unit tests
         * IntegrationTest - Run live integration tests
 .PARAMETER Verbose
     Use to increase verbosity.
@@ -24,7 +24,7 @@
 Param(
     [Parameter(Mandatory=$False, Position=0)]
     [ValidateSet('ProtoGen', 'Format', 'Test', 'UnitTest', 'IntegrationTest', IgnoreCase = $True)]
-    [string]$Target = 'UnitTest'
+    [string]$Target = 'Test'
 )
 
 Set-StrictMode -Version Latest

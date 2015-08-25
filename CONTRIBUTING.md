@@ -10,10 +10,6 @@ The most helpful way to contribute is by reporting your experience through issue
 
 Thank you for being part of the community! We love you for it. 
 
-## Helping through sample code
-
-TODO
-
 ## How-to contribute to the Go client
 
 **_IMPORTANT_**: This is an open source project licensed under the Apache 2.0 License. We encourage contributions to the project from the community. We ask that you keep in mind these considerations when planning your contribution.
