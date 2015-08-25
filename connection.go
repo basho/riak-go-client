@@ -75,7 +75,7 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		healthCheck:    options.healthCheck,
 		authOptions:    options.authOptions,
 		sizeBuf:        make([]byte, 4),
-		dataBuf:        make([]byte, 65536),
+		dataBuf:        make([]byte, defaultInitBuffer),
 		inFlight:       false,
 		lastUsed:       time.Now(),
 	}
@@ -237,7 +237,7 @@ func (c *connection) read() ([]byte, error) {
 			logDebug("[Connection]", "allocating larger dataBuf of size %d", messageLength)
 			c.dataBuf = make([]byte, messageLength)
 		} else {
-			c.dataBuf = c.dataBuf[:0]
+			c.dataBuf = c.dataBuf[0:messageLength]
 		}
 		// FUTURE: large object warning / error
 		c.setReadDeadline()

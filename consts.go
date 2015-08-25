@@ -19,6 +19,7 @@ const (
 	defaultHealthCheckInterval    = 125 * time.Millisecond
 	defaultExecutionAttempts      = byte(3)
 	defaultQueueExecutionInterval = 125 * time.Millisecond
+	defaultInitBuffer             = 2048
 )
 
 var defaultRemoteAddress = fmt.Sprintf("127.0.0.1:%d", defaultRemotePort)
