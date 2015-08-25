@@ -48,6 +48,7 @@ type connection struct {
 	healthCheck    Command
 	authOptions    *AuthOptions
 	sizeBuf        []byte
+	dataBuf        []byte
 	active         bool
 	inFlight       bool
 	lastUsed       time.Time
@@ -74,6 +75,7 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		healthCheck:    options.healthCheck,
 		authOptions:    options.authOptions,
 		sizeBuf:        make([]byte, 4),
+		dataBuf:        make([]byte, defaultInitBuffer),
 		inFlight:       false,
 		lastUsed:       time.Now(),
 	}
@@ -223,28 +225,39 @@ func (c *connection) read() ([]byte, error) {
 	if !c.available() {
 		return nil, ErrCannotRead
 	}
+
 	var err error
 	var count int
-	var data []byte
+	var messageLength uint32
+
 	c.setReadDeadline()
 	if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
-		messageLength := binary.BigEndian.Uint32(c.sizeBuf)
-		// TODO: investigate using a bytes.Buffer on c instead of
-		// always making a new byte slice, more in-line with Node.js client
-		data = make([]byte, messageLength)
+		messageLength = binary.BigEndian.Uint32(c.sizeBuf)
+		if messageLength > uint32(cap(c.dataBuf)) {
+			logDebug("[Connection]", "allocating larger dataBuf of size %d", messageLength)
+			c.dataBuf = make([]byte, messageLength)
+		} else {
+			c.dataBuf = c.dataBuf[0:messageLength]
+		}
+		// FUTURE: large object warning / error
 		c.setReadDeadline()
-		count, err = io.ReadFull(c.conn, data)
-		if err == nil && uint32(count) != messageLength {
-			err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count))
+		count, err = io.ReadFull(c.conn, c.dataBuf)
+	} else {
+		if err == nil && count != 4 {
+			err = newClientError(fmt.Sprintf("[Connection] expected to read 4 bytes, only read: %d", count))
 		}
 	}
-	if err != nil {
-		logDebug("[Connection]", "error in read: '%v'", err)
-		// connection will eventually be expired
-		c.setState(connInactive)
-		data = nil
+
+	if err == nil && count != int(messageLength) {
+		err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count))
 	}
-	return data, err
+
+	if err == nil {
+		return c.dataBuf, nil
+	} else {
+		c.setState(connInactive)
+		return nil, err
+	}
 }
 
 func (c *connection) write(data []byte) error {
