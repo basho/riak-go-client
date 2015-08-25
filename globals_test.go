@@ -2,7 +2,6 @@ package riak
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -120,17 +119,6 @@ func sliceIncludes(slice [][]byte, term []byte) (rv bool) {
 		}
 	}
 	return
-}
-
-func rpbOldWrite(code byte, data []byte) []byte {
-	ml := new(bytes.Buffer)
-	binary.Write(ml, binary.BigEndian, int32(len(data)+1)) // +1 for msg code
-	mc := new(bytes.Buffer)
-	binary.Write(mc, binary.BigEndian, int8(code))
-	buf := []byte(ml.Bytes())
-	buf = append(buf, mc.Bytes()...)
-	buf = append(buf, data...)
-	return buf
 }
 
 var randomBytes = bytes.NewBufferString(random).Bytes()
