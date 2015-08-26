@@ -27,7 +27,7 @@ help:
 	@echo '--------------------------------------------------'
 	@echo ' all              - Run everything                '
 	@echo ' fmt              - Format code                   '
-	@echo ' lint             - Run jshint                    '
+	@echo ' lint             - Run "go vet"                  '
 	@echo ' test             - Run unit & integration tests  '
 	@echo ' unit-test        - Run unit tests                '
 	@echo ' integration-test - Run integration tests         '
