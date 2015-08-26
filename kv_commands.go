@@ -262,18 +262,7 @@ func (cmd *StoreValueCommand) constructPbRequest() (msg proto.Message, err error
 	value := cmd.value
 
 	// Some properties of the value override options
-	if value.VClock != nil {
-		cmd.protobuf.Vclock = value.VClock
-	}
-	if value.BucketType != "" {
-		cmd.protobuf.Type = []byte(value.BucketType)
-	}
-	if value.Bucket != "" {
-		cmd.protobuf.Bucket = []byte(value.Bucket)
-	}
-	if value.Key != "" {
-		cmd.protobuf.Key = []byte(value.Key)
-	}
+	setProtobufFromValue(cmd.protobuf, cmd.value)
 
 	cmd.protobuf.Content, err = toRpbContent(value)
 	if err != nil {
@@ -344,6 +333,21 @@ func (cmd *StoreValueCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiakKV.RpbPutResp{}
 }
 
+func setProtobufFromValue(pb *rpbRiakKV.RpbPutReq, value *Object) {
+	if value.VClock != nil {
+		pb.Vclock = value.VClock
+	}
+	if value.BucketType != "" {
+		pb.Type = []byte(value.BucketType)
+	}
+	if value.Bucket != "" {
+		pb.Bucket = []byte(value.Bucket)
+	}
+	if value.Key != "" {
+		pb.Key = []byte(value.Key)
+	}
+}
+
 // StoreValueResponse contains the response data for a StoreValueCommand
 type StoreValueResponse struct {
 	GeneratedKey string
@@ -402,6 +406,7 @@ func (builder *StoreValueCommandBuilder) WithVClock(vclock []byte) *StoreValueCo
 
 // WithContent sets the object / value to be stored at the specified key
 func (builder *StoreValueCommandBuilder) WithContent(object *Object) *StoreValueCommandBuilder {
+	setProtobufFromValue(builder.protobuf, object)
 	builder.value = object
 	return builder
 }
