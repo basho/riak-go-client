@@ -740,12 +740,13 @@ func populate(mapOp *MapOperation, pbMapOp *rpbRiakDT.MapOp) {
 	}
 
 	for name, increment := range mapOp.incrementCounters {
+		i := increment
 		field := &rpbRiakDT.MapField{
 			Name: []byte(name),
 			Type: rpbRiakDT.MapField_COUNTER.Enum(),
 		}
 		counterOp := &rpbRiakDT.CounterOp{
-			Increment: &increment,
+			Increment: &i,
 		}
 		update := &rpbRiakDT.MapUpdate{
 			Field:     field,
