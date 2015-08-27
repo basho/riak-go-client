@@ -17,7 +17,7 @@ func rpbValidateResp(data []byte, expected byte) (err error) {
 
 func rpbEnsureCode(expected byte, actual byte) (err error) {
 	if expected != actual {
-		err = newClientError(fmt.Sprintf("expected response code %d, got: %d", expected, actual))
+		err = newClientError(fmt.Sprintf("expected response code %d, got: %d", expected, actual), nil)
 	}
 	return
 }

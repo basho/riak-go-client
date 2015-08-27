@@ -2,7 +2,6 @@ package riak
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -40,13 +39,14 @@ type Cluster struct {
 
 // Cluster errors
 var (
-	ErrClusterCommandRequired                 = newClientError("[Cluster] Command must be non-nil")
-	ErrClusterAsyncRequiresChannelOrWaitGroup = newClientError("[Cluster] ExecuteAsync argument requires a channel or sync.WaitGroup to indicate completion")
-	ErrClusterNoNodesAvailable                = newClientError("[Cluster] all retries exhausted and/or no nodes available to execute command")
-	ErrClusterEnqueueWhileShuttingDown        = newClientError("[Cluster] will not enqueue command, shutting down")
-	ErrClusterShuttingDown                    = newClientError("[Cluster] will not execute command, shutting down")
-	ErrClusterNodeMustBeNonNil                = newClientError("[Cluster] node argument must be non-nil")
+	ErrClusterCommandRequired                 = newClientError("[Cluster] Command must be non-nil", nil)
+	ErrClusterAsyncRequiresChannelOrWaitGroup = newClientError("[Cluster] ExecuteAsync argument requires a channel or sync.WaitGroup to indicate completion", nil)
+	ErrClusterEnqueueWhileShuttingDown        = newClientError("[Cluster] will not enqueue command, shutting down", nil)
+	ErrClusterShuttingDown                    = newClientError("[Cluster] will not execute command, shutting down", nil)
+	ErrClusterNodeMustBeNonNil                = newClientError("[Cluster] node argument must be non-nil", nil)
 )
+
+const ErrClusterNoNodesAvailable = "[Cluster] all retries exhausted and/or no nodes available to execute command"
 
 var defaultClusterOptions = &ClusterOptions{
 	Nodes:             make([]*Node, 0),
@@ -227,7 +227,7 @@ func (c *Cluster) RemoveNode(n *Node) error {
 }
 
 // Execute (asynchronously) the provided Command against the active pooled Nodes using the NodeManager
-func (c *Cluster) ExecuteAsync(async *Async) (err error) {
+func (c *Cluster) ExecuteAsync(async *Async) error {
 	if async.Command == nil {
 		return ErrClusterCommandRequired
 	}
@@ -242,18 +242,20 @@ func (c *Cluster) ExecuteAsync(async *Async) (err error) {
 }
 
 // Execute (synchronously) the provided Command against the active pooled Nodes using the NodeManager
-func (c *Cluster) Execute(command Command) (err error) {
+func (c *Cluster) Execute(command Command) error {
 	if command == nil {
 		return ErrClusterCommandRequired
 	}
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 	async := &Async{
 		Command: command,
-		Wait:    wg,
 	}
-	go c.execute(async)
-	wg.Wait()
+	c.execute(async)
+	if async.Error != nil {
+		return async.Error
+	}
+	if cerr := command.Error(); cerr != nil {
+		return cerr
+	}
 	return nil
 }
 
@@ -309,7 +311,7 @@ func (c *Cluster) execute(async *Async) {
 		if command.hasRemainingTries() {
 			async.onRetry()
 		} else {
-			err = ErrClusterNoNodesAvailable
+			err = newClientError(ErrClusterNoNodesAvailable, err)
 		}
 	}
 	if !enqueued {

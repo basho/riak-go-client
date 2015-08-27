@@ -1,7 +1,7 @@
 package riak
 
 type CommandImpl struct {
-	Error          error
+	error          error
 	success        bool
 	remainingTries byte
 	lastNode       *Node
@@ -11,11 +11,15 @@ func (cmd *CommandImpl) Success() bool {
 	return cmd.success == true
 }
 
+func (cmd *CommandImpl) Error() error {
+	return cmd.error
+}
+
 func (cmd *CommandImpl) onError(err error) {
 	cmd.success = false
 	// NB: only set error to the *last* error (retries)
 	if !cmd.hasRemainingTries() {
-		cmd.Error = err
+		cmd.error = err
 	}
 }
 

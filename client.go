@@ -6,14 +6,11 @@ import (
 	"strings"
 )
 
-const (
-	fmtErrClientInvalidRemoteAddress        = "[Client] invalid RemoteAddress '%s'"
-	fmtErrClientInvalidRemoteAddressWithErr = "[Client] invalid RemoteAddress '%s', err '%v'"
-)
+const ErrClientInvalidRemoteAddress = "[Client] invalid RemoteAddress '%s'"
 
 var (
-	ErrClientOptionsRequired     = newClientError("[Client] options are required")
-	ErrClientMissingRequiredData = newClientError("[Client] options must specify either a Cluster or a set of RemoteAddresses")
+	ErrClientOptionsRequired     = newClientError("[Client] options are required", nil)
+	ErrClientMissingRequiredData = newClientError("[Client] options must specify either a Cluster or a set of RemoteAddresses", nil)
 )
 
 // Client object contains your cluster object
@@ -83,7 +80,7 @@ func newClientUsingAddresses(port uint16, remoteAddresses []string) (*Client, er
 		s := strings.SplitN(ra, ":", 2)
 		switch len(s) {
 		case 0:
-			return nil, newClientError(fmt.Sprintf(fmtErrClientInvalidRemoteAddress, ra))
+			return nil, newClientError(fmt.Sprintf(ErrClientInvalidRemoteAddress, ra), nil)
 		case 1:
 			if port > 0 {
 				nopts.RemoteAddress = fmt.Sprintf("%s:%d", s[0], port)
@@ -92,12 +89,12 @@ func newClientUsingAddresses(port uint16, remoteAddresses []string) (*Client, er
 			}
 		case 2:
 			if p, err := strconv.Atoi(s[1]); err != nil {
-				return nil, newClientError(fmt.Sprintf(fmtErrClientInvalidRemoteAddressWithErr, ra, err))
+				return nil, newClientError(ErrClientInvalidRemoteAddress, err)
 			} else {
 				nopts.RemoteAddress = fmt.Sprintf("%s:%d", s[0], p)
 			}
 		default:
-			return nil, newClientError(fmt.Sprintf(fmtErrClientInvalidRemoteAddress, ra))
+			return nil, newClientError(fmt.Sprintf(ErrClientInvalidRemoteAddress, ra), nil)
 		}
 		if node, err := NewNode(nopts); err != nil {
 			return nil, err

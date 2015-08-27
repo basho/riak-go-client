@@ -44,10 +44,10 @@ type connectionManager struct {
 }
 
 var (
-	ErrConnectionManagerRequiresOptions     = newClientError("[connectionManager] new manager requires options")
-	ErrConnectionManagerRequiresAddress     = newClientError("[connectionManager] new manager requires non-nil address")
-	ErrConnectionManagerRequiresStopChannel = newClientError("[connectionManager] new manager requires non-nil stop channel")
-	ErrConnMgrAllConnectionsInUse           = newClientError("[connectionManager] all connections in use at max connections reached")
+	ErrConnectionManagerRequiresOptions     = newClientError("[connectionManager] new manager requires options", nil)
+	ErrConnectionManagerRequiresAddress     = newClientError("[connectionManager] new manager requires non-nil address", nil)
+	ErrConnectionManagerRequiresStopChannel = newClientError("[connectionManager] new manager requires non-nil stop channel", nil)
+	ErrConnMgrAllConnectionsInUse           = newClientError("[connectionManager] all connections in use at max connections reached", nil)
 )
 
 func newConnectionManager(options *connectionManagerOptions) (*connectionManager, error) {

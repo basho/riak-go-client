@@ -29,7 +29,7 @@ func (q *queue) enqueue(v interface{}) error {
 
 func (q *queue) _do_enqueue(v interface{}) error {
 	if len(q.queueChan) == int(q.queueSize) {
-		return newClientError("attempt to enqueue when queue is full")
+		return newClientError("attempt to enqueue when queue is full", nil)
 	}
 	q.queueChan <- v
 	return nil
@@ -45,7 +45,7 @@ func (q *queue) _do_dequeue() (interface{}, error) {
 	select {
 	case v, ok := <-q.queueChan:
 		if !ok {
-			return nil, newClientError("attempt to dequeue from closed queue")
+			return nil, newClientError("attempt to dequeue from closed queue", nil)
 		}
 		return v, nil
 	default:

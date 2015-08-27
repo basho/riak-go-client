@@ -13,7 +13,7 @@ type NodeManager interface {
 	Stop()
 }
 
-var ErrDefaultNodeManagerRequiresNode = newClientError("Must pass at least one node to default node manager")
+var ErrDefaultNodeManagerRequiresNode = newClientError("Must pass at least one node to default node manager", nil)
 
 type defaultNodeManager struct {
 	qsz uint16
