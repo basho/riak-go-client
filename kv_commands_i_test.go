@@ -653,10 +653,10 @@ func TestMapReduceCommand(t *testing.T) {
 		if err = cluster.Execute(cmd); err != nil {
 			t.Fatal(err.Error())
 		}
+		if cerr := cmd.Error(); cerr != nil {
+			t.Fatal(cerr)
+		}
 		if mr, ok := cmd.(*MapReduceCommand); ok {
-			if mr.Error != nil {
-				t.Fatal(mr.Error.Error())
-			}
 			if mr.Response == nil || len(mr.Response) == 0 {
 				t.Error("expected non-nil and non-empty response")
 			}

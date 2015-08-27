@@ -24,6 +24,7 @@ type StreamingCommand interface {
 type Command interface {
 	Name() string
 	Success() bool
+	Error() error
 	getRequestCode() byte
 	constructPbRequest() (proto.Message, error)
 	onError(error)

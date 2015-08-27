@@ -38,27 +38,31 @@ func (e RiakError) Error() (s string) {
 
 // Client errors
 var (
-	ErrAddressRequired      = newClientError("RemoteAddress is required in options")
-	ErrAuthMissingConfig    = newClientError("[Connection] authentication is missing TLS config")
-	ErrAuthTLSUpgradeFailed = newClientError("[Connection] upgrading to TLS connection failed")
-	ErrBucketRequired       = newClientError("Bucket is required")
-	ErrKeyRequired          = newClientError("Key is required")
-	ErrNilOptions           = newClientError("[Command] options must be non-nil")
-	ErrOptionsRequired      = newClientError("Options are required")
-	ErrNoNodesAvailable     = newClientError("No nodes available to execute command, or exhausted all tries")
-	ErrZeroLength           = newClientError("[Command] 0 byte data response")
+	ErrAddressRequired      = newClientError("RemoteAddress is required in options", nil)
+	ErrAuthMissingConfig    = newClientError("[Connection] authentication is missing TLS config", nil)
+	ErrAuthTLSUpgradeFailed = newClientError("[Connection] upgrading to TLS connection failed", nil)
+	ErrBucketRequired       = newClientError("Bucket is required", nil)
+	ErrKeyRequired          = newClientError("Key is required", nil)
+	ErrNilOptions           = newClientError("[Command] options must be non-nil", nil)
+	ErrOptionsRequired      = newClientError("Options are required", nil)
+	ErrZeroLength           = newClientError("[Command] 0 byte data response", nil)
 )
 
 type ClientError struct {
-	Errmsg string
+	Errmsg     string
+	InnerError error
 }
 
-func newClientError(errmsg string) error {
+func newClientError(errmsg string, innerError error) error {
 	return ClientError{
-		Errmsg: errmsg,
+		Errmsg:     errmsg,
+		InnerError: innerError,
 	}
 }
 
 func (e ClientError) Error() (s string) {
-	return fmt.Sprintf("ClientError|%s", e.Errmsg)
+	if e.InnerError == nil {
+		return fmt.Sprintf("ClientError|%s", e.Errmsg)
+	}
+	return fmt.Sprintf("ClientError|%s|InnerError|%v", e.Errmsg, e.InnerError)
 }

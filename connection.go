@@ -244,12 +244,12 @@ func (c *connection) read() ([]byte, error) {
 		count, err = io.ReadFull(c.conn, c.dataBuf)
 	} else {
 		if err == nil && count != 4 {
-			err = newClientError(fmt.Sprintf("[Connection] expected to read 4 bytes, only read: %d", count))
+			err = newClientError(fmt.Sprintf("[Connection] expected to read 4 bytes, only read: %d", count), nil)
 		}
 	}
 
 	if err == nil && count != int(messageLength) {
-		err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count))
+		err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count), nil)
 	}
 
 	if err == nil {
@@ -275,7 +275,7 @@ func (c *connection) write(data []byte) error {
 	if count != len(data) {
 		// connection will eventually be expired
 		c.setState(connInactive)
-		return newClientError(fmt.Sprintf("[Connection] data length: %d, only wrote: %d", len(data), count))
+		return newClientError(fmt.Sprintf("[Connection] data length: %d, only wrote: %d", len(data), count), nil)
 	}
 	return nil
 }
