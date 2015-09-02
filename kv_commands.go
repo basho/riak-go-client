@@ -21,7 +21,7 @@ type ConflictResolver interface {
 
 // FetchValueCommand is used to fetch / get a value from Riak KV
 type FetchValueCommand struct {
-	CommandImpl
+	commandImpl
 	Response *FetchValueResponse
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
@@ -246,7 +246,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 
 // StoreValueCommand used to store a value from Riak KV.
 type StoreValueCommand struct {
-	CommandImpl
+	commandImpl
 	Response *StoreValueResponse
 	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
@@ -516,7 +516,7 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 
 // DeleteValueCommand is used to delete a value from Riak KV.
 type DeleteValueCommand struct {
-	CommandImpl
+	commandImpl
 	Response bool
 	protobuf *rpbRiakKV.RpbDelReq
 }
@@ -675,7 +675,7 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 
 // ListBucketsCommand is used to list buckets in a bucket type
 type ListBucketsCommand struct {
-	CommandImpl
+	commandImpl
 	Response *ListBucketsResponse
 	protobuf *rpbRiakKV.RpbListBucketsReq
 	callback func(buckets []string) error
@@ -687,8 +687,7 @@ func (cmd *ListBucketsCommand) Name() string {
 	return "ListBuckets"
 }
 
-// Done sets a flag on the Command identifying that the streaming operation is complete
-func (cmd *ListBucketsCommand) Done() bool {
+func (cmd *ListBucketsCommand) isDone() bool {
 	if cmd.protobuf.GetStream() {
 		return cmd.done
 	}
@@ -828,7 +827,7 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 
 // ListKeysCommand is used to fetch a list of keys within a bucket from Riak KV
 type ListKeysCommand struct {
-	CommandImpl
+	commandImpl
 	Response  *ListKeysResponse
 	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
@@ -841,8 +840,7 @@ func (cmd *ListKeysCommand) Name() string {
 	return "ListKeys"
 }
 
-// Done sets a flag on the Command identifying that the streaming operation is complete
-func (cmd *ListKeysCommand) Done() bool {
+func (cmd *ListKeysCommand) isDone() bool {
 	// NB: RpbListKeysReq is *always* streaming so no need to take
 	// cmd.streaming into account here, unlike RpbListBucketsReq
 	return cmd.done
@@ -992,7 +990,7 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 
 // FetchPreflistCommand is used to fetch the preference list for a key from Riak KV
 type FetchPreflistCommand struct {
-	CommandImpl
+	commandImpl
 	Response *FetchPreflistResponse
 	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
 }
@@ -1108,15 +1106,14 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 
 // SecondaryIndexQueryCommand is used to query for keys from Riak KV using secondary indexes
 type SecondaryIndexQueryCommand struct {
-	CommandImpl
+	commandImpl
 	Response *SecondaryIndexQueryResponse
 	protobuf *rpbRiakKV.RpbIndexReq
 	callback func([]*SecondaryIndexQueryResult) error
 	done     bool
 }
 
-// Done sets a flag on the Command identifying that the streaming operation is complete
-func (cmd *SecondaryIndexQueryCommand) Done() bool {
+func (cmd *SecondaryIndexQueryCommand) isDone() bool {
 	if cmd.protobuf.GetStream() {
 		return cmd.done
 	}
@@ -1367,7 +1364,7 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 
 // MapReduceCommand is used to fetch keys or data from Riak KV using the MapReduce technique
 type MapReduceCommand struct {
-	CommandImpl
+	commandImpl
 	Response  [][]byte
 	protobuf  *rpbRiakKV.RpbMapRedReq
 	streaming bool
@@ -1380,8 +1377,7 @@ func (cmd *MapReduceCommand) Name() string {
 	return "MapReduce"
 }
 
-// Done sets a flag on the Command identifying that the streaming operation is complete
-func (cmd *MapReduceCommand) Done() bool {
+func (cmd *MapReduceCommand) isDone() bool {
 	// NB: RpbMapRedReq is *always* streaming so no need to take
 	// cmd.streaming into account here, unlike RpbListBucketsReq
 	return cmd.done

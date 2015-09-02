@@ -27,7 +27,7 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 		t.Error("expected nil response protobuf message")
 	}
 	// StartTls
-	cmd = &StartTlsCommand{}
+	cmd = &startTlsCommand{}
 	if expected, actual := rpbCode_RpbStartTls, cmd.getRequestCode(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
@@ -38,7 +38,7 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 		t.Error("expected nil response protobuf message")
 	}
 	// Auth
-	cmd = &AuthCommand{}
+	cmd = &authCommand{}
 	if expected, actual := rpbCode_RpbAuthReq, cmd.getRequestCode(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
