@@ -14,10 +14,8 @@ type CommandBuilder interface {
 	Build() (Command, error)
 }
 
-// StreamingCommand interface requires the Done() method for signaling the
-// completion of a streamed response
-type StreamingCommand interface {
-	Done() bool
+type streamingCommand interface {
+	isDone() bool
 }
 
 // Command interface enforces proper structure of a Command object

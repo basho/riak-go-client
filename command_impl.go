@@ -1,21 +1,21 @@
 package riak
 
-type CommandImpl struct {
+type commandImpl struct {
 	error          error
 	success        bool
 	remainingTries byte
 	lastNode       *Node
 }
 
-func (cmd *CommandImpl) Success() bool {
+func (cmd *commandImpl) Success() bool {
 	return cmd.success == true
 }
 
-func (cmd *CommandImpl) Error() error {
+func (cmd *commandImpl) Error() error {
 	return cmd.error
 }
 
-func (cmd *CommandImpl) onError(err error) {
+func (cmd *commandImpl) onError(err error) {
 	cmd.success = false
 	// NB: only set error to the *last* error (retries)
 	if !cmd.hasRemainingTries() {
@@ -23,26 +23,26 @@ func (cmd *CommandImpl) onError(err error) {
 	}
 }
 
-func (cmd *CommandImpl) setRemainingTries(tries byte) {
+func (cmd *commandImpl) setRemainingTries(tries byte) {
 	cmd.remainingTries = tries
 }
 
-func (cmd *CommandImpl) decrementRemainingTries() {
+func (cmd *commandImpl) decrementRemainingTries() {
 	cmd.remainingTries--
-	logDebug("[CommandImpl]", "remainingTries: %d", cmd.remainingTries)
+	logDebug("[commandImpl]", "remainingTries: %d", cmd.remainingTries)
 }
 
-func (cmd *CommandImpl) hasRemainingTries() bool {
+func (cmd *commandImpl) hasRemainingTries() bool {
 	return cmd.remainingTries > 0
 }
 
-func (cmd *CommandImpl) setLastNode(lastNode *Node) {
+func (cmd *commandImpl) setLastNode(lastNode *Node) {
 	if lastNode == nil {
-		panic("[CommandImpl] nil last node")
+		panic("[commandImpl] nil last node")
 	}
 	cmd.lastNode = lastNode
 }
 
-func (cmd *CommandImpl) getLastNode() *Node {
+func (cmd *commandImpl) getLastNode() *Node {
 	return cmd.lastNode
 }

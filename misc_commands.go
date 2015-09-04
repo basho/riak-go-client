@@ -19,7 +19,7 @@ func (builder *PingCommandBuilder) Build() (Command, error) {
 
 // PingCommand is used to verify Riak is online and reachable
 type PingCommand struct {
-	CommandImpl
+	commandImpl
 }
 
 // Name identifies this command
@@ -48,76 +48,39 @@ func (cmd *PingCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
-// StartTlsCommand is used to open a secure connection with Riak
-type StartTlsCommand struct {
-	CommandImpl
+type startTlsCommand struct {
+	commandImpl
 }
 
 // Name identifies this command
-func (cmd *StartTlsCommand) Name() string {
+func (cmd *startTlsCommand) Name() string {
 	return "StartTls"
 }
 
-func (cmd *StartTlsCommand) constructPbRequest() (msg proto.Message, err error) {
+func (cmd *startTlsCommand) constructPbRequest() (msg proto.Message, err error) {
 	return nil, nil
 }
 
-func (cmd *StartTlsCommand) onSuccess(msg proto.Message) error {
+func (cmd *startTlsCommand) onSuccess(msg proto.Message) error {
 	cmd.success = true
 	return nil
 }
 
-func (cmd *StartTlsCommand) getRequestCode() byte {
+func (cmd *startTlsCommand) getRequestCode() byte {
 	return rpbCode_RpbStartTls
 }
 
-func (cmd *StartTlsCommand) getResponseCode() byte {
+func (cmd *startTlsCommand) getResponseCode() byte {
 	return rpbCode_RpbStartTls
 }
 
-func (cmd *StartTlsCommand) getResponseProtobufMessage() proto.Message {
-	return nil
-}
-
-// AuthCommand is used to securely authenticate with Riak over TLS
-type AuthCommand struct {
-	CommandImpl
-	User     string
-	Password string
-}
-
-// Name identifies this command
-func (cmd *AuthCommand) Name() string {
-	return "Auth"
-}
-
-func (cmd *AuthCommand) constructPbRequest() (msg proto.Message, err error) {
-	return &rpbRiak.RpbAuthReq{
-		User:     []byte(cmd.User),
-		Password: []byte(cmd.Password),
-	}, nil
-}
-
-func (cmd *AuthCommand) onSuccess(msg proto.Message) error {
-	cmd.success = true
-	return nil
-}
-
-func (cmd *AuthCommand) getRequestCode() byte {
-	return rpbCode_RpbAuthReq
-}
-
-func (cmd *AuthCommand) getResponseCode() byte {
-	return rpbCode_RpbAuthResp
-}
-
-func (cmd *AuthCommand) getResponseProtobufMessage() proto.Message {
+func (cmd *startTlsCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
 // FetchBucketPropsCommand is used to fetch the active / non-default properties for a bucket
 type FetchBucketPropsCommand struct {
-	CommandImpl
+	commandImpl
 	Response *FetchBucketPropsResponse
 	protobuf *rpbRiak.RpbGetBucketReq
 }
@@ -323,7 +286,7 @@ func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
 
 // StoreBucketPropsCommand is used to store changes to a buckets properties
 type StoreBucketPropsCommand struct {
-	CommandImpl
+	commandImpl
 	protobuf *rpbRiak.RpbSetBucketReq
 }
 
@@ -580,4 +543,38 @@ func toRpbCommitHook(commitHook *CommitHook) *rpbRiak.RpbCommitHook {
 		}
 	}
 	return rpbCommitHook
+}
+
+type authCommand struct {
+	commandImpl
+	user     string
+	password string
+}
+
+func (cmd *authCommand) Name() string {
+	return "Auth"
+}
+
+func (cmd *authCommand) constructPbRequest() (msg proto.Message, err error) {
+	return &rpbRiak.RpbAuthReq{
+		User:     []byte(cmd.user),
+		Password: []byte(cmd.password),
+	}, nil
+}
+
+func (cmd *authCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	return nil
+}
+
+func (cmd *authCommand) getRequestCode() byte {
+	return rpbCode_RpbAuthReq
+}
+
+func (cmd *authCommand) getResponseCode() byte {
+	return rpbCode_RpbAuthResp
+}
+
+func (cmd *authCommand) getResponseProtobufMessage() proto.Message {
+	return nil
 }

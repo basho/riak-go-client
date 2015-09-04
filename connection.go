@@ -119,7 +119,7 @@ func (c *connection) startTls() error {
 		return ErrAuthMissingConfig
 	}
 	c.setState(connTlsStarting)
-	startTlsCmd := &StartTlsCommand{}
+	startTlsCmd := &startTlsCommand{}
 	if err := c.execute(startTlsCmd); err != nil {
 		return err
 	}
@@ -131,9 +131,9 @@ func (c *connection) startTls() error {
 		return err
 	}
 	c.conn = tlsConn
-	authCmd := &AuthCommand{
-		User:     c.authOptions.User,
-		Password: c.authOptions.Password,
+	authCmd := &authCommand{
+		user:     c.authOptions.User,
+		password: c.authOptions.Password,
 	}
 	return c.execute(authCmd)
 }
@@ -202,9 +202,9 @@ func (c *connection) execute(cmd Command) (err error) {
 			return
 		}
 
-		if sc, ok := cmd.(StreamingCommand); ok {
+		if sc, ok := cmd.(streamingCommand); ok {
 			// Streaming Commands indicate done
-			if sc.Done() {
+			if sc.isDone() {
 				return
 			}
 		} else {

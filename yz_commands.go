@@ -29,7 +29,7 @@ type Schema struct {
 
 // StoreIndexCommand is sused to store a new search index on Riak
 type StoreIndexCommand struct {
-	CommandImpl
+	commandImpl
 	Response bool
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
@@ -122,7 +122,7 @@ func (builder *StoreIndexCommandBuilder) Build() (Command, error) {
 
 // FetchIndexCommand is used to fetch a search index from Riak
 type FetchIndexCommand struct {
-	CommandImpl
+	commandImpl
 	Response []*SearchIndex
 	protobuf *rpbRiakYZ.RpbYokozunaIndexGetReq
 }
@@ -206,7 +206,7 @@ func (builder *FetchIndexCommandBuilder) Build() (Command, error) {
 
 // DeleteIndexCommand is used to delete a search index from Riak
 type DeleteIndexCommand struct {
-	CommandImpl
+	commandImpl
 	Response bool
 	protobuf *rpbRiakYZ.RpbYokozunaIndexDeleteReq
 }
@@ -273,7 +273,7 @@ func (builder *DeleteIndexCommandBuilder) Build() (Command, error) {
 
 // StoreSchemaCommand is used to store / update a search schema in Riak
 type StoreSchemaCommand struct {
-	CommandImpl
+	commandImpl
 	Response bool
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaPutReq
 }
@@ -350,7 +350,7 @@ func (builder *StoreSchemaCommandBuilder) Build() (Command, error) {
 
 // FetchSchemaCommand is used to GET a search schema from Riak
 type FetchSchemaCommand struct {
-	CommandImpl
+	commandImpl
 	Response *Schema
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaGetReq
 }
@@ -429,7 +429,7 @@ func (builder *FetchSchemaCommandBuilder) Build() (Command, error) {
 
 // SearchCommand is used to search Riak for values using search indexes & schemas
 type SearchCommand struct {
-	CommandImpl
+	commandImpl
 	Response *SearchResponse
 	protobuf *rpbRiakSCH.RpbSearchQueryReq
 }
