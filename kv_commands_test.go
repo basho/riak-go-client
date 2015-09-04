@@ -12,6 +12,18 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
+type testConflictResolver struct {
+}
+
+func (cr *testConflictResolver) Resolve(objs []*Object) []*Object {
+	// return the first one
+	return []*Object{
+		objs[0],
+	}
+}
+
+var resolver = &testConflictResolver{}
+
 // FetchValue
 
 func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
@@ -245,6 +257,50 @@ func TestParseRpbGetRespCorrectly(t *testing.T) {
 		}
 		if expected, actual := "vclock123456789", string(riakObject.VClock); expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestParseRpbGetRespWithSiblingsCorrectly(t *testing.T) {
+	rpb1 := generateTestRpbContent("value_1", "text/plain")
+	rpb2 := generateTestRpbContent("value_2", "text/plain")
+
+	rpbGetResp := &rpbRiakKV.RpbGetResp{
+		Content: []*rpbRiakKV.RpbContent{rpb1, rpb2},
+		Vclock:  vclock.Bytes(),
+	}
+
+	builder := NewFetchValueCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("key").
+		WithConflictResolver(resolver).
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	cmd.onSuccess(rpbGetResp)
+	if actual, expected := cmd.Success(), true; actual != expected {
+		t.Errorf("got %v, expected %v", actual, expected)
+	}
+
+	if fetchValueCommand, ok := cmd.(*FetchValueCommand); ok {
+		if fetchValueCommand.Response == nil {
+			t.Fatal("unexpected nil object")
+		}
+		if actual, expected := len(fetchValueCommand.Response.Values), 1; actual != expected {
+			t.Errorf("got %v, expected %v", actual, expected)
+		}
+		ro := fetchValueCommand.Response.Values[0]
+		if ro == nil {
+			t.Fatal("unexpected nil object")
+		}
+		if actual, expected := string(ro.Value), "value_1"; actual != expected {
+			t.Errorf("got %v, expected %v", actual, expected)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
@@ -715,6 +771,58 @@ func TestParseRpbPutRespCorrectly(t *testing.T) {
 		}
 		if expected, actual := "2", ro.Indexes["test_int"][1]; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestParseRpbPutRespWithSiblingsCorrectly(t *testing.T) {
+	rpb1 := &rpbRiakKV.RpbContent{
+		Value:           []byte("value_1"),
+		ContentType:     []byte("text/plain"),
+		ContentEncoding: []byte("ascii"),
+		Charset:         []byte("ascii"),
+	}
+	rpb2 := &rpbRiakKV.RpbContent{
+		Value:           []byte("value_2"),
+		ContentType:     []byte("text/plain"),
+		ContentEncoding: []byte("ascii"),
+		Charset:         []byte("ascii"),
+	}
+
+	rpbPutResp := &rpbRiakKV.RpbPutResp{
+		Content: []*rpbRiakKV.RpbContent{rpb1, rpb2},
+		Vclock:  vclock.Bytes(),
+		Key:     []byte("generated_riak_key"),
+	}
+
+	builder := NewStoreValueCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name").
+		WithKey("ignored_key").
+		WithConflictResolver(resolver).
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	cmd.onSuccess(rpbPutResp)
+	if actual, expected := cmd.Success(), true; actual != expected {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	if storeValueCommand, ok := cmd.(*StoreValueCommand); ok {
+		if actual, expected := len(storeValueCommand.Response.Values), 1; actual != expected {
+			t.Errorf("got %v, expected %v", actual, expected)
+		}
+		ro := storeValueCommand.Response.Values[0]
+		if ro == nil {
+			t.Fatal("unexpected nil object")
+		}
+		if actual, expected := string(ro.Value), "value_1"; actual != expected {
+			t.Errorf("got %v, expected %v", actual, expected)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *FetchValueCommand", ok, reflect.TypeOf(cmd))
@@ -1587,8 +1695,4 @@ func TestParseRpbMapRedRespCorrectlyWithStreaming(t *testing.T) {
 	} else {
 		t.Error(err.Error())
 	}
-}
-
-func ExampleNewFetchValueCommandBuilder() {
-
 }

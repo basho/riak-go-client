@@ -237,7 +237,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &FetchValueCommand{protobuf: builder.protobuf}, nil
+	return &FetchValueCommand{protobuf: builder.protobuf, resolver: builder.resolver}, nil
 }
 
 // StoreValue
@@ -507,7 +507,10 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &StoreValueCommand{value: builder.value, protobuf: builder.protobuf}, nil
+	return &StoreValueCommand{
+		value:    builder.value,
+		protobuf: builder.protobuf,
+		resolver: builder.resolver}, nil
 }
 
 // DeleteValue
