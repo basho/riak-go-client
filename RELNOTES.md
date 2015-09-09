@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+* 1.2.0 - Following issues / PRs addressed:
+ * [Conflict resolver not being passed to Fetch/Store-ValueCommand](https://github.com/basho/riak-go-client/issues/21)
+ * [Reduce exported API](https://github.com/basho/riak-go-client/pull/20)
+ * [Modify ClientError to trap an inner error if necessary](https://github.com/basho/riak-go-client/pull/19)
 * 1.1.0 - Following issues / PRs addressed:
  * [Issues with incrementing counters within Maps](https://github.com/basho/riak-go-client/issues/17)
  * [Extra goroutine in Execute](https://github.com/basho/riak-go-client/issues/16)
