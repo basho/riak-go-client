@@ -21,7 +21,7 @@ func TestCreateNodeWithOptions(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if expected, actual := "8.8.8.8:1234|0", node.String(); expected != actual {
+	if expected, actual := "8.8.8.8:1234|0|0", node.String(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if expected, actual := nodeCreated, node.getState(); expected != actual {

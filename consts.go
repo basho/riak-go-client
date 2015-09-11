@@ -13,6 +13,7 @@ const (
 	defaultRemotePort             = uint16(8087)
 	defaultMinConnections         = uint16(1)
 	defaultMaxConnections         = uint16(8096)
+	defaultIdleExpirationInterval = fiveSeconds
 	defaultIdleTimeout            = threeSeconds
 	defaultConnectTimeout         = thirtySeconds
 	defaultRequestTimeout         = fiveSeconds

@@ -184,7 +184,9 @@ func readClientMessage(c net.Conn) (err error) {
 		}
 		// logDebug("[readClientMessage]", "read message '%v', count '%d'", data, count)
 	} else {
-		err = errors.New(fmt.Sprintf("[readClientMessage] error reading command size into sizeBuf: count %d, err %s", count, err))
+		if err != io.EOF {
+			err = errors.New(fmt.Sprintf("[readClientMessage] error reading command size into sizeBuf: count %d, err %s", count, err))
+		}
 	}
 	return
 }

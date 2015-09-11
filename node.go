@@ -37,7 +37,7 @@ type Node struct {
 	healthCheckInterval time.Duration
 	healthCheckBuilder  CommandBuilder
 	authOptions         *AuthOptions
-	stopChan            chan bool
+	stopChan            chan struct{}
 	// Health Check
 	expireTicker *time.Ticker
 	// Connections
@@ -71,9 +71,8 @@ func NewNode(options *NodeOptions) (*Node, error) {
 	var resolvedAddress *net.TCPAddr
 	resolvedAddress, err = net.ResolveTCPAddr("tcp", options.RemoteAddress)
 	if err == nil {
-		stopChan := make(chan bool)
 		n := &Node{
-			stopChan:            stopChan,
+			stopChan:            make(chan struct{}),
 			addr:                resolvedAddress,
 			healthCheckInterval: options.HealthCheckInterval,
 			healthCheckBuilder:  options.HealthCheckBuilder,
@@ -82,7 +81,6 @@ func NewNode(options *NodeOptions) (*Node, error) {
 
 		connMgrOpts := &connectionManagerOptions{
 			addr:           resolvedAddress,
-			stopChan:       stopChan,
 			minConnections: options.MinConnections,
 			maxConnections: options.MaxConnections,
 			idleTimeout:    options.IdleTimeout,
@@ -105,7 +103,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 // String returns a formatted string including the remoteAddress for the Node and its current
 // connection count
 func (n *Node) String() string {
-	return fmt.Sprintf("%v|%d", n.addr, n.cm.count())
+	return fmt.Sprintf("%v|%d|%d", n.addr, n.cm.count(), n.cm.q.count())
 }
 
 // Start opens a connection with Riak at the configured remoteAddress and adds the connections to the
@@ -133,7 +131,6 @@ func (n *Node) stop() error {
 	logDebug("[Node]", "(%v) shutting down.", n)
 
 	n.setState(nodeShuttingDown)
-	n.stopChan <- true
 	close(n.stopChan)
 
 	err := n.cm.stop()
@@ -143,6 +140,7 @@ func (n *Node) stop() error {
 		logDebug("[Node]", "(%v) shut down.", n)
 	} else {
 		n.setState(nodeError)
+		logErr("[Node]", err)
 	}
 
 	return err
@@ -250,7 +248,7 @@ func (n *Node) ensureHealthCheckCanContinue() bool {
 
 func (n *Node) healthCheck() {
 
-	logDebug("[Node]", "(%v) running health check", n)
+	logDebug("[Node]", "(%v) starting health check routine", n)
 
 	healthCheckTicker := time.NewTicker(n.healthCheckInterval)
 	defer healthCheckTicker.Stop()
@@ -265,12 +263,20 @@ func (n *Node) healthCheck() {
 			case t := <-healthCheckTicker.C:
 				if n.ensureHealthCheckCanContinue() {
 					logDebug("[Node]", "(%v) running health check at %v", n, t)
-					if conn, err := n.cm.create(healthCheckCommand); err != nil {
-						logDebug("[Node]", "(%v) failed healthcheck, err: %v", n, err)
+					conn, cerr := n.cm.createConnection()
+					if cerr != nil {
+						conn.close()
+						logDebug("[Node]", "(%v) failed healthcheck in create(false), err: %v", n, cerr)
 					} else {
-						n.cm.put(conn)
-						n.setState(nodeRunning)
-						logDebug("[Node]", "(%v) healthcheck success", n)
+						defer conn.close()
+						if n.ensureHealthCheckCanContinue() {
+							if hcerr := conn.execute(healthCheckCommand); hcerr != nil || !healthCheckCommand.Success() {
+								logDebug("[Node]", "(%v) failed healthcheck in execute, err: %v", n, hcerr)
+							} else {
+								n.setState(nodeRunning)
+								logDebug("[Node]", "(%v) healthcheck success", n)
+							}
+						}
 						return
 					}
 				}

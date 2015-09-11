@@ -17,37 +17,38 @@ const (
 )
 
 type connectionManagerOptions struct {
-	addr           *net.TCPAddr
-	stopChan       chan bool
-	minConnections uint16
-	maxConnections uint16
-	idleTimeout    time.Duration
-	connectTimeout time.Duration
-	requestTimeout time.Duration
-	authOptions    *AuthOptions
+	addr                   *net.TCPAddr
+	minConnections         uint16
+	maxConnections         uint16
+	idleExpirationInterval time.Duration
+	idleTimeout            time.Duration
+	connectTimeout         time.Duration
+	requestTimeout         time.Duration
+	authOptions            *AuthOptions
 }
 
 type connectionManager struct {
-	addr            *net.TCPAddr
-	minConnections  uint16
-	maxConnections  uint16
-	idleTimeout     time.Duration
-	connectTimeout  time.Duration
-	requestTimeout  time.Duration
-	authOptions     *AuthOptions
-	stopChan        chan bool
-	q               *queue
-	expireTicker    *time.Ticker
-	connectionCount uint16
+	addr                   *net.TCPAddr
+	minConnections         uint16
+	maxConnections         uint16
+	idleExpirationInterval time.Duration
+	idleTimeout            time.Duration
+	connectTimeout         time.Duration
+	requestTimeout         time.Duration
+	authOptions            *AuthOptions
+	stopChan               chan struct{}
+	q                      *queue
+	expireTicker           *time.Ticker
+	connectionCount        uint16
 	sync.RWMutex
 	stateData
 }
 
 var (
-	ErrConnectionManagerRequiresOptions     = newClientError("[connectionManager] new manager requires options", nil)
-	ErrConnectionManagerRequiresAddress     = newClientError("[connectionManager] new manager requires non-nil address", nil)
-	ErrConnectionManagerRequiresStopChannel = newClientError("[connectionManager] new manager requires non-nil stop channel", nil)
-	ErrConnMgrAllConnectionsInUse           = newClientError("[connectionManager] all connections in use at max connections reached", nil)
+	ErrConnectionManagerRequiresOptions         = newClientError("[connectionManager] new manager requires options", nil)
+	ErrConnectionManagerRequiresAddress         = newClientError("[connectionManager] new manager requires non-nil address", nil)
+	ErrConnectionManagerMaxMustBeGreaterThanMin = newClientError("[connectionManager] new connection manager maxConnections must be greater than minConnections", nil)
+	ErrConnMgrAllConnectionsInUse               = newClientError("[connectionManager] all connections in use / max connections reached", nil)
 )
 
 func newConnectionManager(options *connectionManagerOptions) (*connectionManager, error) {
@@ -57,14 +58,17 @@ func newConnectionManager(options *connectionManagerOptions) (*connectionManager
 	if options.addr == nil {
 		return nil, ErrConnectionManagerRequiresAddress
 	}
-	if options.stopChan == nil {
-		return nil, ErrConnectionManagerRequiresStopChannel
-	}
 	if options.minConnections == 0 {
 		options.minConnections = defaultMinConnections
 	}
 	if options.maxConnections == 0 {
 		options.maxConnections = defaultMaxConnections
+	}
+	if options.minConnections > options.maxConnections {
+		return nil, ErrConnectionManagerMaxMustBeGreaterThanMin
+	}
+	if options.idleExpirationInterval == 0 {
+		options.idleExpirationInterval = defaultIdleExpirationInterval
 	}
 	if options.idleTimeout == 0 {
 		options.idleTimeout = defaultIdleTimeout
@@ -76,15 +80,16 @@ func newConnectionManager(options *connectionManagerOptions) (*connectionManager
 		options.requestTimeout = defaultRequestTimeout
 	}
 	cm := &connectionManager{
-		addr:           options.addr,
-		minConnections: options.minConnections,
-		maxConnections: options.maxConnections,
-		idleTimeout:    options.idleTimeout,
-		connectTimeout: options.connectTimeout,
-		requestTimeout: options.requestTimeout,
-		authOptions:    options.authOptions,
-		stopChan:       options.stopChan,
-		q:              newQueue(options.maxConnections),
+		addr:                   options.addr,
+		minConnections:         options.minConnections,
+		maxConnections:         options.maxConnections,
+		idleExpirationInterval: options.idleExpirationInterval,
+		idleTimeout:            options.idleTimeout,
+		connectTimeout:         options.connectTimeout,
+		requestTimeout:         options.requestTimeout,
+		authOptions:            options.authOptions,
+		stopChan:               make(chan struct{}),
+		q:                      newQueue(options.maxConnections),
 	}
 	cm.initStateData("connMgrError", "connMgrCreated", "connMgrRunning", "connMgrShuttingDown", "connMgrShutdown")
 	cm.setState(cmCreated)
@@ -92,7 +97,7 @@ func newConnectionManager(options *connectionManagerOptions) (*connectionManager
 }
 
 func (cm *connectionManager) String() string {
-	return fmt.Sprintf("%v|%d", cm.addr, cm.count())
+	return fmt.Sprintf("%v", cm.addr)
 }
 
 func (cm *connectionManager) start() error {
@@ -100,14 +105,14 @@ func (cm *connectionManager) start() error {
 		return err
 	}
 	for i := uint16(0); i < cm.minConnections; i++ {
-		conn, err := cm.create(nil)
+		conn, err := cm.create()
 		if err == nil {
 			cm.put(conn)
 		} else {
 			logErr("[connectionManager]", err)
 		}
 	}
-	cm.expireTicker = time.NewTicker(fiveSeconds)
+	cm.expireTicker = time.NewTicker(cm.idleExpirationInterval)
 	go cm.expireConnections()
 	cm.setState(cmRunning)
 	return nil
@@ -121,6 +126,7 @@ func (cm *connectionManager) stop() error {
 	logDebug("[connectionManager]", "shutting down")
 
 	cm.setState(cmShuttingDown)
+	close(cm.stopChan)
 	cm.expireTicker.Stop()
 
 	if cm.count() != cm.q.count() {
@@ -163,33 +169,40 @@ func (cm *connectionManager) count() uint16 {
 	return cm.connectionCount
 }
 
-func (cm *connectionManager) create(hc Command) (*connection, error) {
+func (cm *connectionManager) create() (*connection, error) {
 	if !cm.isStateLessThan(cmShuttingDown) {
 		return nil, nil
 	}
+
 	cm.Lock()
 	defer cm.Unlock()
-	if cm.connectionCount < cm.maxConnections {
-		opts := &connectionOptions{
-			remoteAddress:  cm.addr,
-			connectTimeout: cm.connectTimeout,
-			requestTimeout: cm.requestTimeout,
-			authOptions:    cm.authOptions,
-			healthCheck:    hc,
-		}
-		conn, err := newConnection(opts)
-		if err != nil {
-			return nil, err
-		}
-		err = conn.connect()
-		if err != nil {
-			return nil, err
-		}
-		cm.connectionCount++
-		return conn, nil
-	} else {
+
+	if cm.connectionCount >= cm.maxConnections {
 		return nil, ErrConnMgrAllConnectionsInUse
 	}
+
+	conn, err := cm.createConnection()
+	if err != nil {
+		return nil, err
+	}
+
+	cm.connectionCount++
+	return conn, nil
+}
+
+func (cm *connectionManager) createConnection() (*connection, error) {
+	opts := &connectionOptions{
+		remoteAddress:  cm.addr,
+		connectTimeout: cm.connectTimeout,
+		requestTimeout: cm.requestTimeout,
+		authOptions:    cm.authOptions,
+	}
+	conn, err := newConnection(opts)
+	if err != nil {
+		return nil, err
+	}
+	err = conn.connect()
+	return conn, err
 }
 
 func (cm *connectionManager) get() (*connection, error) {
@@ -218,7 +231,7 @@ func (cm *connectionManager) get() (*connection, error) {
 	}
 
 	// NB: if we get here, there were no available connections
-	return cm.create(nil)
+	return cm.create()
 }
 
 func (cm *connectionManager) put(conn *connection) error {
@@ -261,6 +274,7 @@ func (cm *connectionManager) expireConnections() {
 
 			expiredCount := uint16(0)
 			now := time.Now()
+
 			var f = func(v interface{}) (bool, bool) {
 				if v == nil {
 					// connection pool is empty
@@ -270,16 +284,18 @@ func (cm *connectionManager) expireConnections() {
 					return true, true
 				}
 				conn := v.(*connection)
-				// expire connection if not available or if it has passed idle timeout
-				if !conn.available() || (now.Sub(conn.lastUsed) >= cm.idleTimeout) {
-					cm.Lock()
-					cm.connectionCount--
-					cm.Unlock()
-					if err := conn.close(); err != nil {
-						logErr("[connectionManager]", err)
+				cm.Lock()
+				defer cm.Unlock()
+				if cm.connectionCount > cm.minConnections {
+					// expire connection if not available or if it has passed idle timeout
+					if !conn.available() || (now.Sub(conn.lastUsed) >= cm.idleTimeout) {
+						cm.connectionCount--
+						if err := conn.close(); err != nil {
+							logErr("[connectionManager]", err)
+						}
+						expiredCount++
+						return false, false
 					}
-					expiredCount++
-					return false, false
 				}
 				return false, true
 			}

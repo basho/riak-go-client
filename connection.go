@@ -29,7 +29,6 @@ type connectionOptions struct {
 	remoteAddress  *net.TCPAddr
 	connectTimeout time.Duration
 	requestTimeout time.Duration
-	healthCheck    Command
 	authOptions    *AuthOptions
 }
 
@@ -45,7 +44,6 @@ type connection struct {
 	conn           net.Conn
 	connectTimeout time.Duration
 	requestTimeout time.Duration
-	healthCheck    Command
 	authOptions    *AuthOptions
 	sizeBuf        []byte
 	dataBuf        []byte
@@ -72,7 +70,6 @@ func newConnection(options *connectionOptions) (*connection, error) {
 		addr:           options.remoteAddress,
 		connectTimeout: options.connectTimeout,
 		requestTimeout: options.requestTimeout,
-		healthCheck:    options.healthCheck,
 		authOptions:    options.authOptions,
 		sizeBuf:        make([]byte, 4),
 		dataBuf:        make([]byte, defaultInitBuffer),
@@ -100,13 +97,6 @@ func (c *connection) connect() (err error) {
 			return
 		}
 		c.setState(connActive)
-		if c.healthCheck != nil {
-			if err = c.execute(c.healthCheck); err != nil || !c.healthCheck.Success() {
-				c.setState(connInactive)
-				logError("[Connection]", "initial health check error: '%s'", err.Error())
-				c.close()
-			}
-		}
 	}
 	return
 }

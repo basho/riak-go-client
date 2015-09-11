@@ -134,50 +134,7 @@ func TestConnectionTimeout(t *testing.T) {
 	}
 }
 
-func TestHealthCheckFail(t *testing.T) {
-	var onConn = func(c net.Conn) bool {
-		handleClientMessageWithRiakError(t, c, 1, nil)
-		return true
-	}
-	o := &testListenerOpts{
-		test:   t,
-		host:   "127.0.0.1",
-		port:   1339,
-		onConn: onConn,
-	}
-	tl := newTestListener(o)
-	defer tl.stop()
-	tl.start()
-
-	addr, err := net.ResolveTCPAddr("tcp4", tl.addr)
-	if err != nil {
-		t.Error(err.Error())
-	}
-
-	opts := &connectionOptions{
-		remoteAddress:  addr,
-		connectTimeout: thirtySeconds,
-		healthCheck:    &PingCommand{},
-	}
-
-	if conn, err := newConnection(opts); err == nil {
-		if err := conn.connect(); err == nil {
-			t.Error("expected to see error")
-		} else {
-			if riakError, ok := err.(RiakError); ok == true {
-				if expected, actual := "RiakError|1|this is an error", riakError.Error(); expected != actual {
-					t.Errorf("expected %v, got %v", expected, actual)
-				}
-			} else {
-				t.Error("expected to see Riak error, got:", err)
-			}
-		}
-	} else {
-		t.Error(err)
-	}
-}
-
-func TestHealthCheckSuccess(t *testing.T) {
+func TestConnectionSuccess(t *testing.T) {
 	o := &testListenerOpts{
 		test: t,
 		host: "127.0.0.1",
@@ -195,7 +152,6 @@ func TestHealthCheckSuccess(t *testing.T) {
 	opts := &connectionOptions{
 		remoteAddress:  addr,
 		connectTimeout: thirtySeconds,
-		healthCheck:    &PingCommand{},
 	}
 
 	if conn, err := newConnection(opts); err == nil {
