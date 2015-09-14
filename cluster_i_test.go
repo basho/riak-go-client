@@ -70,10 +70,10 @@ func TestExecuteCommandOnCluster(t *testing.T) {
 }
 
 func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
-	count := uint16(8)
+	maxCount := uint16(8)
 	nodeOpts := &NodeOptions{
-		MinConnections: count,
-		MaxConnections: count,
+		MinConnections: 1,
+		MaxConnections: 4,
 		RemoteAddress:  getRiakAddress(),
 	}
 
@@ -106,9 +106,8 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	pingChan := make(chan *PingCommand, count)
-	for i := uint16(0); i < count; i++ {
-		logDebug("[TestExecuteConcurrentCommandsOnCluster]", "i: %d", i)
+	pingChan := make(chan *PingCommand)
+	for i := uint16(0); i < maxCount; i++ {
 		go func() {
 			command := &PingCommand{}
 			if err := cluster.Execute(command); err != nil {
@@ -119,16 +118,14 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 	}
 
 	j := uint16(0)
-	for i := uint16(0); i < count; i++ {
-		select {
-		case pingCommand := <-pingChan:
-			if expected, actual := true, pingCommand.Success(); expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-			j++
+	for i := uint16(0); i < maxCount; i++ {
+		pingCommand := <-pingChan
+		if expected, actual := true, pingCommand.Success(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
+		j++
 	}
-	if expected, actual := count, j; expected != actual {
+	if expected, actual := maxCount, j; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }

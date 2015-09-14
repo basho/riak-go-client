@@ -66,9 +66,6 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		if conn.addr.Zone != "" {
 			t.Errorf("expected empty zone, got: %s", string(conn.addr.Zone))
 		}
-		if conn.healthCheck != nil {
-			t.Error("expected nil conn.healthCheck")
-		}
 		if expected, actual := conn.connectTimeout, opts.ConnectTimeout; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)
 		}

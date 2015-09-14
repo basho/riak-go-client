@@ -76,7 +76,6 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		c = nil
 		return
 	}
-	c.nodeManager.Init(c.nodes)
 
 	if options.QueueMaxDepth > 0 {
 		if options.QueueExecutionInterval == 0 {
@@ -141,7 +140,7 @@ func (c *Cluster) Stop() (err error) {
 		c.commandQueueTicker.Stop()
 		qc := c.cq.count()
 		if qc > 0 {
-			logWarn("[Cluster]", "commands in queue during shutdown: ", qc)
+			logWarn("[Cluster]", "commands in queue during shutdown: %d", qc)
 			var f = func(v interface{}) (bool, bool) {
 				if v == nil {
 					return true, false
@@ -176,7 +175,6 @@ func (c *Cluster) Stop() (err error) {
 	}
 
 	if allStopped {
-		c.nodeManager.Stop()
 		c.setState(clusterShutdown)
 		logDebug("[Cluster]", "cluster shut down")
 	} else {
@@ -277,7 +275,7 @@ func (c *Cluster) execute(async *Async) {
 		if err = c.stateCheck(clusterRunning); err != nil {
 			break
 		}
-		executed, err = c.nodeManager.ExecuteOnNode(command, command.getLastNode())
+		executed, err = c.nodeManager.ExecuteOnNode(c.nodes, command, command.getLastNode())
 		// NB: do *not* call command.onError here as it will have been called in connection
 		if executed {
 			// NB: "executed" means that a node sent the data to Riak and received a response
