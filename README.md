@@ -1,8 +1,10 @@
 Riak Go Client
 ==================
 
-**Riak Go Client** is a client which makes it easy to communicate with [Riak](http://basho.com/riak/), an open source, distributed database that focuses on high availability, horizontal scalability, and *predictable*
-latency. Both Riak and this code is maintained by [Basho](http://www.basho.com/).
+The **Riak Go Client** is a client which makes it easy to communicate with
+[Riak](http://basho.com/riak/), an open source, distributed database that
+focuses on high availability, horizontal scalability, and *predictable* latency.
+Both Riak and this code is maintained by [Basho](http://www.basho.com/).
 
 1. [Installation](#installation)
 2. [Documentation](#documentation)
@@ -54,18 +56,22 @@ Thank you for being part of the community! We love you for it.
 
 * 1.0.0 - Full Riak 2 support with command queuing and retries.
 
-## License and Authors
+## License
 
-**The Riak Go** Client is Open Source software released under the Apache 2.0 License. Please see the [LICENSE](LICENSE) file for full license details.
+The **Riak Go Client** is Open Source software released under the Apache 2.0
+License. Please see the [LICENSE](LICENSE) file for full license details.
 
-These excellent community projects inspired this client and parts of their code are in riak-go-client as well:
+These excellent community projects inspired this client and parts of their code
+are in `riak-go-client` as well:
 
 * [`goriakpbc`](https://github.com/tpjg/goriakpbc)
 * [`riaken-core`](https://github.com/riaken/riaken-core)
 * [`backoff`](https://github.com/jpillora/backoff)
 
-* Author: [Luke Bakken](https://github.com/lukebakken)
-* Author: [Christopher Mancini](https://github.com/christophermancini)
+## Authors
+
+* [Luke Bakken](https://github.com/lukebakken)
+* [Christopher Mancini](https://github.com/christophermancini)
 
 ## Contributors
 

@@ -53,6 +53,13 @@ func (c *Client) ExecuteAsync(a *Async) error {
 	return c.cluster.ExecuteAsync(a)
 }
 
+// Pings the cluster
+func (c *Client) Ping() (bool, error) {
+	cmd := &PingCommand{}
+	err := c.cluster.Execute(cmd)
+	return cmd.Success(), err
+}
+
 // Stop the nodes in the cluster and the cluster itself
 func (c *Client) Stop() error {
 	return c.cluster.Stop()
