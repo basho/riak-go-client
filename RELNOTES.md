@@ -1,4 +1,5 @@
-# vim:fo=tc:tw=0:
+<!--- vim:fo=tc:tw=0:
+--->
 
 Release Notes
 =============
