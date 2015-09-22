@@ -2,6 +2,7 @@ package riak
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,7 @@ const (
 // If the NodeManager is not defined, the defaultNodeManager is used
 type ClusterOptions struct {
 	Nodes                  []*Node
+	NoDefaultNode          bool
 	NodeManager            NodeManager
 	ExecutionAttempts      byte
 	QueueMaxDepth          uint16
@@ -27,14 +29,15 @@ type ClusterOptions struct {
 // Cluster object contains your pool of Node objects, the NodeManager and the
 // current stateData object of the cluster
 type Cluster struct {
-	stateData
-	stopChan           chan bool
+	stopChan           chan struct{}
 	nodes              []*Node
 	nodeManager        NodeManager
 	executionAttempts  byte
 	queueCommands      bool
 	cq                 *queue
 	commandQueueTicker *time.Ticker
+	sync.Mutex
+	stateData
 }
 
 // Cluster errors
@@ -55,7 +58,7 @@ var defaultClusterOptions = &ClusterOptions{
 }
 
 // NewCluster generates a new Cluster object using the provided ClusterOptions object
-func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
+func NewCluster(options *ClusterOptions) (*Cluster, error) {
 	if options == nil {
 		options = defaultClusterOptions
 	}
@@ -66,15 +69,24 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 		options.ExecutionAttempts = defaultExecutionAttempts
 	}
 
-	c = &Cluster{
+	c := &Cluster{
 		executionAttempts: options.ExecutionAttempts,
 		nodeManager:       options.NodeManager,
 	}
 	c.initStateData("clusterCreated", "clusterRunning", "clusterShuttingDown", "clusterShutdown", "clusterError")
 
-	if c.nodes, err = optNodes(options.Nodes); err != nil {
-		c = nil
-		return
+	if options.Nodes == nil {
+		c.nodes = make([]*Node, 0)
+	} else {
+		c.nodes = options.Nodes
+	}
+
+	if options.NoDefaultNode == false && len(c.nodes) == 0 {
+		defaultNode, nerr := NewNode(nil)
+		if nerr != nil {
+			return nil, nerr
+		}
+		c.nodes = append(c.nodes, defaultNode)
 	}
 
 	if options.QueueMaxDepth > 0 {
@@ -82,14 +94,14 @@ func NewCluster(options *ClusterOptions) (c *Cluster, err error) {
 			options.QueueExecutionInterval = defaultQueueExecutionInterval
 		}
 		c.queueCommands = true
-		c.stopChan = make(chan bool)
+		c.stopChan = make(chan struct{})
 		c.cq = newQueue(options.QueueMaxDepth)
 		c.commandQueueTicker = time.NewTicker(options.QueueExecutionInterval)
 		go c.executeEnqueuedCommands()
 	}
 
 	c.setState(clusterCreated)
-	return
+	return c, nil
 }
 
 // String returns a formatted string that lists status information for the Cluster
@@ -111,6 +123,8 @@ func (c *Cluster) Start() error {
 
 	logDebug("[Cluster]", "starting")
 
+	c.Lock()
+	defer c.Unlock()
 	for _, node := range c.nodes {
 		if err := node.start(); err != nil {
 			return err
@@ -135,7 +149,6 @@ func (c *Cluster) Stop() (err error) {
 	c.setState(clusterShuttingDown)
 
 	if c.queueCommands {
-		c.stopChan <- true
 		close(c.stopChan)
 		c.commandQueueTicker.Stop()
 		qc := c.cq.count()
@@ -157,6 +170,8 @@ func (c *Cluster) Stop() (err error) {
 		c.cq.destroy()
 	}
 
+	c.Lock()
+	defer c.Unlock()
 	for _, node := range c.nodes {
 		err = node.stop()
 		if err != nil {
@@ -189,6 +204,8 @@ func (c *Cluster) AddNode(n *Node) error {
 	if n == nil {
 		return ErrClusterNodeMustBeNonNil
 	}
+	c.Lock()
+	defer c.Unlock()
 	for _, node := range c.nodes {
 		if n == node {
 			return nil
@@ -208,6 +225,8 @@ func (c *Cluster) RemoveNode(n *Node) error {
 	if n == nil {
 		return ErrClusterNodeMustBeNonNil
 	}
+	c.Lock()
+	defer c.Unlock()
 	cn := c.nodes
 	for i, node := range c.nodes {
 		if n == node {
@@ -373,19 +392,4 @@ func (c *Cluster) executeEnqueuedCommands() {
 			}
 		}
 	}
-}
-
-func optNodes(nodes []*Node) (rv []*Node, err error) {
-	if nodes == nil {
-		nodes = make([]*Node, 0)
-	}
-	if len(nodes) == 0 {
-		var defaultNode *Node
-		if defaultNode, err = NewNode(nil); err == nil {
-			rv = append(nodes, defaultNode)
-		}
-	} else {
-		rv = nodes
-	}
-	return
 }

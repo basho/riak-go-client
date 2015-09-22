@@ -11,6 +11,9 @@ func TestCreateClusterWithDefaultOptions(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+	if cluster.nodes == nil {
+		t.Errorf("expected non-nil value")
+	}
 	if expected, actual := 1, len(cluster.nodes); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
@@ -29,6 +32,38 @@ func TestCreateClusterWithDefaultOptions(t *testing.T) {
 	}
 }
 
+func TestCreateClusterWithoutDefaultNodeAndStart(t *testing.T) {
+	o := &ClusterOptions{
+		NoDefaultNode: true,
+	}
+	cluster, err := NewCluster(o)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if cluster.nodes == nil {
+		t.Errorf("expected non-nil value")
+	}
+	if expected, actual := 0, len(cluster.nodes); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := clusterCreated, cluster.getState(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if cluster.nodeManager == nil {
+		t.Error("expected cluster to have a node manager")
+	}
+	if expected, actual := defaultExecutionAttempts, cluster.executionAttempts; expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	err = cluster.Start()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if expected, actual := clusterRunning, cluster.getState(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
 func TestAddAndRemoveNodeFromCluster(t *testing.T) {
 	var err error
 	var c *Cluster
@@ -36,6 +71,7 @@ func TestAddAndRemoveNodeFromCluster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	node := c.nodes[0]
 	// re-adding same node instance won't add it
 	if err := c.AddNode(node); err != nil {
