@@ -76,9 +76,9 @@ func newTestListener(o *testListenerOpts) *testListener {
 	if o.onConn == nil {
 		o.onConn = func(c net.Conn) bool {
 			if readWritePingResp(o.test, c, false) {
-				return false
+				return false // connection is not done
 			}
-			return true
+			return true // connection is done
 		}
 	}
 	tl := &testListener{
@@ -169,6 +169,7 @@ func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool
 	return
 }
 
+// TODO this code is copied from connection.go and should be shared instead
 func readClientMessage(c net.Conn) (err error) {
 	sizeBuf := make([]byte, 4)
 	var count int = 0

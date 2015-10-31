@@ -8,6 +8,7 @@ import (
 	"time"
 
 	rpbRiakDT "github.com/basho/riak-go-client/rpb/riak_dt"
+	rpbRiakKV "github.com/basho/riak-go-client/rpb/riak_kv"
 )
 
 // UpdateCounter
@@ -34,7 +35,7 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateCounterCommandBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiakDT.DtUpdateReq); ok {
 		if expected, actual := "counters", string(req.GetType()); expected != actual {
@@ -68,6 +69,56 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateCounterCommandBuilder(t *testing.T) {
 	}
 }
 
+func TestBuildDtUpdateReqCorrectlyViaUpdateCounterCommandBuilderForLegacyCounter(t *testing.T) {
+	b := "mybucket"
+	k := "counter_1"
+	builder := NewUpdateCounterCommandBuilder().
+		WithBucketType(defaultBucketType).
+		WithBucket(b).
+		WithKey(k).
+		WithIncrement(100).
+		WithW(3).
+		WithPw(1).
+		WithDw(2).
+		WithReturnBody(true)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+	if req, ok := protobuf.(*rpbRiakKV.RpbCounterUpdateReq); ok {
+		if got, want := string(req.GetBucket()), b; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if want, got := string(req.GetKey()), k; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if want, got := req.GetAmount(), int64(100); got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if want, got := req.GetW(), uint32(3); got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if want, got := req.GetDw(), uint32(2); got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if want, got := req.GetPw(), uint32(1); got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if want, got := req.GetReturnvalue(), true; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakKV.RpbCounterUpdateReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
 func TestUpdateCounterParsesDtUpdateRespCorrectly(t *testing.T) {
 	counterValue := int64(1234)
 	generatedKey := "generated_key"
@@ -79,7 +130,6 @@ func TestUpdateCounterParsesDtUpdateRespCorrectly(t *testing.T) {
 	builder := NewUpdateCounterCommandBuilder().
 		WithBucketType("counters").
 		WithBucket("myBucket").
-		WithKey("counter_1").
 		WithIncrement(100)
 	cmd, err := builder.Build()
 	if err != nil {
@@ -90,18 +140,74 @@ func TestUpdateCounterParsesDtUpdateRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
-	cmd.onSuccess(dtUpdateResp)
+	if dtUpdateReq, ok := protobuf.(*rpbRiakDT.DtUpdateReq); ok {
+		if dtUpdateReq.GetKey() != nil {
+			t.Error("expected nil slice")
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakDT.DtUpdateReq", ok, reflect.TypeOf(protobuf))
+	}
+
+	err = cmd.onSuccess(dtUpdateResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if uc, ok := cmd.(*UpdateCounterCommand); ok {
 		rsp := uc.Response
-		if expected, actual := int64(1234), rsp.CounterValue; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := rsp.CounterValue, int64(1234); got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "generated_key", rsp.GeneratedKey; expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := rsp.GeneratedKey, "generated_key"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *UpdateCounterCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestUpdateCounterParsesRbpCounterUpdateRespCorrectly(t *testing.T) {
+	b := "mybucket"
+	k := "counter_1"
+	v := int64(1234)
+	rpbCounterUpdateResp := &rpbRiakKV.RpbCounterUpdateResp{
+		Value: &v,
+	}
+
+	builder := NewUpdateCounterCommandBuilder().
+		WithBucketType(defaultBucketType).
+		WithBucket(b).
+		WithKey(k).
+		WithIncrement(v).
+		WithReturnBody(true)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+
+	err = cmd.onSuccess(rpbCounterUpdateResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if uc, ok := cmd.(*UpdateCounterCommand); ok {
+		if got, want := uc.isLegacy, true; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		rsp := uc.Response
+		if got, want := rsp.CounterValue, v; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *UpdateCounterCommand", ok, reflect.TypeOf(cmd))
@@ -113,7 +219,7 @@ func TestValidationOfUpdateCounterViaBuilder(t *testing.T) {
 	builder := NewUpdateCounterCommandBuilder()
 	_, err := builder.Build()
 	if err == nil {
-		t.Fatal("expected non-nil err")
+		t.Fatalf("expected non-nil err")
 	}
 	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
@@ -151,7 +257,7 @@ func TestBuildDtFetchReqCorrectlyViaFetchCounterCommandBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiakDT.DtFetchReq); ok {
 		if expected, actual := "counters", string(req.GetType()); expected != actual {
@@ -204,10 +310,13 @@ func TestFetchCounterParsesDtFetchRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
-	cmd.onSuccess(dtFetchResp)
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if uc, ok := cmd.(*FetchCounterCommand); ok {
 		rsp := uc.Response
@@ -233,11 +342,14 @@ func TestFetchCounterParsesDtFetchRespWithoutValueCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
 	dtFetchResp := &rpbRiakDT.DtFetchResp{}
-	cmd.onSuccess(dtFetchResp)
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if uc, ok := cmd.(*FetchCounterCommand); ok {
 		if expected, actual := true, uc.Response.IsNotFound; expected != actual {
@@ -299,7 +411,7 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateSetCommandBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiakDT.DtUpdateReq); ok {
 		if expected, actual := "sets", string(req.GetType()); expected != actual {
@@ -370,10 +482,13 @@ func TestUpdateSetParsesDtUpdateRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
-	cmd.onSuccess(dtUpdateResp)
+	err = cmd.onSuccess(dtUpdateResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if uc, ok := cmd.(*UpdateSetCommand); ok {
 		rsp := uc.Response
@@ -437,7 +552,7 @@ func TestBuildDtFetchReqCorrectlyViaFetchSetCommandBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiakDT.DtFetchReq); ok {
 		if expected, actual := "sets", string(req.GetType()); expected != actual {
@@ -494,10 +609,13 @@ func TestFetchSetParsesDtFetchRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
-	cmd.onSuccess(dtFetchResp)
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if fc, ok := cmd.(*FetchSetCommand); ok {
 		rsp := fc.Response
@@ -529,11 +647,14 @@ func TestFetchSetParsesDtFetchRespWithoutValueCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
 	dtFetchResp := &rpbRiakDT.DtFetchResp{}
-	cmd.onSuccess(dtFetchResp)
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if uc, ok := cmd.(*FetchSetCommand); ok {
 		if expected, actual := true, uc.Response.IsNotFound; expected != actual {
@@ -673,7 +794,7 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateMapCommandBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiakDT.DtUpdateReq); ok {
 		if expected, actual := "maps", string(req.GetType()); expected != actual {
@@ -890,10 +1011,13 @@ func TestUpdateMapParsesDtUpdateRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
-	cmd.onSuccess(dtUpdateResp)
+	err = cmd.onSuccess(dtUpdateResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if uc, ok := cmd.(*UpdateMapCommand); ok {
 		rsp := uc.Response
@@ -965,7 +1089,7 @@ func TestBuildDtFetchReqCorrectlyViaFetchMapCommandBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiakDT.DtFetchReq); ok {
 		if expected, actual := "maps", string(req.GetType()); expected != actual {
@@ -1017,10 +1141,13 @@ func TestFetchMapParsesDtFetchRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
-	cmd.onSuccess(dtFetchResp)
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if fc, ok := cmd.(*FetchMapCommand); ok {
 		rsp := fc.Response
@@ -1048,11 +1175,14 @@ func TestFetchMapParsesDtFetchRespWithoutValueCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 
 	dtFetchResp := &rpbRiakDT.DtFetchResp{}
-	cmd.onSuccess(dtFetchResp)
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	if uc, ok := cmd.(*FetchMapCommand); ok {
 		if expected, actual := true, uc.Response.IsNotFound; expected != actual {

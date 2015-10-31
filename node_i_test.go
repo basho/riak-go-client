@@ -23,9 +23,9 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		RemoteAddress:       tl.addr,
 		MinConnections:      count,
 		MaxConnections:      count,
-		IdleTimeout:         thirtySeconds,
-		ConnectTimeout:      thirtySeconds,
-		RequestTimeout:      thirtySeconds,
+		IdleTimeout:         tenSeconds,
+		ConnectTimeout:      tenSeconds,
+		RequestTimeout:      tenSeconds,
 		HealthCheckInterval: time.Millisecond * 500,
 		HealthCheckBuilder:  &PingCommandBuilder{},
 	}

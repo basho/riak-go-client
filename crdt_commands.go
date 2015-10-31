@@ -18,7 +18,8 @@ import (
 type UpdateCounterCommand struct {
 	commandImpl
 	Response *UpdateCounterResponse
-	protobuf *rpbRiakDT.DtUpdateReq
+	protobuf proto.Message
+	isLegacy bool
 }
 
 // Name identifies this command
@@ -27,66 +28,47 @@ func (cmd *UpdateCounterCommand) Name() string {
 }
 
 func (cmd *UpdateCounterCommand) constructPbRequest() (proto.Message, error) {
-	// workaround for bug #31
-	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
-		return &rpbRiakKV.RpbCounterUpdateReq{
-			Bucket:      cmd.protobuf.Bucket,
-			Key:         cmd.protobuf.Key,
-			Amount:      cmd.protobuf.Op.CounterOp.Increment,
-			W:           cmd.protobuf.W,
-			Dw:          cmd.protobuf.Dw,
-			Pw:          cmd.protobuf.Pw,
-			Returnvalue: cmd.protobuf.ReturnBody,
-		}, nil
-	}
-	// end workaroundå
 	return cmd.protobuf, nil
 }
 
 func (cmd *UpdateCounterCommand) onSuccess(msg proto.Message) error {
 	cmd.success = true
 	if msg != nil {
-		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
+		// For legacy counters, the response may be different
+		if rpbDtUpdateResp, is_DtUpdateResp := msg.(*rpbRiakDT.DtUpdateResp); is_DtUpdateResp && !cmd.isLegacy {
 			cmd.Response = &UpdateCounterResponse{
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
 				CounterValue: rpbDtUpdateResp.GetCounterValue(),
 			}
-		} else if rpbCounterUpdateResp, ok2 := msg.(*rpbRiakKV.RpbCounterUpdateResp); ok2 { // workaround for bug #31
+		} else if rpbCounterUpdateResp, is_RpbCounterUpdateResp := msg.(*rpbRiakKV.RpbCounterUpdateResp); is_RpbCounterUpdateResp && cmd.isLegacy {
 			cmd.Response = &UpdateCounterResponse{
 				CounterValue: rpbCounterUpdateResp.GetValue(),
 			}
-			// end workaround
 		} else {
-			return fmt.Errorf("[UpdateCounterCommand] could not convert %v to DtUpdateResp", reflect.TypeOf(msg))
+			return fmt.Errorf("[UpdateCounterCommand] could not convert %v to DtUpdateResp / RpbCounterUpdateResp, isLegacy: %v", reflect.TypeOf(msg), cmd.isLegacy)
 		}
 	}
 	return nil
 }
 
 func (cmd *UpdateCounterCommand) getRequestCode() byte {
-	// workaround for bug #31
-	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
+	if cmd.isLegacy {
 		return rpbCode_RpbCounterUpdateReq
 	}
-	// end workaround
 	return rpbCode_DtUpdateReq
 }
 
 func (cmd *UpdateCounterCommand) getResponseCode() byte {
-	// workaround for bug #31
-	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
+	if cmd.isLegacy {
 		return rpbCode_RpbCounterUpdateResp
 	}
-	// end workaround
 	return rpbCode_DtUpdateResp
 }
 
 func (cmd *UpdateCounterCommand) getResponseProtobufMessage() proto.Message {
-	// workaround for bug #31
-	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
+	if cmd.isLegacy {
 		return &rpbRiakKV.RpbCounterUpdateResp{}
 	}
-	// end workaround
 	return &rpbRiakDT.DtUpdateResp{}
 }
 
@@ -105,41 +87,43 @@ type UpdateCounterResponse struct {
 //		WithIncrement(1).
 //		Build()
 type UpdateCounterCommandBuilder struct {
-	protobuf *rpbRiakDT.DtUpdateReq
+	bucketType string
+	bucket     string
+	key        string
+	increment  int64
+	w          uint32
+	dw         uint32
+	pw         uint32
+	returnBody bool
+	timeout    time.Duration
 }
 
 // NewUpdateCounterCommandBuilder is a factory function for generating the command builder struct
 func NewUpdateCounterCommandBuilder() *UpdateCounterCommandBuilder {
-	return &UpdateCounterCommandBuilder{
-		protobuf: &rpbRiakDT.DtUpdateReq{
-			Op: &rpbRiakDT.DtOp{
-				CounterOp: &rpbRiakDT.CounterOp{},
-			},
-		},
-	}
+	return &UpdateCounterCommandBuilder{}
 }
 
 // WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
 func (builder *UpdateCounterCommandBuilder) WithBucketType(bucketType string) *UpdateCounterCommandBuilder {
-	builder.protobuf.Type = []byte(bucketType)
+	builder.bucketType = bucketType
 	return builder
 }
 
 // WithBucket sets the bucket to be used by the command
 func (builder *UpdateCounterCommandBuilder) WithBucket(bucket string) *UpdateCounterCommandBuilder {
-	builder.protobuf.Bucket = []byte(bucket)
+	builder.bucket = bucket
 	return builder
 }
 
 // WithKey sets the key to be used by the command to read / write values
 func (builder *UpdateCounterCommandBuilder) WithKey(key string) *UpdateCounterCommandBuilder {
-	builder.protobuf.Key = []byte(key)
+	builder.key = key
 	return builder
 }
 
 // WithIncrement defines the increment the Counter value is to be increased / decreased by
 func (builder *UpdateCounterCommandBuilder) WithIncrement(increment int64) *UpdateCounterCommandBuilder {
-	builder.protobuf.Op.CounterOp.Increment = &increment
+	builder.increment = increment
 	return builder
 }
 
@@ -148,7 +132,7 @@ func (builder *UpdateCounterCommandBuilder) WithIncrement(increment int64) *Upda
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateCounterCommandBuilder) WithW(w uint32) *UpdateCounterCommandBuilder {
-	builder.protobuf.W = &w
+	builder.w = w
 	return builder
 }
 
@@ -158,7 +142,7 @@ func (builder *UpdateCounterCommandBuilder) WithW(w uint32) *UpdateCounterComman
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateCounterCommandBuilder) WithPw(pw uint32) *UpdateCounterCommandBuilder {
-	builder.protobuf.Pw = &pw
+	builder.pw = pw
 	return builder
 }
 
@@ -167,33 +151,81 @@ func (builder *UpdateCounterCommandBuilder) WithPw(pw uint32) *UpdateCounterComm
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *UpdateCounterCommandBuilder) WithDw(dw uint32) *UpdateCounterCommandBuilder {
-	builder.protobuf.Dw = &dw
+	builder.dw = dw
 	return builder
 }
 
 // WithReturnBody sets Riak to return the value within its response after completing the write
 // operation
 func (builder *UpdateCounterCommandBuilder) WithReturnBody(returnBody bool) *UpdateCounterCommandBuilder {
-	builder.protobuf.ReturnBody = &returnBody
+	builder.returnBody = returnBody
 	return builder
 }
 
 // WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *UpdateCounterCommandBuilder) WithTimeout(timeout time.Duration) *UpdateCounterCommandBuilder {
-	timeoutMilliseconds := uint32(timeout / time.Millisecond)
-	builder.protobuf.Timeout = &timeoutMilliseconds
+	builder.timeout = timeout
 	return builder
 }
 
 // Build validates the configuration options provided then builds the command
 func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
-	if builder.protobuf == nil {
-		panic("builder.protobuf must not be nil")
+	var isLegacy = false
+	var protobuf proto.Message = nil
+	if builder.bucketType == defaultBucketType && builder.returnBody == true {
+		isLegacy = true
+		rpbCounterUpdateReq := &rpbRiakKV.RpbCounterUpdateReq{
+			Amount:      &builder.increment,
+			W:           &builder.w,
+			Dw:          &builder.dw,
+			Pw:          &builder.pw,
+			Returnvalue: &builder.returnBody,
+		}
+		// NB: strings must be handled this way to ensure that nil slices
+		// are in the PB msg, rather than 0-len ones
+		if builder.bucket != "" {
+			rpbCounterUpdateReq.Bucket = []byte(builder.bucket)
+		}
+		if builder.key != "" {
+			rpbCounterUpdateReq.Key = []byte(builder.key)
+		}
+		protobuf = rpbCounterUpdateReq
+	} else {
+		timeoutMilliseconds := uint32(builder.timeout / time.Millisecond)
+		dtUpdateReq := &rpbRiakDT.DtUpdateReq{
+			W:          &builder.w,
+			Dw:         &builder.dw,
+			Pw:         &builder.pw,
+			ReturnBody: &builder.returnBody,
+			Timeout:    &timeoutMilliseconds,
+			Op: &rpbRiakDT.DtOp{
+				CounterOp: &rpbRiakDT.CounterOp{
+					Increment: &builder.increment,
+				},
+			},
+		}
+		// NB: strings must be handled this way to ensure that nil slices
+		// are in the PB msg, rather than 0-len ones
+		if builder.bucketType != "" {
+			dtUpdateReq.Type = []byte(builder.bucketType)
+		}
+		if builder.bucket != "" {
+			dtUpdateReq.Bucket = []byte(builder.bucket)
+		}
+		if builder.key != "" {
+			dtUpdateReq.Key = []byte(builder.key)
+		}
+		protobuf = dtUpdateReq
 	}
-	if err := validateLocatable(builder.protobuf); err != nil {
+
+	if err := validateLocatable(protobuf); err != nil {
 		return nil, err
 	}
-	return &UpdateCounterCommand{protobuf: builder.protobuf}, nil
+
+	return &UpdateCounterCommand{
+		protobuf: protobuf,
+		isLegacy: isLegacy,
+	}, nil
 }
 
 // FetchCounter
