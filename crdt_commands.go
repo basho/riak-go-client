@@ -51,7 +51,7 @@ func (cmd *UpdateCounterCommand) onSuccess(msg proto.Message) error {
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
 				CounterValue: rpbDtUpdateResp.GetCounterValue(),
 			}
-		} else if rpbCounterUpdateResp, ok := msg.(*rpbRiakKV.RpbCounterUpdateResp); ok { // workaround for bug #31
+		} else if rpbCounterUpdateResp, ok2 := msg.(*rpbRiakKV.RpbCounterUpdateResp); ok2 { // workaround for bug #31
 			cmd.Response = &UpdateCounterResponse{
 				CounterValue: rpbCounterUpdateResp.GetValue(),
 			}
