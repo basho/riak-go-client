@@ -6,6 +6,7 @@ import (
 	"time"
 
 	rpbRiakDT "github.com/basho/riak-go-client/rpb/riak_dt"
+	rpbRiakKV "github.com/basho/riak-go-client/rpb/riak_kv"
 	proto "github.com/golang/protobuf/proto"
 )
 
@@ -26,6 +27,19 @@ func (cmd *UpdateCounterCommand) Name() string {
 }
 
 func (cmd *UpdateCounterCommand) constructPbRequest() (proto.Message, error) {
+	// workaround for bug #31
+	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
+		return &rpbRiakKV.RpbCounterUpdateReq{
+			Bucket:      cmd.protobuf.Bucket,
+			Key:         cmd.protobuf.Key,
+			Amount:      cmd.protobuf.Op.CounterOp.Increment,
+			W:           cmd.protobuf.W,
+			Dw:          cmd.protobuf.Dw,
+			Pw:          cmd.protobuf.Pw,
+			Returnvalue: cmd.protobuf.ReturnBody,
+		}, nil
+	}
+	// end workaroundå
 	return cmd.protobuf, nil
 }
 
@@ -37,6 +51,11 @@ func (cmd *UpdateCounterCommand) onSuccess(msg proto.Message) error {
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
 				CounterValue: rpbDtUpdateResp.GetCounterValue(),
 			}
+		} else if rpbCounterUpdateResp, ok2 := msg.(*rpbRiakKV.RpbCounterUpdateResp); ok2 { // workaround for bug #31
+			cmd.Response = &UpdateCounterResponse{
+				CounterValue: rpbCounterUpdateResp.GetValue(),
+			}
+			// end workaround
 		} else {
 			return fmt.Errorf("[UpdateCounterCommand] could not convert %v to DtUpdateResp", reflect.TypeOf(msg))
 		}
@@ -45,14 +64,29 @@ func (cmd *UpdateCounterCommand) onSuccess(msg proto.Message) error {
 }
 
 func (cmd *UpdateCounterCommand) getRequestCode() byte {
+	// workaround for bug #31
+	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
+		return rpbCode_RpbCounterUpdateReq
+	}
+	// end workaround
 	return rpbCode_DtUpdateReq
 }
 
 func (cmd *UpdateCounterCommand) getResponseCode() byte {
+	// workaround for bug #31
+	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
+		return rpbCode_RpbCounterUpdateResp
+	}
+	// end workaround
 	return rpbCode_DtUpdateResp
 }
 
 func (cmd *UpdateCounterCommand) getResponseProtobufMessage() proto.Message {
+	// workaround for bug #31
+	if string(cmd.protobuf.GetType()) == "default" && cmd.protobuf.GetReturnBody() {
+		return &rpbRiakKV.RpbCounterUpdateResp{}
+	}
+	// end workaround
 	return &rpbRiakDT.DtUpdateResp{}
 }
 
