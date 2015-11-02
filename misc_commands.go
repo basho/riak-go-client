@@ -533,7 +533,7 @@ type ResetBucketCommandBuilder struct {
 	protobuf *rpbRiak.RpbResetBucketReq
 }
 
-// NewFetchBucketPropsCommandBuilder is a factory function for generating the command builder struct
+// NewResetBucketCommandBuilder is a factory function for generating the command builder struct
 func NewResetBucketCommandBuilder() *ResetBucketCommandBuilder {
 	builder := &ResetBucketCommandBuilder{protobuf: &rpbRiak.RpbResetBucketReq{}}
 	return builder
