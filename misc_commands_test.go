@@ -382,3 +382,32 @@ func TestParseRpbStoreBucketRespCorrectly(t *testing.T) {
 		t.Errorf("ok: %v - could not convert %v to *StoreBucketPropsCommand", ok, reflect.TypeOf(cmd))
 	}
 }
+
+// ResetBucket
+
+func TestBuildRpbResetBucketReqCorrectlyViaBuilder(t *testing.T) {
+	builder := NewResetBucketCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket_name")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.FailNow()
+	}
+	if req, ok := protobuf.(*rpbRiak.RpbResetBucketReq); ok {
+		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbResetBucketReq", ok, reflect.TypeOf(protobuf))
+	}
+}
