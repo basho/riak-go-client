@@ -22,7 +22,7 @@ func TestBuildRpbGetBucketReqCorrectlyViaBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiak.RpbGetBucketReq); ok {
 		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
@@ -96,7 +96,11 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	cmd.onSuccess(rpbGetBucketResp)
+	err = cmd.onSuccess(rpbGetBucketResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
 	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
@@ -266,7 +270,7 @@ func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiak.RpbSetBucketReq); ok {
 		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
@@ -369,7 +373,11 @@ func TestParseRpbStoreBucketRespCorrectly(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	cmd.onSuccess(nil)
+	err = cmd.onSuccess(nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
 	if expected, actual := true, cmd.Success(); expected != actual {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
@@ -398,14 +406,14 @@ func TestBuildRpbResetBucketReqCorrectlyViaBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if protobuf == nil {
-		t.FailNow()
+		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiak.RpbResetBucketReq); ok {
-		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := string(req.GetType()), "bucket_type"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := string(req.GetBucket()), "bucket_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbResetBucketReq", ok, reflect.TypeOf(protobuf))
