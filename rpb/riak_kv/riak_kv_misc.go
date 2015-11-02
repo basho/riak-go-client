@@ -109,3 +109,20 @@ func (m *RpbIndexReq) BucketIsRequired() bool {
 func (m *RpbIndexReq) KeyIsRequired() bool {
 	return false
 }
+
+// RpbCounterUpdateReq
+
+func (m *RpbCounterUpdateReq) SetType(bt []byte) {
+}
+
+func (m *RpbCounterUpdateReq) GetType() []byte {
+	return nil
+}
+
+func (m *RpbCounterUpdateReq) BucketIsRequired() bool {
+	return true
+}
+
+func (m *RpbCounterUpdateReq) KeyIsRequired() bool {
+	return true
+}

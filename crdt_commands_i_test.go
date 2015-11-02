@@ -35,6 +35,9 @@ func TestUpdateAndFetchCounter(t *testing.T) {
 	}
 	key := "unknown"
 	if uc, ok := cmd.(*UpdateCounterCommand); ok {
+		if got, want := uc.isLegacy, false; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 		if uc.Response == nil {
 			t.Fatal("expected non-nil Response")
 		}

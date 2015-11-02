@@ -12,8 +12,8 @@ func TestCreateConnection(t *testing.T) {
 	}
 	opts := &connectionOptions{
 		remoteAddress:  addr,
-		connectTimeout: thirtySeconds,
-		requestTimeout: thirtySeconds,
+		connectTimeout: tenSeconds,
+		requestTimeout: tenSeconds,
 	}
 	var conn *connection
 	if conn, err = newConnection(opts); err == nil {
@@ -26,11 +26,11 @@ func TestCreateConnection(t *testing.T) {
 		if !conn.addr.IP.Equal(localhost) {
 			t.Errorf("expected %v, got: %v", localhost, conn.addr.IP)
 		}
-		if conn.connectTimeout != thirtySeconds {
-			t.Errorf("expected %v, got: %v", thirtySeconds, conn.connectTimeout)
+		if conn.connectTimeout != tenSeconds {
+			t.Errorf("expected %v, got: %v", tenSeconds, conn.connectTimeout)
 		}
-		if conn.requestTimeout != thirtySeconds {
-			t.Errorf("expected %v, got: %v", thirtySeconds, conn.requestTimeout)
+		if conn.requestTimeout != tenSeconds {
+			t.Errorf("expected %v, got: %v", tenSeconds, conn.requestTimeout)
 		}
 		if expected, actual := false, conn.inFlight; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)

@@ -15,13 +15,17 @@ type rpbLocatable interface {
 
 func validateLocatable(msg proto.Message) error {
 	l := msg.(rpbLocatable)
-	if l.GetBucket() == nil && l.BucketIsRequired() {
-		return ErrBucketRequired
+	if l.BucketIsRequired() {
+		if bucket := l.GetBucket(); len(bucket) == 0 {
+			return ErrBucketRequired
+		}
 	}
-	if l.GetKey() == nil && l.KeyIsRequired() {
-		return ErrKeyRequired
+	if l.KeyIsRequired() {
+		if key := l.GetKey(); len(key) == 0 {
+			return ErrKeyRequired
+		}
 	}
-	if l.GetType() == nil {
+	if bucketType := l.GetType(); len(bucketType) == 0 {
 		l.SetType([]byte(defaultBucketType))
 	}
 	return nil
