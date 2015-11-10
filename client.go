@@ -25,6 +25,12 @@ type NewClientOptions struct {
 	RemoteAddresses []string // NB: in the form HOST|IP[:PORT]
 }
 
+type GetOptions struct {
+	BucketType string
+	Bucket     string
+	Key        string
+}
+
 // NewClient generates a new Client object using the provided options
 func NewClient(opts *NewClientOptions) (*Client, error) {
 	if opts == nil {
@@ -117,4 +123,31 @@ func newClientUsingAddresses(port uint16, remoteAddresses []string) (*Client, er
 	} else {
 		return newClientUsingCluster(cluster)
 	}
+}
+
+// Get is a simple invocation of the NewFetchValueCommand
+func (c *Client) Get(opts *GetOptions) ([]*Object, error) {
+	builder := NewFetchValueCommandBuilder().
+		WithBucket(opts.Bucket).
+		WithKey(opts.Key)
+
+	if opts.BucketType != "" {
+		builder = builder.WithBucketType(opts.BucketType)
+	}
+
+	cmd, err := builder.Build()
+
+	if err != nil {
+		return nil, err
+	}
+	if err = c.cluster.Execute(cmd); err != nil {
+		return nil, err
+	}
+
+	res := cmd.(*FetchValueCommand)
+	if res.Error() != nil || res.Response.IsNotFound {
+		return nil, res.Error()
+	}
+
+	return res.Response.Values, nil
 }
