@@ -143,14 +143,7 @@ func (c *Client) Fetch(bucketType, bucket, key string) ([]*Object, error) {
 }
 
 // Store is a simple invocation of the StorehValueCommand
-func (c *Client) Store(bucketType, bucket, key string, data []byte) ([]*Object, error) {
-	obj := &Object{
-		ContentType:     "application/json",
-		Charset:         "utf-8",
-		ContentEncoding: "utf-8",
-		Value:           data,
-	}
-
+func (c *Client) Store(bucketType, bucket, key string, obj *Object) ([]*Object, error) {
 	cmd, err := NewStoreValueCommandBuilder().
 		WithBucketType(bucketType).
 		WithBucket(bucket).
