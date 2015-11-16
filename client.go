@@ -25,12 +25,6 @@ type NewClientOptions struct {
 	RemoteAddresses []string // NB: in the form HOST|IP[:PORT]
 }
 
-type Options struct {
-	BucketType string
-	Bucket     string
-	Key        string
-}
-
 // NewClient generates a new Client object using the provided options
 func NewClient(opts *NewClientOptions) (*Client, error) {
 	if opts == nil {
