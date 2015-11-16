@@ -173,9 +173,9 @@ func (c *Client) Store(bucketType, bucket, key string, data []byte) ([]*Object, 
 	return res.Response.Values, nil
 }
 
-// Fetch is a simple invocation of the NewFetchValueCommand
+// Delete is a simple invocation of the NewFetchValueCommand
 func (c *Client) Delete(bucketType, bucket, key string) error {
-	cmd, err := NewFetchValueCommandBuilder().
+	cmd, err := NewDeleteValueCommandBuilder().
 		WithBucketType(bucketType).
 		WithBucket(bucket).
 		WithKey(key).
