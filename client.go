@@ -25,7 +25,7 @@ type NewClientOptions struct {
 	RemoteAddresses []string // NB: in the form HOST|IP[:PORT]
 }
 
-type GetOptions struct {
+type Options struct {
 	BucketType string
 	Bucket     string
 	Key        string
@@ -125,17 +125,13 @@ func newClientUsingAddresses(port uint16, remoteAddresses []string) (*Client, er
 	}
 }
 
-// Get is a simple invocation of the NewFetchValueCommand
-func (c *Client) Get(opts *GetOptions) ([]*Object, error) {
-	builder := NewFetchValueCommandBuilder().
-		WithBucket(opts.Bucket).
-		WithKey(opts.Key)
-
-	if opts.BucketType != "" {
-		builder = builder.WithBucketType(opts.BucketType)
-	}
-
-	cmd, err := builder.Build()
+// Fetch is a simple invocation of the NewFetchValueCommand
+func (c *Client) Fetch(bucketType, bucket, key string) ([]*Object, error) {
+	cmd, err := NewFetchValueCommandBuilder().
+		WithBucketType(bucketType).
+		WithBucket(bucket).
+		WithKey(key).
+		Build()
 
 	if err != nil {
 		return nil, err
@@ -150,4 +146,58 @@ func (c *Client) Get(opts *GetOptions) ([]*Object, error) {
 	}
 
 	return res.Response.Values, nil
+}
+
+// Store is a simple invocation of the StorehValueCommand
+func (c *Client) Store(bucketType, bucket, key string, data []byte) ([]*Object, error) {
+	obj := &Object{
+		ContentType:     "application/json",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           data,
+	}
+
+	cmd, err := NewStoreValueCommandBuilder().
+		WithBucketType(bucketType).
+		WithBucket(bucket).
+		WithKey(key).
+		WithContent(obj).
+		Build()
+
+	if err != nil {
+		return nil, err
+	}
+	if err = c.cluster.Execute(cmd); err != nil {
+		return nil, err
+	}
+
+	res := cmd.(*StoreValueCommand)
+	if res.Error() != nil {
+		return nil, res.Error()
+	}
+
+	return res.Response.Values, nil
+}
+
+// Fetch is a simple invocation of the NewFetchValueCommand
+func (c *Client) Delete(bucketType, bucket, key string) error {
+	cmd, err := NewFetchValueCommandBuilder().
+		WithBucketType(bucketType).
+		WithBucket(bucket).
+		WithKey(key).
+		Build()
+
+	if err != nil {
+		return err
+	}
+	if err = c.cluster.Execute(cmd); err != nil {
+		return err
+	}
+
+	res := cmd.(*DeleteValueCommand)
+	if res.Error() != nil {
+		return res.Error()
+	}
+
+	return nil
 }
