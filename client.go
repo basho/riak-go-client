@@ -149,6 +149,7 @@ func (c *Client) Store(bucketType, bucket, key string, obj *Object) ([]*Object, 
 		WithBucket(bucket).
 		WithKey(key).
 		WithContent(obj).
+		WithReturnBody(true).
 		Build()
 
 	if err != nil {
@@ -167,12 +168,17 @@ func (c *Client) Store(bucketType, bucket, key string, obj *Object) ([]*Object, 
 }
 
 // Delete is a simple invocation of the NewFetchValueCommand
-func (c *Client) Delete(bucketType, bucket, key string) error {
-	cmd, err := NewDeleteValueCommandBuilder().
+func (c *Client) Delete(bucketType, bucket, key string, vclock []byte) error {
+	builder := NewDeleteValueCommandBuilder().
 		WithBucketType(bucketType).
 		WithBucket(bucket).
-		WithKey(key).
-		Build()
+		WithKey(key)
+
+	if vclock != nil && len(vclock) > 0 {
+		builder = builder.WithVClock(vclock)
+	}
+
+	cmd, err := builder.Build()
 
 	if err != nil {
 		return err
