@@ -9,6 +9,7 @@ TL;DR;
 
 	import (
 		"fmt"
+		"os"
 		riak "github.com/basho/riak-go-client"
 	)
 
@@ -21,6 +22,7 @@ TL;DR;
 		var err error
 		if node, err = riak.NewNode(nodeOpts); err != nil {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
 		nodes := []*riak.Node{node}
@@ -31,16 +33,19 @@ TL;DR;
 		cluster, err := riak.NewCluster(opts)
 		if err != nil {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
 		defer func() {
 			if err := cluster.Stop(); err != nil {
 				fmt.Println(err.Error())
+				os.Exit(1)
 			}
 		}()
 
 		if err := cluster.Start(); err != nil {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
 		obj := &riak.Object{
@@ -56,10 +61,12 @@ TL;DR;
 			Build()
 		if err != nil {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
 		if err := cluster.Execute(cmd); err != nil {
 			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
 		svc := cmd.(*riak.StoreValueCommand)
