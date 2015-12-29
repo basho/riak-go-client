@@ -51,7 +51,7 @@ TL;DR;
 		}
 
 		cmd, err := riak.NewStoreValueCommandBuilder().
-			WithBucket(testBucketName).
+			WithBucket("testBucketName").
 			WithContent(obj).
 			Build()
 		if err != nil {
@@ -62,7 +62,7 @@ TL;DR;
 			fmt.Println(err.Error())
 		}
 
-		svc := cmd.(*StoreValueCommand)
+		svc := cmd.(*riak.StoreValueCommand)
 		rsp := svc.Response
 		fmt.Println(rsp.GeneratedKey)
 	}
