@@ -80,3 +80,4 @@ Thank you to all of our contributors!
 * [Ian Lozinski](https://github.com/i)
 * [Sergio C. Arteaga](https://github.com/tegioz)
 * [Andrew Zeneski](https://github.com/andrewzeneski)
+* [Кирилл Александрович Журавлев](https://github.com/kazhuravlev)
