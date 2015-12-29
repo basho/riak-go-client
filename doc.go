@@ -56,9 +56,9 @@ TL;DR;
 		}
 
 		cmd, err := riak.NewStoreValueCommandBuilder().
-		WithBucket("testBucketName").
-		WithContent(obj).
-		Build()
+			WithBucket("testBucketName").
+			WithContent(obj).
+			Build()
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
