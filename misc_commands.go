@@ -528,6 +528,72 @@ func (builder *StoreBucketPropsCommandBuilder) Build() (Command, error) {
 	return &StoreBucketPropsCommand{protobuf: builder.protobuf}, nil
 }
 
+// ResetBucketCommandBuilder is the command builder for ResetBucketCommand
+type ResetBucketCommandBuilder struct {
+	protobuf *rpbRiak.RpbResetBucketReq
+}
+
+// NewResetBucketCommandBuilder is a factory function for generating the command builder struct
+func NewResetBucketCommandBuilder() *ResetBucketCommandBuilder {
+	builder := &ResetBucketCommandBuilder{protobuf: &rpbRiak.RpbResetBucketReq{}}
+	return builder
+}
+
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
+func (builder *ResetBucketCommandBuilder) WithBucketType(bucketType string) *ResetBucketCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+// WithBucket sets the bucket to be used by the command
+func (builder *ResetBucketCommandBuilder) WithBucket(bucket string) *ResetBucketCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+// Build validates the configuration options provided then builds the command
+func (builder *ResetBucketCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &ResetBucketCommand{protobuf: builder.protobuf}, nil
+}
+
+// PingCommand is used to verify Riak is online and reachable
+type ResetBucketCommand struct {
+	commandImpl
+	protobuf *rpbRiak.RpbResetBucketReq
+}
+
+// Name identifies this command
+func (cmd *ResetBucketCommand) Name() string {
+	return "ResetBucket"
+}
+
+func (cmd *ResetBucketCommand) getRequestCode() byte {
+	return rpbCode_RpbResetBucketReq
+}
+
+func (cmd *ResetBucketCommand) constructPbRequest() (msg proto.Message, err error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *ResetBucketCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	return nil
+}
+
+func (cmd *ResetBucketCommand) getResponseCode() byte {
+	return rpbCode_RpbResetBucketResp
+}
+
+func (cmd *ResetBucketCommand) getResponseProtobufMessage() proto.Message {
+	return nil
+}
+
 func addCommitHookTo(rpbHooks []*rpbRiak.RpbCommitHook, rpbCommitHook *rpbRiak.RpbCommitHook) []*rpbRiak.RpbCommitHook {
 	return append(rpbHooks, rpbCommitHook)
 }

@@ -294,10 +294,12 @@ func (cm *connectionManager) expireConnections() {
 							logErr("[connectionManager]", err)
 						}
 						expiredCount++
-						return false, false
+						return false, false // don't break, don't re-enqueue
+					} else {
+						return false, true // don't break, re-enqueue
 					}
 				}
-				return false, true
+				return true, true // break, re-enqueue
 			}
 
 			if err := cm.q.iterate(f); err != nil {

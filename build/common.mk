@@ -21,6 +21,9 @@ test: integration-test
 fmt:
 	gofmt -s -w .
 
+protogen:
+	$(PROJDIR)/build/protogen $(PROJDIR)
+
 help:
 	@echo ''
 	@echo ' Targets:'

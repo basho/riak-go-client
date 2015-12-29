@@ -8,14 +8,14 @@ import (
 const (
 	threeSeconds                  = time.Second * 3
 	fiveSeconds                   = time.Second * 5
-	thirtySeconds                 = time.Second * 30
+	tenSeconds                    = time.Second * 10
 	defaultBucketType             = "default"
 	defaultRemotePort             = uint16(8087)
 	defaultMinConnections         = uint16(1)
 	defaultMaxConnections         = uint16(8096)
 	defaultIdleExpirationInterval = fiveSeconds
-	defaultIdleTimeout            = threeSeconds
-	defaultConnectTimeout         = thirtySeconds
+	defaultIdleTimeout            = tenSeconds
+	defaultConnectTimeout         = threeSeconds
 	defaultRequestTimeout         = fiveSeconds
 	defaultHealthCheckInterval    = 125 * time.Millisecond
 	defaultExecutionAttempts      = byte(3)

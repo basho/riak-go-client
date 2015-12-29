@@ -151,7 +151,7 @@ func TestConnectionSuccess(t *testing.T) {
 
 	opts := &connectionOptions{
 		remoteAddress:  addr,
-		connectTimeout: thirtySeconds,
+		connectTimeout: tenSeconds,
 	}
 
 	if conn, err := newConnection(opts); err == nil {

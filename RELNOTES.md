@@ -4,6 +4,9 @@
 Release Notes
 =============
 
+* 1.4.0 - Following issues / PRs addressed:
+ * [Add `ResetBucketCommand`](https://github.com/basho/riak-go-client/pull/35)
+ * [Legacy Counter support](https://github.com/basho/riak-go-client/pull/33)
 * 1.3.0 - Following issues / PRs addressed:
  * [Add `NoDefaultNode` option to `ClusterOptions`](https://github.com/basho/riak-go-client/pull/28)
  * [`ConnectionManager` / `NodeManager` fixes](https://github.com/basho/riak-go-client/pull/25)

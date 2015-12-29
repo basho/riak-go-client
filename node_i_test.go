@@ -23,9 +23,9 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		RemoteAddress:       tl.addr,
 		MinConnections:      count,
 		MaxConnections:      count,
-		IdleTimeout:         thirtySeconds,
-		ConnectTimeout:      thirtySeconds,
-		RequestTimeout:      thirtySeconds,
+		IdleTimeout:         tenSeconds,
+		ConnectTimeout:      tenSeconds,
+		RequestTimeout:      tenSeconds,
 		HealthCheckInterval: time.Millisecond * 500,
 		HealthCheckBuilder:  &PingCommandBuilder{},
 	}
@@ -127,6 +127,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		node.start()
 		ping := &PingCommand{}
 		executed, err := node.execute(ping)
+		// TODO: is this correct? Executed == true?
 		if executed == false {
 			t.Fatal("expected ping to be executed")
 		}

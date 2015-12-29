@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+if ! hash protoc 2>&1 >/dev/null
+then
+    echo "protoc command must be in PATH."
+    exit 1
+fi
+
+declare -r projdir="${1:-unknown_projdir}"
+if [[ ! -d $projdir ]]
+then
+    echo "First argument must be project directory." 2>&1
+    exit 1
+fi
+
+declare -r rpb_path="$projdir/rpb"
+declare -r proto_path="$projdir/riak_pb/src"
+if [[ ! -d $proto_path ]]
+then
+    echo "Could not find $proto_path." 2>&1
+    exit 1
+fi
+
+for proto_file in $proto_path/*.proto
+do
+    proto_file_basename="$(basename -s '.proto' $proto_file)"
+    rpb_path_tmp="$rpb_path/$proto_file_basename"
+
+    protoc --go_out="$rpb_path_tmp" --proto_path="$proto_path" "$proto_file"
+
+    rpb_file="$rpb_path_tmp/$proto_file_basename.pb.go"
+
+    sed -i 's/^import proto.*/import proto "github.com\/golang\/protobuf\/proto"/g' "$rpb_file"
+
+    if [[ $proto_file_basename == 'riak_search' || $proto_file_basename == 'riak_kv' ]]
+    then
+        sed -i 's/^import riak.*/import riak "github.com\/basho\/riak-go-client\/rpb\/riak"/g' "$rpb_file"
+    fi
+done
