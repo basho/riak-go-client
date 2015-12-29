@@ -15,7 +15,7 @@ TL;DR;
 
 	func main() {
 		nodeOpts := &riak.NodeOptions{
-			RemoteAddress: "127.0.0.1:8098",
+			RemoteAddress: "127.0.0.1:8087",
 		}
 
 		var node *riak.Node
