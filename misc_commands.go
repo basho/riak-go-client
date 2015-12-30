@@ -167,7 +167,7 @@ type FetchBucketPropsResponse struct {
 }
 
 func processRpbGetBucketResp(rsp *rpbRiak.RpbGetBucketResp) *FetchBucketPropsResponse {
-	rpbBucketProps := rpbGetBucketResp.GetProps()
+	rpbBucketProps := rsp.GetProps()
 	response := &FetchBucketPropsResponse{
 		NVal:          rpbBucketProps.GetNVal(),
 		AllowMult:     rpbBucketProps.GetAllowMult(),
