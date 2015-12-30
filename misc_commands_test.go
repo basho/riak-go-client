@@ -7,6 +7,162 @@ import (
 	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
 )
 
+var trueVal bool = true
+var uint32val uint32 = uint32(9)
+var replMode = rpbRiak.RpbBucketProps_REALTIME
+
+var rpbBucketProps = &rpbRiak.RpbBucketProps{
+	NVal:          &uint32val,
+	AllowMult:     &trueVal,
+	LastWriteWins: &trueVal,
+	HasPrecommit:  &trueVal,
+	HasPostcommit: &trueVal,
+	OldVclock:     &uint32val,
+	YoungVclock:   &uint32val,
+	BigVclock:     &uint32val,
+	SmallVclock:   &uint32val,
+	R:             &uint32val,
+	Pr:            &uint32val,
+	W:             &uint32val,
+	Pw:            &uint32val,
+	Dw:            &uint32val,
+	Rw:            &uint32val,
+	BasicQuorum:   &trueVal,
+	NotfoundOk:    &trueVal,
+	Search:        &trueVal,
+	Consistent:    &trueVal,
+	Repl:          &replMode,
+	Backend:       []byte("backend"),
+	SearchIndex:   []byte("index"),
+	Datatype:      []byte("datatype"),
+}
+
+var rpbModFun = &rpbRiak.RpbModFun{
+	Module:   []byte("module_name"),
+	Function: []byte("function_name"),
+}
+
+var rpbCommitHook = &rpbRiak.RpbCommitHook{
+	Name:   []byte("hook_name"),
+	Modfun: rpbModFun,
+}
+
+var rpbGetBucketResp = &rpbRiak.RpbGetBucketResp{}
+
+func init() {
+	rpbBucketProps.Precommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
+	rpbBucketProps.Postcommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
+	rpbBucketProps.ChashKeyfun = rpbModFun
+	rpbBucketProps.Linkfun = rpbModFun
+	rpbGetBucketResp.Props = rpbBucketProps
+}
+
+func validateFetchBucketPropsResponse(t *testing.T, r *FetchBucketPropsResponse) {
+	if r == nil {
+		t.Fatal("want non-nil response")
+	}
+	if got, want := r.NVal, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.AllowMult, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.LastWriteWins, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.HasPrecommit, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.HasPostcommit, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.OldVClock, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.YoungVClock, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.BigVClock, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.SmallVClock, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.R, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.Pr, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.W, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.Pw, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.Dw, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.Rw, uint32val; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.BasicQuorum, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.NotFoundOk, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.Search, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.Consistent, true; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := int32(r.Repl), int32(replMode); got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.Backend, "backend"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.SearchIndex, "index"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.DataType, "datatype"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.PreCommit[0].Name, "hook_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.PreCommit[0].ModFun.Module, "module_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.PreCommit[0].ModFun.Function, "function_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.PostCommit[0].Name, "hook_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.PostCommit[0].ModFun.Module, "module_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.PostCommit[0].ModFun.Function, "function_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.ChashKeyFun.Module, "module_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.ChashKeyFun.Function, "function_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.LinkFun.Module, "module_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+	if got, want := r.LinkFun.Function, "function_name"; got != want {
+		t.Errorf("want %v, got %v", got, want)
+	}
+}
+
+
 // FetchBucketTypeProps
 
 func TestBuildRpbGetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
@@ -62,56 +218,6 @@ func TestBuildRpbGetBucketReqCorrectlyViaBuilder(t *testing.T) {
 }
 
 func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
-	trueVal := true
-	uint32val := uint32(9)
-	replMode := rpbRiak.RpbBucketProps_REALTIME
-
-	rpbBucketProps := &rpbRiak.RpbBucketProps{
-		NVal:          &uint32val,
-		AllowMult:     &trueVal,
-		LastWriteWins: &trueVal,
-		HasPrecommit:  &trueVal,
-		HasPostcommit: &trueVal,
-		OldVclock:     &uint32val,
-		YoungVclock:   &uint32val,
-		BigVclock:     &uint32val,
-		SmallVclock:   &uint32val,
-		R:             &uint32val,
-		Pr:            &uint32val,
-		W:             &uint32val,
-		Pw:            &uint32val,
-		Dw:            &uint32val,
-		Rw:            &uint32val,
-		BasicQuorum:   &trueVal,
-		NotfoundOk:    &trueVal,
-		Search:        &trueVal,
-		Consistent:    &trueVal,
-		Repl:          &replMode,
-		Backend:       []byte("backend"),
-		SearchIndex:   []byte("index"),
-		Datatype:      []byte("datatype"),
-	}
-
-	rpbModFun := &rpbRiak.RpbModFun{
-		Module:   []byte("module_name"),
-		Function: []byte("function_name"),
-	}
-
-	rpbCommitHook := &rpbRiak.RpbCommitHook{
-		Name:   []byte("hook_name"),
-		Modfun: rpbModFun,
-	}
-
-	rpbBucketProps.Precommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
-	rpbBucketProps.Postcommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
-
-	rpbBucketProps.ChashKeyfun = rpbModFun
-	rpbBucketProps.Linkfun = rpbModFun
-
-	rpbGetBucketResp := &rpbRiak.RpbGetBucketResp{
-		Props: rpbBucketProps,
-	}
-
 	builder := NewFetchBucketPropsCommandBuilder()
 	cmd, err := builder.
 		WithBucketType("bucket_type").
@@ -132,115 +238,12 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 
 	if fetchBucketPropsCommand, ok := cmd.(*FetchBucketPropsCommand); ok {
 		if fetchBucketPropsCommand.Response == nil {
-			t.Error("unexpected nil object")
-			t.FailNow()
+			t.Fatal("unexpected nil object")
 		}
 		if expected, actual := true, fetchBucketPropsCommand.success; expected != actual {
 			t.Errorf("expected %v, actual %v", expected, actual)
 		}
-		if fetchBucketPropsCommand.Response == nil {
-			t.Fatal("expected non-nil response")
-		}
-		response := fetchBucketPropsCommand.Response
-		if expected, actual := uint32val, response.NVal; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.AllowMult; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.LastWriteWins; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.HasPrecommit; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.HasPostcommit; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.OldVClock; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.YoungVClock; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.BigVClock; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.SmallVClock; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.R; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.Pr; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.W; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.Pw; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.Dw; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := uint32val, response.Rw; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.BasicQuorum; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.NotFoundOk; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.Search; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := true, response.Consistent; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := int32(replMode), int32(response.Repl); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "backend", response.Backend; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "index", response.SearchIndex; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "datatype", response.DataType; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "hook_name", response.PreCommit[0].Name; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "module_name", response.PreCommit[0].ModFun.Module; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "function_name", response.PreCommit[0].ModFun.Function; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "hook_name", response.PostCommit[0].Name; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "module_name", response.PostCommit[0].ModFun.Module; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "function_name", response.PostCommit[0].ModFun.Function; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "module_name", response.ChashKeyFun.Module; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "function_name", response.ChashKeyFun.Function; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "module_name", response.LinkFun.Module; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
-		if expected, actual := "function_name", response.LinkFun.Function; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
-		}
+		validateFetchBucketPropsResponse(t, fetchBucketPropsCommand.Response)
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *FetchBucketPropsCommand", ok, reflect.TypeOf(cmd))
 	}
@@ -249,9 +252,6 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 // StoreBucketProps
 
 func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
-	trueVal := true
-	uint32val := uint32(9)
-
 	modFun := &ModFun{
 		Module:   "module_name",
 		Function: "function_name",
