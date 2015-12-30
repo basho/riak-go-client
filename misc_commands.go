@@ -78,6 +78,168 @@ func (cmd *startTlsCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// Types for bucket type and bucket properties
+
+// ReplMode contains the replication mode
+type ReplMode int32
+
+// Convenience constants for maintaining the replication mode
+const (
+	FALSE    ReplMode = 0
+	REALTIME ReplMode = 1
+	FULLSYNC ReplMode = 2
+	TRUE     ReplMode = 3
+)
+
+// CommitHook object is used when fetching or updating pre- or post- commit hook bucket properties
+// on Riak
+type CommitHook struct {
+	Name   string
+	ModFun *ModFun
+}
+
+func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
+	hooks := make([]*CommitHook, len(rpbHooks))
+	for i, hook := range rpbHooks {
+		commitHook := &CommitHook{
+			Name: string(hook.Name),
+		}
+		if hook.Modfun != nil {
+			commitHook.ModFun = &ModFun{
+				Module:   string(hook.Modfun.Module),
+				Function: string(hook.Modfun.Function),
+			}
+		}
+		hooks[i] = commitHook
+	}
+	return hooks
+}
+
+// ModFun is used when fetching or updating LinkFun or ChashKeyfun bucket properties on Riak
+type ModFun struct {
+	Module   string
+	Function string
+}
+
+func getFunFrom(rpbModFun *rpbRiak.RpbModFun) *ModFun {
+	var modFun *ModFun
+	if rpbModFun == nil {
+		modFun = nil
+	} else {
+		modFun = &ModFun{
+			Module:   string(rpbModFun.Module),
+			Function: string(rpbModFun.Function),
+		}
+	}
+	return modFun
+}
+
+// FetchBucketPropsResponse contains the response data for both
+// FetchBucketPropsCommand and FetchBucketTypePropsCommand
+type FetchBucketPropsResponse struct {
+	NVal          uint32
+	AllowMult     bool
+	LastWriteWins bool
+	HasPrecommit  bool
+	HasPostcommit bool
+	OldVClock     uint32
+	YoungVClock   uint32
+	BigVClock     uint32
+	SmallVClock   uint32
+	R             uint32
+	Pr            uint32
+	W             uint32
+	Pw            uint32
+	Dw            uint32
+	Rw            uint32
+	BasicQuorum   bool
+	NotFoundOk    bool
+	Search        bool
+	Consistent    bool
+	Repl          ReplMode
+	Backend       string
+	SearchIndex   string
+	DataType      string
+	PreCommit     []*CommitHook
+	PostCommit    []*CommitHook
+	ChashKeyFun   *ModFun
+	LinkFun       *ModFun
+}
+
+// FetchBucketTypePropsCommand is used to fetch the active / non-default properties for a bucket type
+type FetchBucketTypePropsCommand struct {
+	commandImpl
+	Response *FetchBucketPropsResponse
+	protobuf *rpbRiak.RpbGetBucketTypeReq
+}
+
+func (cmd *FetchBucketTypePropsCommand) Name() string {
+	return "FetchBucketTypeProps"
+}
+
+func (cmd *FetchBucketTypePropsCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *FetchBucketTypePropsCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	if msg == nil {
+		cmd.success = false
+	} else {
+		/*
+		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
+		} else {
+			return fmt.Errorf("[FetchBucketTypePropsCommand] could not convert %v to RpbGetBucketResp", reflect.TypeOf(msg))
+		}
+		*/
+	}
+	return nil
+}
+
+func (cmd *FetchBucketTypePropsCommand) getRequestCode() byte {
+	return rpbCode_RpbGetBucketTypeReq
+}
+
+func (cmd *FetchBucketTypePropsCommand) getResponseCode() byte {
+	return rpbCode_RpbGetBucketResp
+}
+
+func (cmd *FetchBucketTypePropsCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiak.RpbGetBucketResp{}
+}
+
+// FetchBucketTypePropsCommandBuilder type is required for creating new instances of FetchBucketTypePropsCommand
+//
+//	command := NewFetchBucketTypePropsCommandBuilder().
+//		WithBucketType("myBucketType").
+//		Build()
+type FetchBucketTypePropsCommandBuilder struct {
+	protobuf *rpbRiak.RpbGetBucketTypeReq
+}
+
+// NewFetchBucketTypePropsCommandBuilder is a factory function for generating the command builder struct
+func NewFetchBucketTypePropsCommandBuilder() *FetchBucketTypePropsCommandBuilder {
+	builder := &FetchBucketTypePropsCommandBuilder{protobuf: &rpbRiak.RpbGetBucketTypeReq{}}
+	return builder
+}
+
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
+func (builder *FetchBucketTypePropsCommandBuilder) WithBucketType(bucketType string) *FetchBucketTypePropsCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+// Build validates the configuration options provided then builds the command
+func (builder *FetchBucketTypePropsCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &FetchBucketTypePropsCommand{protobuf: builder.protobuf}, nil
+}
+
 // FetchBucketPropsCommand is used to fetch the active / non-default properties for a bucket
 type FetchBucketPropsCommand struct {
 	commandImpl
@@ -85,7 +247,6 @@ type FetchBucketPropsCommand struct {
 	protobuf *rpbRiak.RpbGetBucketReq
 }
 
-// Name identifies this command
 func (cmd *FetchBucketPropsCommand) Name() string {
 	return "FetchBucketProps"
 }
@@ -142,7 +303,7 @@ func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
 
 			cmd.Response = response
 		} else {
-			return fmt.Errorf("[FetchBucketPropsCommand] could not convert %v to RpbGetResp", reflect.TypeOf(msg))
+			return fmt.Errorf("[FetchBucketPropsCommand] could not convert %v to RpbGetBucketResp", reflect.TypeOf(msg))
 		}
 	}
 	return nil
@@ -158,61 +319,6 @@ func (cmd *FetchBucketPropsCommand) getResponseCode() byte {
 
 func (cmd *FetchBucketPropsCommand) getResponseProtobufMessage() proto.Message {
 	return &rpbRiak.RpbGetBucketResp{}
-}
-
-// ReplMode contains the replication mode
-type ReplMode int32
-
-// Convenience constants for maintaining the replication mode
-const (
-	FALSE    ReplMode = 0
-	REALTIME ReplMode = 1
-	FULLSYNC ReplMode = 2
-	TRUE     ReplMode = 3
-)
-
-// CommitHook object is used when fetching or updating pre- or post- commit hook bucket properties
-// on Riak
-type CommitHook struct {
-	Name   string
-	ModFun *ModFun
-}
-
-// ModFun is used when fetching or updating LinkFun or ChashKeyfun bucket properties on Riak
-type ModFun struct {
-	Module   string
-	Function string
-}
-
-// FetchBucketPropsResponse contains the response data for a FetchBucketPropsCommand
-type FetchBucketPropsResponse struct {
-	NVal          uint32
-	AllowMult     bool
-	LastWriteWins bool
-	HasPrecommit  bool
-	HasPostcommit bool
-	OldVClock     uint32
-	YoungVClock   uint32
-	BigVClock     uint32
-	SmallVClock   uint32
-	R             uint32
-	Pr            uint32
-	W             uint32
-	Pw            uint32
-	Dw            uint32
-	Rw            uint32
-	BasicQuorum   bool
-	NotFoundOk    bool
-	Search        bool
-	Consistent    bool
-	Repl          ReplMode
-	Backend       string
-	SearchIndex   string
-	DataType      string
-	PreCommit     []*CommitHook
-	PostCommit    []*CommitHook
-	ChashKeyFun   *ModFun
-	LinkFun       *ModFun
 }
 
 // FetchBucketPropsCommandBuilder type is required for creating new instances of FetchBucketPropsCommand
@@ -252,36 +358,6 @@ func (builder *FetchBucketPropsCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	return &FetchBucketPropsCommand{protobuf: builder.protobuf}, nil
-}
-
-func getFunFrom(rpbModFun *rpbRiak.RpbModFun) *ModFun {
-	var modFun *ModFun
-	if rpbModFun == nil {
-		modFun = nil
-	} else {
-		modFun = &ModFun{
-			Module:   string(rpbModFun.Module),
-			Function: string(rpbModFun.Function),
-		}
-	}
-	return modFun
-}
-
-func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
-	hooks := make([]*CommitHook, len(rpbHooks))
-	for i, hook := range rpbHooks {
-		commitHook := &CommitHook{
-			Name: string(hook.Name),
-		}
-		if hook.Modfun != nil {
-			commitHook.ModFun = &ModFun{
-				Module:   string(hook.Modfun.Module),
-				Function: string(hook.Modfun.Function),
-			}
-		}
-		hooks[i] = commitHook
-	}
-	return hooks
 }
 
 // StoreBucketPropsCommand is used to store changes to a buckets properties

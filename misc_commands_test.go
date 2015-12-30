@@ -7,6 +7,31 @@ import (
 	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
 )
 
+// FetchBucketTypeProps
+
+func TestBuildRpbGetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
+	bt := "bucket_type"
+	builder := NewFetchBucketTypePropsCommandBuilder().WithBucketType(bt)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+	if req, ok := protobuf.(*rpbRiak.RpbGetBucketTypeReq); ok {
+		if got, want := string(req.GetType()), bt; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbGetBucketTypeReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
 // FetchBucketProps
 
 func TestBuildRpbGetBucketReqCorrectlyViaBuilder(t *testing.T) {
