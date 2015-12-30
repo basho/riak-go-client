@@ -166,6 +166,49 @@ type FetchBucketPropsResponse struct {
 	LinkFun       *ModFun
 }
 
+func processRpbGetBucketResp(rsp *rpbRiak.RpbGetBucketResp) *FetchBucketPropsResponse {
+	rpbBucketProps := rpbGetBucketResp.GetProps()
+	response := &FetchBucketPropsResponse{
+		NVal:          rpbBucketProps.GetNVal(),
+		AllowMult:     rpbBucketProps.GetAllowMult(),
+		LastWriteWins: rpbBucketProps.GetLastWriteWins(),
+		HasPrecommit:  rpbBucketProps.GetHasPrecommit(),
+		HasPostcommit: rpbBucketProps.GetHasPostcommit(),
+		OldVClock:     rpbBucketProps.GetOldVclock(),
+		YoungVClock:   rpbBucketProps.GetYoungVclock(),
+		BigVClock:     rpbBucketProps.GetBigVclock(),
+		SmallVClock:   rpbBucketProps.GetSmallVclock(),
+		R:             rpbBucketProps.GetR(),
+		Pr:            rpbBucketProps.GetPr(),
+		W:             rpbBucketProps.GetW(),
+		Pw:            rpbBucketProps.GetPw(),
+		Dw:            rpbBucketProps.GetDw(),
+		Rw:            rpbBucketProps.GetRw(),
+		BasicQuorum:   rpbBucketProps.GetBasicQuorum(),
+		NotFoundOk:    rpbBucketProps.GetNotfoundOk(),
+		Search:        rpbBucketProps.GetSearch(),
+		Consistent:    rpbBucketProps.GetConsistent(),
+		Repl:          ReplMode(rpbBucketProps.GetRepl()),
+		Backend:       string(rpbBucketProps.GetBackend()),
+		SearchIndex:   string(rpbBucketProps.GetSearchIndex()),
+		DataType:      string(rpbBucketProps.GetDatatype()),
+	}
+
+	if rpbBucketProps.GetHasPrecommit() {
+		response.PreCommit = getHooksFrom(rpbBucketProps.Precommit)
+	}
+	if rpbBucketProps.GetHasPostcommit() {
+		response.PostCommit = getHooksFrom(rpbBucketProps.Postcommit)
+	}
+	if rpbBucketProps.ChashKeyfun != nil {
+		response.ChashKeyFun = getFunFrom(rpbBucketProps.ChashKeyfun)
+	}
+	if rpbBucketProps.Linkfun != nil {
+		response.LinkFun = getFunFrom(rpbBucketProps.Linkfun)
+	}
+	return response
+}
+
 // FetchBucketTypePropsCommand is used to fetch the active / non-default properties for a bucket type
 type FetchBucketTypePropsCommand struct {
 	commandImpl
@@ -186,12 +229,11 @@ func (cmd *FetchBucketTypePropsCommand) onSuccess(msg proto.Message) error {
 	if msg == nil {
 		cmd.success = false
 	} else {
-		/*
 		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
+			cmd.Response = processRpbGetBucketResp(rpbGetBucketResp)
 		} else {
 			return fmt.Errorf("[FetchBucketTypePropsCommand] could not convert %v to RpbGetBucketResp", reflect.TypeOf(msg))
 		}
-		*/
 	}
 	return nil
 }
@@ -261,47 +303,7 @@ func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
 		cmd.success = false
 	} else {
 		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
-			rpbBucketProps := rpbGetBucketResp.GetProps()
-			response := &FetchBucketPropsResponse{
-				NVal:          rpbBucketProps.GetNVal(),
-				AllowMult:     rpbBucketProps.GetAllowMult(),
-				LastWriteWins: rpbBucketProps.GetLastWriteWins(),
-				HasPrecommit:  rpbBucketProps.GetHasPrecommit(),
-				HasPostcommit: rpbBucketProps.GetHasPostcommit(),
-				OldVClock:     rpbBucketProps.GetOldVclock(),
-				YoungVClock:   rpbBucketProps.GetYoungVclock(),
-				BigVClock:     rpbBucketProps.GetBigVclock(),
-				SmallVClock:   rpbBucketProps.GetSmallVclock(),
-				R:             rpbBucketProps.GetR(),
-				Pr:            rpbBucketProps.GetPr(),
-				W:             rpbBucketProps.GetW(),
-				Pw:            rpbBucketProps.GetPw(),
-				Dw:            rpbBucketProps.GetDw(),
-				Rw:            rpbBucketProps.GetRw(),
-				BasicQuorum:   rpbBucketProps.GetBasicQuorum(),
-				NotFoundOk:    rpbBucketProps.GetNotfoundOk(),
-				Search:        rpbBucketProps.GetSearch(),
-				Consistent:    rpbBucketProps.GetConsistent(),
-				Repl:          ReplMode(rpbBucketProps.GetRepl()),
-				Backend:       string(rpbBucketProps.GetBackend()),
-				SearchIndex:   string(rpbBucketProps.GetSearchIndex()),
-				DataType:      string(rpbBucketProps.GetDatatype()),
-			}
-
-			if rpbBucketProps.GetHasPrecommit() {
-				response.PreCommit = getHooksFrom(rpbBucketProps.Precommit)
-			}
-			if rpbBucketProps.GetHasPostcommit() {
-				response.PostCommit = getHooksFrom(rpbBucketProps.Postcommit)
-			}
-			if rpbBucketProps.ChashKeyfun != nil {
-				response.ChashKeyFun = getFunFrom(rpbBucketProps.ChashKeyfun)
-			}
-			if rpbBucketProps.Linkfun != nil {
-				response.LinkFun = getFunFrom(rpbBucketProps.Linkfun)
-			}
-
-			cmd.Response = response
+			cmd.Response = processRpbGetBucketResp(rpbGetBucketResp)
 		} else {
 			return fmt.Errorf("[FetchBucketPropsCommand] could not convert %v to RpbGetBucketResp", reflect.TypeOf(msg))
 		}

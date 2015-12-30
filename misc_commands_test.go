@@ -188,6 +188,37 @@ func TestBuildRpbGetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
 	}
 }
 
+func TestParseRpbGetBucketRespCorrectlyForBucketType(t *testing.T) {
+	builder := NewFetchBucketTypePropsCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	err = cmd.onSuccess(rpbGetBucketResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if got, want := cmd.Success(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	if fetchBucketTypePropsCommand, ok := cmd.(*FetchBucketTypePropsCommand); ok {
+		if fetchBucketTypePropsCommand.Response == nil {
+			t.Fatal("unexpected nil object")
+		}
+		if got, want := fetchBucketTypePropsCommand.success, true; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		validateFetchBucketPropsResponse(t, fetchBucketTypePropsCommand.Response)
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchBucketTypePropsCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
 // FetchBucketProps
 
 func TestBuildRpbGetBucketReqCorrectlyViaBuilder(t *testing.T) {
@@ -206,11 +237,11 @@ func TestBuildRpbGetBucketReqCorrectlyViaBuilder(t *testing.T) {
 		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiak.RpbGetBucketReq); ok {
-		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := string(req.GetType()), "bucket_type"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := string(req.GetBucket()), "bucket_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbGetBucketReq", ok, reflect.TypeOf(protobuf))
@@ -232,16 +263,16 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if expected, actual := true, cmd.Success(); expected != actual {
-		t.Errorf("expected %v, actual %v", expected, actual)
+	if got, want := cmd.Success(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 
 	if fetchBucketPropsCommand, ok := cmd.(*FetchBucketPropsCommand); ok {
 		if fetchBucketPropsCommand.Response == nil {
 			t.Fatal("unexpected nil object")
 		}
-		if expected, actual := true, fetchBucketPropsCommand.success; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := fetchBucketPropsCommand.success, true; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 		validateFetchBucketPropsResponse(t, fetchBucketPropsCommand.Response)
 	} else {
@@ -298,90 +329,90 @@ func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
 		t.Fatal("protobuf is nil")
 	}
 	if req, ok := protobuf.(*rpbRiak.RpbSetBucketReq); ok {
-		if expected, actual := "bucket_type", string(req.GetType()); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := string(req.GetType()), "bucket_type"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "bucket_name", string(req.GetBucket()); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := string(req.GetBucket()), "bucket_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 		props := req.Props
-		if expected, actual := uint32val, props.GetNVal(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetNVal(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := true, props.GetAllowMult(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetAllowMult(), true; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := true, props.GetLastWriteWins(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetLastWriteWins(), true; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetOldVclock(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetOldVclock(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetYoungVclock(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetYoungVclock(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetBigVclock(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetBigVclock(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetSmallVclock(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetSmallVclock(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetR(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetR(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetPr(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetPr(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetW(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetW(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetPw(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetPw(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetDw(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetDw(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := uint32val, props.GetRw(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetRw(), uint32val; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := true, props.GetBasicQuorum(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetBasicQuorum(), true; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := true, props.GetNotfoundOk(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetNotfoundOk(), true; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := true, props.GetSearch(); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := props.GetSearch(), true; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "backend", string(props.GetBackend()); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.GetBackend()), "backend"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "index", string(props.GetSearchIndex()); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.GetSearchIndex()), "index"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "module_name", string(props.ChashKeyfun.Module); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.ChashKeyfun.Module), "module_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "function_name", string(props.ChashKeyfun.Function); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.ChashKeyfun.Function), "function_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "hook_name", string(props.Precommit[0].Name); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.Precommit[0].Name), "hook_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "module_name", string(props.Precommit[0].Modfun.Module); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.Precommit[0].Modfun.Module), "module_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "function_name", string(props.Precommit[0].Modfun.Function); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.Precommit[0].Modfun.Function), "function_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "hook_name", string(props.Postcommit[0].Name); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.Postcommit[0].Name), "hook_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "module_name", string(props.Postcommit[0].Modfun.Module); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.Postcommit[0].Modfun.Module), "module_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
-		if expected, actual := "function_name", string(props.Postcommit[0].Modfun.Function); expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := string(props.Postcommit[0].Modfun.Function), "function_name"; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbGetBucketReq", ok, reflect.TypeOf(protobuf))
@@ -403,13 +434,13 @@ func TestParseRpbStoreBucketRespCorrectly(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if expected, actual := true, cmd.Success(); expected != actual {
-		t.Errorf("expected %v, actual %v", expected, actual)
+	if got, want := cmd.Success(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 
 	if storeBucketPropsCommand, ok := cmd.(*StoreBucketPropsCommand); ok {
-		if expected, actual := true, storeBucketPropsCommand.success; expected != actual {
-			t.Errorf("expected %v, actual %v", expected, actual)
+		if got, want := storeBucketPropsCommand.success, true; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 	} else {
 		t.Errorf("ok: %v - could not convert %v to *StoreBucketPropsCommand", ok, reflect.TypeOf(cmd))
