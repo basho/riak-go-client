@@ -7,158 +7,247 @@ import (
 	rpbRiak "github.com/basho/riak-go-client/rpb/riak"
 )
 
-var trueVal bool = true
-var uint32val uint32 = uint32(9)
-var replMode = rpbRiak.RpbBucketProps_REALTIME
+func buildRpbGetBucketResp() *rpbRiak.RpbGetBucketResp {
+	trueVal := true
+	uint32val := uint32(9)
+	replMode := rpbRiak.RpbBucketProps_REALTIME
 
-var rpbBucketProps = &rpbRiak.RpbBucketProps{
-	NVal:          &uint32val,
-	AllowMult:     &trueVal,
-	LastWriteWins: &trueVal,
-	HasPrecommit:  &trueVal,
-	HasPostcommit: &trueVal,
-	OldVclock:     &uint32val,
-	YoungVclock:   &uint32val,
-	BigVclock:     &uint32val,
-	SmallVclock:   &uint32val,
-	R:             &uint32val,
-	Pr:            &uint32val,
-	W:             &uint32val,
-	Pw:            &uint32val,
-	Dw:            &uint32val,
-	Rw:            &uint32val,
-	BasicQuorum:   &trueVal,
-	NotfoundOk:    &trueVal,
-	Search:        &trueVal,
-	Consistent:    &trueVal,
-	Repl:          &replMode,
-	Backend:       []byte("backend"),
-	SearchIndex:   []byte("index"),
-	Datatype:      []byte("datatype"),
-}
+	rpbModFun := &rpbRiak.RpbModFun{
+		Module:   []byte("module_name"),
+		Function: []byte("function_name"),
+	}
 
-var rpbModFun = &rpbRiak.RpbModFun{
-	Module:   []byte("module_name"),
-	Function: []byte("function_name"),
-}
+	rpbCommitHook := &rpbRiak.RpbCommitHook{
+		Name:   []byte("hook_name"),
+		Modfun: rpbModFun,
+	}
 
-var rpbCommitHook = &rpbRiak.RpbCommitHook{
-	Name:   []byte("hook_name"),
-	Modfun: rpbModFun,
-}
+	rpbBucketProps := &rpbRiak.RpbBucketProps{
+		NVal:          &uint32val,
+		AllowMult:     &trueVal,
+		LastWriteWins: &trueVal,
+		HasPrecommit:  &trueVal,
+		HasPostcommit: &trueVal,
+		OldVclock:     &uint32val,
+		YoungVclock:   &uint32val,
+		BigVclock:     &uint32val,
+		SmallVclock:   &uint32val,
+		R:             &uint32val,
+		Pr:            &uint32val,
+		W:             &uint32val,
+		Pw:            &uint32val,
+		Dw:            &uint32val,
+		Rw:            &uint32val,
+		BasicQuorum:   &trueVal,
+		NotfoundOk:    &trueVal,
+		Search:        &trueVal,
+		Consistent:    &trueVal,
+		Repl:          &replMode,
+		Backend:       []byte("backend"),
+		SearchIndex:   []byte("index"),
+		Datatype:      []byte("datatype"),
+	}
 
-var rpbGetBucketResp = &rpbRiak.RpbGetBucketResp{}
-
-func init() {
 	rpbBucketProps.Precommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
 	rpbBucketProps.Postcommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
 	rpbBucketProps.ChashKeyfun = rpbModFun
 	rpbBucketProps.Linkfun = rpbModFun
-	rpbGetBucketResp.Props = rpbBucketProps
+
+	rpbGetBucketResp := &rpbRiak.RpbGetBucketResp{
+		Props: rpbBucketProps,
+	}
+
+	return rpbGetBucketResp
+}
+
+func validateRpbBucketPropsForSetCommand(t *testing.T, rpb *rpbRiak.RpbBucketProps) {
+	uint32val := uint32(9)
+
+	if got, want := rpb.GetNVal(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetAllowMult(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetLastWriteWins(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetOldVclock(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetYoungVclock(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetBigVclock(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetSmallVclock(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetR(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetPr(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetW(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetPw(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetDw(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetRw(), uint32val; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetBasicQuorum(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetNotfoundOk(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetSearch(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.GetBackend()), "backend"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.GetSearchIndex()), "index"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.ChashKeyfun.Module), "module_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.ChashKeyfun.Function), "function_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.Precommit[0].Name), "hook_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.Precommit[0].Modfun.Module), "module_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.Precommit[0].Modfun.Function), "function_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.Postcommit[0].Name), "hook_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.Postcommit[0].Modfun.Module), "module_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := string(rpb.Postcommit[0].Modfun.Function), "function_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func validateFetchBucketPropsResponse(t *testing.T, r *FetchBucketPropsResponse) {
+	uint32val := uint32(9)
+	replMode := rpbRiak.RpbBucketProps_REALTIME
+
 	if r == nil {
 		t.Fatal("want non-nil response")
 	}
 	if got, want := r.NVal, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.AllowMult, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.LastWriteWins, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.HasPrecommit, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.HasPostcommit, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.OldVClock, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.YoungVClock, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.BigVClock, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.SmallVClock, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.R, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.Pr, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.W, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.Pw, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.Dw, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.Rw, uint32val; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.BasicQuorum, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.NotFoundOk, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.Search, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.Consistent, true; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := int32(r.Repl), int32(replMode); got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.Backend, "backend"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.SearchIndex, "index"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.DataType, "datatype"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.PreCommit[0].Name, "hook_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.PreCommit[0].ModFun.Module, "module_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.PreCommit[0].ModFun.Function, "function_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.PostCommit[0].Name, "hook_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.PostCommit[0].ModFun.Module, "module_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.PostCommit[0].ModFun.Function, "function_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.ChashKeyFun.Module, "module_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.ChashKeyFun.Function, "function_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.LinkFun.Module, "module_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.LinkFun.Function, "function_name"; got != want {
-		t.Errorf("want %v, got %v", got, want)
+		t.Errorf("got %v, want %v", got, want)
 	}
 }
 
@@ -197,7 +286,7 @@ func TestParseRpbGetBucketRespCorrectlyForBucketType(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	err = cmd.onSuccess(rpbGetBucketResp)
+	err = cmd.onSuccess(buildRpbGetBucketResp())
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -258,7 +347,7 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	err = cmd.onSuccess(rpbGetBucketResp)
+	err = cmd.onSuccess(buildRpbGetBucketResp())
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -280,9 +369,99 @@ func TestParseRpbGetBucketRespCorrectly(t *testing.T) {
 	}
 }
 
+// StoreBucketTypeProps
+
+func TestBuildRpbSetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
+	trueVal := true
+	uint32val := uint32(9)
+
+	modFun := &ModFun{
+		Module:   "module_name",
+		Function: "function_name",
+	}
+	hook := &CommitHook{
+		Name:   "hook_name",
+		ModFun: modFun,
+	}
+
+	builder := NewStoreBucketTypePropsCommandBuilder().
+		WithBucketType("bucket_type").
+		WithNVal(uint32val).
+		WithAllowMult(trueVal).
+		WithLastWriteWins(trueVal).
+		WithOldVClock(uint32val).
+		WithYoungVClock(uint32val).
+		WithBigVClock(uint32val).
+		WithSmallVClock(uint32val).
+		WithR(uint32val).
+		WithPr(uint32val).
+		WithW(uint32val).
+		WithPw(uint32val).
+		WithDw(uint32val).
+		WithRw(uint32val).
+		WithBasicQuorum(trueVal).
+		WithNotFoundOk(trueVal).
+		WithSearch(trueVal).
+		WithBackend("backend").
+		WithSearchIndex("index").
+		AddPreCommit(hook).
+		AddPostCommit(hook).
+		WithChashKeyFun(modFun)
+
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+	if req, ok := protobuf.(*rpbRiak.RpbSetBucketTypeReq); ok {
+		if got, want := string(req.GetType()), "bucket_type"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		validateRpbBucketPropsForSetCommand(t, req.Props)
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbSetBucketTypeReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestParseRpbStoreBucketTypeRespCorrectly(t *testing.T) {
+	builder := NewStoreBucketTypePropsCommandBuilder()
+	cmd, err := builder.
+		WithBucketType("bucket_type").
+		Build()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	err = cmd.onSuccess(nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if got, want := cmd.Success(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	if storeBucketTypePropsCommand, ok := cmd.(*StoreBucketTypePropsCommand); ok {
+		if got, want := storeBucketTypePropsCommand.success, true; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *StoreBucketTypePropsCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
 // StoreBucketProps
 
-func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
+func TestBuildRpbSetBucketReqCorrectlyViaBuilder(t *testing.T) {
+	trueVal := true
+	uint32val := uint32(9)
+
 	modFun := &ModFun{
 		Module:   "module_name",
 		Function: "function_name",
@@ -335,87 +514,9 @@ func TestBuildRpbStoreBucketReqCorrectlyViaBuilder(t *testing.T) {
 		if got, want := string(req.GetBucket()), "bucket_name"; got != want {
 			t.Errorf("got %v, want %v", got, want)
 		}
-		props := req.Props
-		if got, want := props.GetNVal(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetAllowMult(), true; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetLastWriteWins(), true; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetOldVclock(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetYoungVclock(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetBigVclock(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetSmallVclock(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetR(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetPr(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetW(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetPw(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetDw(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetRw(), uint32val; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetBasicQuorum(), true; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetNotfoundOk(), true; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := props.GetSearch(), true; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.GetBackend()), "backend"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.GetSearchIndex()), "index"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.ChashKeyfun.Module), "module_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.ChashKeyfun.Function), "function_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.Precommit[0].Name), "hook_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.Precommit[0].Modfun.Module), "module_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.Precommit[0].Modfun.Function), "function_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.Postcommit[0].Name), "hook_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.Postcommit[0].Modfun.Module), "module_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := string(props.Postcommit[0].Modfun.Function), "function_name"; got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
+		validateRpbBucketPropsForSetCommand(t, req.Props)
 	} else {
-		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbGetBucketReq", ok, reflect.TypeOf(protobuf))
+		t.Errorf("ok: %v - could not convert %v to *rpbRiak.RpbSetBucketReq", ok, reflect.TypeOf(protobuf))
 	}
 }
 

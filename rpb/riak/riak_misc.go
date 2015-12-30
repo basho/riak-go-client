@@ -40,6 +40,28 @@ func (m *RpbGetBucketReq) KeyIsRequired() bool {
 	return false
 }
 
+// RpbSetBucketTypeReq
+
+func (m *RpbSetBucketTypeReq) GetKey() []byte {
+	return nil
+}
+
+func (m *RpbSetBucketTypeReq) SetType(bt []byte) {
+	m.Type = bt
+}
+
+func (m *RpbSetBucketTypeReq) BucketIsRequired() bool {
+	return false
+}
+
+func (m *RpbSetBucketTypeReq) GetBucket() []byte {
+	return nil
+}
+
+func (m *RpbSetBucketTypeReq) KeyIsRequired() bool {
+	return false
+}
+
 // RpbSetBucketReq
 
 func (m *RpbSetBucketReq) GetKey() []byte {
