@@ -383,7 +383,7 @@ func (cmd *StoreBucketTypePropsCommand) onSuccess(msg proto.Message) error {
 }
 
 func (cmd *StoreBucketTypePropsCommand) getRequestCode() byte {
-	return rpbCode_RpbSetBucketReq
+	return rpbCode_RpbSetBucketTypeReq
 }
 
 func (cmd *StoreBucketTypePropsCommand) getResponseCode() byte {
