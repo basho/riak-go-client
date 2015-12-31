@@ -251,7 +251,6 @@ func validateFetchBucketPropsResponse(t *testing.T, r *FetchBucketPropsResponse)
 	}
 }
 
-
 // FetchBucketTypeProps
 
 func TestBuildRpbGetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
