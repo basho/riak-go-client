@@ -78,87 +78,7 @@ func (cmd *startTlsCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
-// FetchBucketPropsCommand is used to fetch the active / non-default properties for a bucket
-type FetchBucketPropsCommand struct {
-	commandImpl
-	Response *FetchBucketPropsResponse
-	protobuf *rpbRiak.RpbGetBucketReq
-}
-
-// Name identifies this command
-func (cmd *FetchBucketPropsCommand) Name() string {
-	return "FetchBucketProps"
-}
-
-func (cmd *FetchBucketPropsCommand) constructPbRequest() (proto.Message, error) {
-	return cmd.protobuf, nil
-}
-
-func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
-	cmd.success = true
-	if msg == nil {
-		cmd.success = false
-	} else {
-		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
-			rpbBucketProps := rpbGetBucketResp.GetProps()
-			response := &FetchBucketPropsResponse{
-				NVal:          rpbBucketProps.GetNVal(),
-				AllowMult:     rpbBucketProps.GetAllowMult(),
-				LastWriteWins: rpbBucketProps.GetLastWriteWins(),
-				HasPrecommit:  rpbBucketProps.GetHasPrecommit(),
-				HasPostcommit: rpbBucketProps.GetHasPostcommit(),
-				OldVClock:     rpbBucketProps.GetOldVclock(),
-				YoungVClock:   rpbBucketProps.GetYoungVclock(),
-				BigVClock:     rpbBucketProps.GetBigVclock(),
-				SmallVClock:   rpbBucketProps.GetSmallVclock(),
-				R:             rpbBucketProps.GetR(),
-				Pr:            rpbBucketProps.GetPr(),
-				W:             rpbBucketProps.GetW(),
-				Pw:            rpbBucketProps.GetPw(),
-				Dw:            rpbBucketProps.GetDw(),
-				Rw:            rpbBucketProps.GetRw(),
-				BasicQuorum:   rpbBucketProps.GetBasicQuorum(),
-				NotFoundOk:    rpbBucketProps.GetNotfoundOk(),
-				Search:        rpbBucketProps.GetSearch(),
-				Consistent:    rpbBucketProps.GetConsistent(),
-				Repl:          ReplMode(rpbBucketProps.GetRepl()),
-				Backend:       string(rpbBucketProps.GetBackend()),
-				SearchIndex:   string(rpbBucketProps.GetSearchIndex()),
-				DataType:      string(rpbBucketProps.GetDatatype()),
-			}
-
-			if rpbBucketProps.GetHasPrecommit() {
-				response.PreCommit = getHooksFrom(rpbBucketProps.Precommit)
-			}
-			if rpbBucketProps.GetHasPostcommit() {
-				response.PostCommit = getHooksFrom(rpbBucketProps.Postcommit)
-			}
-			if rpbBucketProps.ChashKeyfun != nil {
-				response.ChashKeyFun = getFunFrom(rpbBucketProps.ChashKeyfun)
-			}
-			if rpbBucketProps.Linkfun != nil {
-				response.LinkFun = getFunFrom(rpbBucketProps.Linkfun)
-			}
-
-			cmd.Response = response
-		} else {
-			return fmt.Errorf("[FetchBucketPropsCommand] could not convert %v to RpbGetResp", reflect.TypeOf(msg))
-		}
-	}
-	return nil
-}
-
-func (cmd *FetchBucketPropsCommand) getRequestCode() byte {
-	return rpbCode_RpbGetBucketReq
-}
-
-func (cmd *FetchBucketPropsCommand) getResponseCode() byte {
-	return rpbCode_RpbGetBucketResp
-}
-
-func (cmd *FetchBucketPropsCommand) getResponseProtobufMessage() proto.Message {
-	return &rpbRiak.RpbGetBucketResp{}
-}
+// Types for bucket type and bucket properties
 
 // ReplMode contains the replication mode
 type ReplMode int32
@@ -178,13 +98,44 @@ type CommitHook struct {
 	ModFun *ModFun
 }
 
+func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
+	hooks := make([]*CommitHook, len(rpbHooks))
+	for i, hook := range rpbHooks {
+		commitHook := &CommitHook{
+			Name: string(hook.Name),
+		}
+		if hook.Modfun != nil {
+			commitHook.ModFun = &ModFun{
+				Module:   string(hook.Modfun.Module),
+				Function: string(hook.Modfun.Function),
+			}
+		}
+		hooks[i] = commitHook
+	}
+	return hooks
+}
+
 // ModFun is used when fetching or updating LinkFun or ChashKeyfun bucket properties on Riak
 type ModFun struct {
 	Module   string
 	Function string
 }
 
-// FetchBucketPropsResponse contains the response data for a FetchBucketPropsCommand
+func getFunFrom(rpbModFun *rpbRiak.RpbModFun) *ModFun {
+	var modFun *ModFun
+	if rpbModFun == nil {
+		modFun = nil
+	} else {
+		modFun = &ModFun{
+			Module:   string(rpbModFun.Module),
+			Function: string(rpbModFun.Function),
+		}
+	}
+	return modFun
+}
+
+// FetchBucketPropsResponse contains the response data for both
+// FetchBucketPropsCommand and FetchBucketTypePropsCommand
 type FetchBucketPropsResponse struct {
 	NVal          uint32
 	AllowMult     bool
@@ -213,6 +164,163 @@ type FetchBucketPropsResponse struct {
 	PostCommit    []*CommitHook
 	ChashKeyFun   *ModFun
 	LinkFun       *ModFun
+}
+
+func processRpbGetBucketResp(rsp *rpbRiak.RpbGetBucketResp) *FetchBucketPropsResponse {
+	rpbBucketProps := rsp.GetProps()
+	response := &FetchBucketPropsResponse{
+		NVal:          rpbBucketProps.GetNVal(),
+		AllowMult:     rpbBucketProps.GetAllowMult(),
+		LastWriteWins: rpbBucketProps.GetLastWriteWins(),
+		HasPrecommit:  rpbBucketProps.GetHasPrecommit(),
+		HasPostcommit: rpbBucketProps.GetHasPostcommit(),
+		OldVClock:     rpbBucketProps.GetOldVclock(),
+		YoungVClock:   rpbBucketProps.GetYoungVclock(),
+		BigVClock:     rpbBucketProps.GetBigVclock(),
+		SmallVClock:   rpbBucketProps.GetSmallVclock(),
+		R:             rpbBucketProps.GetR(),
+		Pr:            rpbBucketProps.GetPr(),
+		W:             rpbBucketProps.GetW(),
+		Pw:            rpbBucketProps.GetPw(),
+		Dw:            rpbBucketProps.GetDw(),
+		Rw:            rpbBucketProps.GetRw(),
+		BasicQuorum:   rpbBucketProps.GetBasicQuorum(),
+		NotFoundOk:    rpbBucketProps.GetNotfoundOk(),
+		Search:        rpbBucketProps.GetSearch(),
+		Consistent:    rpbBucketProps.GetConsistent(),
+		Repl:          ReplMode(rpbBucketProps.GetRepl()),
+		Backend:       string(rpbBucketProps.GetBackend()),
+		SearchIndex:   string(rpbBucketProps.GetSearchIndex()),
+		DataType:      string(rpbBucketProps.GetDatatype()),
+	}
+
+	if rpbBucketProps.GetHasPrecommit() {
+		response.PreCommit = getHooksFrom(rpbBucketProps.Precommit)
+	}
+	if rpbBucketProps.GetHasPostcommit() {
+		response.PostCommit = getHooksFrom(rpbBucketProps.Postcommit)
+	}
+	if rpbBucketProps.ChashKeyfun != nil {
+		response.ChashKeyFun = getFunFrom(rpbBucketProps.ChashKeyfun)
+	}
+	if rpbBucketProps.Linkfun != nil {
+		response.LinkFun = getFunFrom(rpbBucketProps.Linkfun)
+	}
+	return response
+}
+
+// FetchBucketTypePropsCommand is used to fetch the active / non-default properties for a bucket type
+type FetchBucketTypePropsCommand struct {
+	commandImpl
+	Response *FetchBucketPropsResponse
+	protobuf *rpbRiak.RpbGetBucketTypeReq
+}
+
+func (cmd *FetchBucketTypePropsCommand) Name() string {
+	return "FetchBucketTypeProps"
+}
+
+func (cmd *FetchBucketTypePropsCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *FetchBucketTypePropsCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	if msg == nil {
+		cmd.success = false
+	} else {
+		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
+			cmd.Response = processRpbGetBucketResp(rpbGetBucketResp)
+		} else {
+			return fmt.Errorf("[FetchBucketTypePropsCommand] could not convert %v to RpbGetBucketResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *FetchBucketTypePropsCommand) getRequestCode() byte {
+	return rpbCode_RpbGetBucketTypeReq
+}
+
+func (cmd *FetchBucketTypePropsCommand) getResponseCode() byte {
+	return rpbCode_RpbGetBucketResp
+}
+
+func (cmd *FetchBucketTypePropsCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiak.RpbGetBucketResp{}
+}
+
+// FetchBucketTypePropsCommandBuilder type is required for creating new instances of FetchBucketTypePropsCommand
+//
+//	command := NewFetchBucketTypePropsCommandBuilder().
+//		WithBucketType("myBucketType").
+//		Build()
+type FetchBucketTypePropsCommandBuilder struct {
+	protobuf *rpbRiak.RpbGetBucketTypeReq
+}
+
+// NewFetchBucketTypePropsCommandBuilder is a factory function for generating the command builder struct
+func NewFetchBucketTypePropsCommandBuilder() *FetchBucketTypePropsCommandBuilder {
+	builder := &FetchBucketTypePropsCommandBuilder{protobuf: &rpbRiak.RpbGetBucketTypeReq{}}
+	return builder
+}
+
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
+func (builder *FetchBucketTypePropsCommandBuilder) WithBucketType(bucketType string) *FetchBucketTypePropsCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+// Build validates the configuration options provided then builds the command
+func (builder *FetchBucketTypePropsCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &FetchBucketTypePropsCommand{protobuf: builder.protobuf}, nil
+}
+
+// FetchBucketPropsCommand is used to fetch the active / non-default properties for a bucket
+type FetchBucketPropsCommand struct {
+	commandImpl
+	Response *FetchBucketPropsResponse
+	protobuf *rpbRiak.RpbGetBucketReq
+}
+
+func (cmd *FetchBucketPropsCommand) Name() string {
+	return "FetchBucketProps"
+}
+
+func (cmd *FetchBucketPropsCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *FetchBucketPropsCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	if msg == nil {
+		cmd.success = false
+	} else {
+		if rpbGetBucketResp, ok := msg.(*rpbRiak.RpbGetBucketResp); ok {
+			cmd.Response = processRpbGetBucketResp(rpbGetBucketResp)
+		} else {
+			return fmt.Errorf("[FetchBucketPropsCommand] could not convert %v to RpbGetBucketResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *FetchBucketPropsCommand) getRequestCode() byte {
+	return rpbCode_RpbGetBucketReq
+}
+
+func (cmd *FetchBucketPropsCommand) getResponseCode() byte {
+	return rpbCode_RpbGetBucketResp
+}
+
+func (cmd *FetchBucketPropsCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiak.RpbGetBucketResp{}
 }
 
 // FetchBucketPropsCommandBuilder type is required for creating new instances of FetchBucketPropsCommand
@@ -254,34 +362,36 @@ func (builder *FetchBucketPropsCommandBuilder) Build() (Command, error) {
 	return &FetchBucketPropsCommand{protobuf: builder.protobuf}, nil
 }
 
-func getFunFrom(rpbModFun *rpbRiak.RpbModFun) *ModFun {
-	var modFun *ModFun
-	if rpbModFun == nil {
-		modFun = nil
-	} else {
-		modFun = &ModFun{
-			Module:   string(rpbModFun.Module),
-			Function: string(rpbModFun.Function),
-		}
-	}
-	return modFun
+// StoreBucketTypePropsCommand is used to store changes to a bucket type's properties
+type StoreBucketTypePropsCommand struct {
+	commandImpl
+	protobuf *rpbRiak.RpbSetBucketTypeReq
 }
 
-func getHooksFrom(rpbHooks []*rpbRiak.RpbCommitHook) []*CommitHook {
-	hooks := make([]*CommitHook, len(rpbHooks))
-	for i, hook := range rpbHooks {
-		commitHook := &CommitHook{
-			Name: string(hook.Name),
-		}
-		if hook.Modfun != nil {
-			commitHook.ModFun = &ModFun{
-				Module:   string(hook.Modfun.Module),
-				Function: string(hook.Modfun.Function),
-			}
-		}
-		hooks[i] = commitHook
-	}
-	return hooks
+// Name identifies this command
+func (cmd *StoreBucketTypePropsCommand) Name() string {
+	return "StoreBucketTypeProps"
+}
+
+func (cmd *StoreBucketTypePropsCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *StoreBucketTypePropsCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	return nil
+}
+
+func (cmd *StoreBucketTypePropsCommand) getRequestCode() byte {
+	return rpbCode_RpbSetBucketTypeReq
+}
+
+func (cmd *StoreBucketTypePropsCommand) getResponseCode() byte {
+	return rpbCode_RpbSetBucketResp
+}
+
+func (cmd *StoreBucketTypePropsCommand) getResponseProtobufMessage() proto.Message {
+	return nil
 }
 
 // StoreBucketPropsCommand is used to store changes to a buckets properties
@@ -314,6 +424,209 @@ func (cmd *StoreBucketPropsCommand) getResponseCode() byte {
 
 func (cmd *StoreBucketPropsCommand) getResponseProtobufMessage() proto.Message {
 	return nil
+}
+
+// StoreBucketTypePropsCommandBuilder type is required for creating new instances of StoreBucketTypePropsCommand
+//
+//	command := NewStoreBucketTypePropsCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithAllowMult(true).
+//		Build()
+type StoreBucketTypePropsCommandBuilder struct {
+	protobuf *rpbRiak.RpbSetBucketTypeReq
+	props    *rpbRiak.RpbBucketProps
+}
+
+// NewStoreBucketTypePropsCommandBuilder is a factory function for generating the command builder struct
+func NewStoreBucketTypePropsCommandBuilder() *StoreBucketTypePropsCommandBuilder {
+	props := &rpbRiak.RpbBucketProps{}
+	protobuf := &rpbRiak.RpbSetBucketTypeReq{
+		Props: props,
+	}
+	builder := &StoreBucketTypePropsCommandBuilder{protobuf: protobuf, props: props}
+	return builder
+}
+
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
+func (builder *StoreBucketTypePropsCommandBuilder) WithBucketType(bucketType string) *StoreBucketTypePropsCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+// WithNVal sets the number of times this command operation is replicated in the Cluster. If
+// omitted, the ring default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *StoreBucketTypePropsCommandBuilder) WithNVal(nval uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.NVal = &nval
+	return builder
+}
+
+// WithAllowMult sets whether or not to allow Riak to store siblings of an object when writes conflict
+func (builder *StoreBucketTypePropsCommandBuilder) WithAllowMult(allowMult bool) *StoreBucketTypePropsCommandBuilder {
+	builder.props.AllowMult = &allowMult
+	return builder
+}
+
+// WithLastWriteWins sets whether Riak should resolve conflicts using timestamp (most recent wins)
+func (builder *StoreBucketTypePropsCommandBuilder) WithLastWriteWins(lww bool) *StoreBucketTypePropsCommandBuilder {
+	builder.props.LastWriteWins = &lww
+	return builder
+}
+
+// WithOldVClock sets the old_vclock value representing an epoch time value
+func (builder *StoreBucketTypePropsCommandBuilder) WithOldVClock(oldVClock uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.OldVclock = &oldVClock
+	return builder
+}
+
+// WithYoungVClock sets the old_vclock value representing an epoch time value
+func (builder *StoreBucketTypePropsCommandBuilder) WithYoungVClock(youngVClock uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.YoungVclock = &youngVClock
+	return builder
+}
+
+// WithBigVClock sets the big_vclock value representing an epoch time value
+func (builder *StoreBucketTypePropsCommandBuilder) WithBigVClock(bigVClock uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.BigVclock = &bigVClock
+	return builder
+}
+
+// WithSmallVClock sets the old_vclock value representing an epoch time value
+func (builder *StoreBucketTypePropsCommandBuilder) WithSmallVClock(smallVClock uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.SmallVclock = &smallVClock
+	return builder
+}
+
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *StoreBucketTypePropsCommandBuilder) WithR(r uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.R = &r
+	return builder
+}
+
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *StoreBucketTypePropsCommandBuilder) WithPr(pr uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.Pr = &pr
+	return builder
+}
+
+// WithW sets the number of nodes that must report back a successful write in order for the
+// command operation to be considered a success by Riak.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *StoreBucketTypePropsCommandBuilder) WithW(w uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.W = &w
+	return builder
+}
+
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *StoreBucketTypePropsCommandBuilder) WithPw(pw uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.Pw = &pw
+	return builder
+}
+
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// omitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *StoreBucketTypePropsCommandBuilder) WithDw(dw uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.Dw = &dw
+	return builder
+}
+
+// WithRw (delete quorum) sets the number of nodes that must report back a successful delete to
+// backend storage in order for the command operation to be considered a success by Riak. It
+// represents the read and write operations that are completed internal to Riak to complete a delete.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *StoreBucketTypePropsCommandBuilder) WithRw(rw uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.Rw = &rw
+	return builder
+}
+
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
+func (builder *StoreBucketTypePropsCommandBuilder) WithBasicQuorum(basicQuorum bool) *StoreBucketTypePropsCommandBuilder {
+	builder.props.BasicQuorum = &basicQuorum
+	return builder
+}
+
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
+func (builder *StoreBucketTypePropsCommandBuilder) WithNotFoundOk(notFoundOk bool) *StoreBucketTypePropsCommandBuilder {
+	builder.props.NotfoundOk = &notFoundOk
+	return builder
+}
+
+// WithSearch enables / disables search features for this bucket
+func (builder *StoreBucketTypePropsCommandBuilder) WithSearch(search bool) *StoreBucketTypePropsCommandBuilder {
+	builder.props.Search = &search
+	return builder
+}
+
+// WithBackend sets the backend to be used for this bucket
+func (builder *StoreBucketTypePropsCommandBuilder) WithBackend(backend string) *StoreBucketTypePropsCommandBuilder {
+	builder.props.Backend = []byte(backend)
+	return builder
+}
+
+// WithSearchIndex sets a searchIndex to be used on the bucket
+func (builder *StoreBucketTypePropsCommandBuilder) WithSearchIndex(searchIndex string) *StoreBucketTypePropsCommandBuilder {
+	builder.props.SearchIndex = []byte(searchIndex)
+	return builder
+}
+
+// AddPreCommit allows you to attach a precommit hook to the bucket
+//
+// See http://docs.basho.com/riak/latest/dev/using/commit-hooks/
+func (builder *StoreBucketTypePropsCommandBuilder) AddPreCommit(commitHook *CommitHook) *StoreBucketTypePropsCommandBuilder {
+	rpbCommitHook := toRpbCommitHook(commitHook)
+	builder.props.Precommit = addCommitHookTo(builder.props.Precommit, rpbCommitHook)
+	return builder
+}
+
+// AddPostCommit allows you to attach a postcommit hook to the bucket
+//
+// See http://docs.basho.com/riak/latest/dev/using/commit-hooks/
+func (builder *StoreBucketTypePropsCommandBuilder) AddPostCommit(commitHook *CommitHook) *StoreBucketTypePropsCommandBuilder {
+	rpbCommitHook := toRpbCommitHook(commitHook)
+	builder.props.Postcommit = addCommitHookTo(builder.props.Postcommit, rpbCommitHook)
+	return builder
+}
+
+// WithChashKeyFun sets the chash_keyfun property on the bucket which allows custom hashing functions
+// Please note, this is an advanced feature, only use with caution
+func (builder *StoreBucketTypePropsCommandBuilder) WithChashKeyFun(val *ModFun) *StoreBucketTypePropsCommandBuilder {
+	builder.props.ChashKeyfun = &rpbRiak.RpbModFun{
+		Module:   []byte(val.Module),
+		Function: []byte(val.Function),
+	}
+	return builder
+}
+
+// Build validates the configuration options provided then builds the command
+func (builder *StoreBucketTypePropsCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &StoreBucketTypePropsCommand{protobuf: builder.protobuf}, nil
 }
 
 // StoreBucketPropsCommandBuilder type is required for creating new instances of StoreBucketPropsCommand
@@ -351,7 +664,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithBucket(bucket string) *StoreB
 }
 
 // WithNVal sets the number of times this command operation is replicated in the Cluster. If
-// ommitted, the ring default is used.
+// omitted, the ring default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithNVal(nval uint32) *StoreBucketPropsCommandBuilder {
@@ -396,7 +709,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithSmallVClock(smallVClock uint3
 }
 
 // WithR sets the number of nodes that must report back a successful read in order for the
-// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// command operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithR(r uint32) *StoreBucketPropsCommandBuilder {
@@ -405,7 +718,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithR(r uint32) *StoreBucketProps
 }
 
 // WithPr sets the number of primary nodes (N) that must be read from in order for the command
-// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithPr(pr uint32) *StoreBucketPropsCommandBuilder {
@@ -414,7 +727,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithPr(pr uint32) *StoreBucketPro
 }
 
 // WithW sets the number of nodes that must report back a successful write in order for the
-// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// command operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithW(w uint32) *StoreBucketPropsCommandBuilder {
@@ -423,8 +736,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithW(w uint32) *StoreBucketProps
 }
 
 // WithPw sets the number of primary nodes (N) that must report back a successful write in order for
-// the command operation to be considered a success by Riak. If ommitted, the bucket default is
-// used.
+// the command operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithPw(pw uint32) *StoreBucketPropsCommandBuilder {
@@ -434,7 +746,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithPw(pw uint32) *StoreBucketPro
 
 // WithDw (durable writes) sets the number of nodes that must report back a successful write to
 // backend storage in order for the command operation to be considered a success by Riak. If
-// ommitted, the bucket default is used.
+// omitted, the bucket default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithDw(dw uint32) *StoreBucketPropsCommandBuilder {
@@ -445,7 +757,6 @@ func (builder *StoreBucketPropsCommandBuilder) WithDw(dw uint32) *StoreBucketPro
 // WithRw (delete quorum) sets the number of nodes that must report back a successful delete to
 // backend storage in order for the command operation to be considered a success by Riak. It
 // represents the read and write operations that are completed internal to Riak to complete a delete.
-// If ommitted, the bucket default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithRw(rw uint32) *StoreBucketPropsCommandBuilder {

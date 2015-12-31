@@ -17,70 +17,94 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	// Misc commands
 	// Ping
 	cmd = &PingCommand{}
-	if expected, actual := rpbCode_RpbPingReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbPingReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbPingResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbPingResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if cmd.getResponseProtobufMessage() != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
 	}
 	// StartTls
 	cmd = &startTlsCommand{}
-	if expected, actual := rpbCode_RpbStartTls, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbStartTls; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbStartTls, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbStartTls; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if cmd.getResponseProtobufMessage() != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
 	}
 	// Auth
 	cmd = &authCommand{}
-	if expected, actual := rpbCode_RpbAuthReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbAuthReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbAuthResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbAuthResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if cmd.getResponseProtobufMessage() != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
 	}
-	// FetchBucketProps
-	cmd = &FetchBucketPropsCommand{}
-	if expected, actual := rpbCode_RpbGetBucketReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	// FetchBucketTypeProps
+	cmd = &FetchBucketTypePropsCommand{}
+	if got, want := cmd.getRequestCode(), rpbCode_RpbGetBucketTypeReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbGetBucketResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbGetBucketResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiak.RpbGetBucketResp); !ok {
 		t.Errorf("error casting %v to RpbGetBucketResp", reflect.TypeOf(msg))
 	}
-	// StoreBucketProps
-	cmd = &StoreBucketPropsCommand{}
-	if expected, actual := rpbCode_RpbSetBucketReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	// FetchBucketProps
+	cmd = &FetchBucketPropsCommand{}
+	if got, want := cmd.getRequestCode(), rpbCode_RpbGetBucketReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbSetBucketResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbGetBucketResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiak.RpbGetBucketResp); !ok {
+		t.Errorf("error casting %v to RpbGetBucketResp", reflect.TypeOf(msg))
+	}
+	// StoreBucketTypeProps
+	cmd = &StoreBucketTypePropsCommand{}
+	if got, want := cmd.getRequestCode(), rpbCode_RpbSetBucketTypeReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cmd.getResponseCode(), rpbCode_RpbSetBucketResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if msg != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
+	}
+	// StoreBucketProps
+	cmd = &StoreBucketPropsCommand{}
+	if got, want := cmd.getRequestCode(), rpbCode_RpbSetBucketReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cmd.getResponseCode(), rpbCode_RpbSetBucketResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if msg != nil {
+		t.Error("want nil response protobuf message")
 	}
 
 	// KV commands
 	// FetchValue
 	cmd = &FetchValueCommand{}
-	if expected, actual := rpbCode_RpbGetReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbGetReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbGetResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbGetResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbGetResp); !ok {
@@ -88,11 +112,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// StoreValue
 	cmd = &StoreValueCommand{}
-	if expected, actual := rpbCode_RpbPutReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbPutReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbPutResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbPutResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbPutResp); !ok {
@@ -100,23 +124,23 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// DeleteValue
 	cmd = &DeleteValueCommand{}
-	if expected, actual := rpbCode_RpbDelReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbDelReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbDelResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbDelResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if msg != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
 	}
 	// ListBuckets
 	cmd = &ListBucketsCommand{}
-	if expected, actual := rpbCode_RpbListBucketsReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbListBucketsReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbListBucketsResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbListBucketsResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbListBucketsResp); !ok {
@@ -124,11 +148,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// ListKeys
 	cmd = &ListKeysCommand{}
-	if expected, actual := rpbCode_RpbListKeysReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbListKeysReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbListKeysResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbListKeysResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbListKeysResp); !ok {
@@ -136,11 +160,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// FetchPreflist
 	cmd = &FetchPreflistCommand{}
-	if expected, actual := rpbCode_RpbGetBucketKeyPreflistReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbGetBucketKeyPreflistReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbGetBucketKeyPreflistResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbGetBucketKeyPreflistResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbGetBucketKeyPreflistResp); !ok {
@@ -148,11 +172,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// SecondaryIndexQuery
 	cmd = &SecondaryIndexQueryCommand{}
-	if expected, actual := rpbCode_RpbIndexReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbIndexReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbIndexResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbIndexResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbIndexResp); !ok {
@@ -160,11 +184,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// MapReduce
 	cmd = &MapReduceCommand{}
-	if expected, actual := rpbCode_RpbMapRedReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbMapRedReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbMapRedResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbMapRedResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakKV.RpbMapRedResp); !ok {
@@ -174,22 +198,22 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	// YZ commands
 	// StoreIndex
 	cmd = &StoreIndexCommand{}
-	if expected, actual := rpbCode_RpbYokozunaIndexPutReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbYokozunaIndexPutReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbPutResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbPutResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if cmd.getResponseProtobufMessage() != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
 	}
 	// FetchIndex
 	cmd = &FetchIndexCommand{}
-	if expected, actual := rpbCode_RpbYokozunaIndexGetReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbYokozunaIndexGetReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbYokozunaIndexGetResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbYokozunaIndexGetResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakYZ.RpbYokozunaIndexGetResp); !ok {
@@ -197,33 +221,33 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// DeleteIndex
 	cmd = &DeleteIndexCommand{}
-	if expected, actual := rpbCode_RpbYokozunaIndexDeleteReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbYokozunaIndexDeleteReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbDelResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbDelResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if cmd.getResponseProtobufMessage() != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
 	}
 	// StoreSchema
 	cmd = &StoreSchemaCommand{}
-	if expected, actual := rpbCode_RpbYokozunaSchemaPutReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbYokozunaSchemaPutReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbPutResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbPutResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if cmd.getResponseProtobufMessage() != nil {
-		t.Error("expected nil response protobuf message")
+		t.Error("want nil response protobuf message")
 	}
 	// FetchSchema
 	cmd = &FetchSchemaCommand{}
-	if expected, actual := rpbCode_RpbYokozunaSchemaGetReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbYokozunaSchemaGetReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbYokozunaSchemaGetResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbYokozunaSchemaGetResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakYZ.RpbYokozunaSchemaGetResp); !ok {
@@ -231,11 +255,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// Search
 	cmd = &SearchCommand{}
-	if expected, actual := rpbCode_RpbSearchQueryReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_RpbSearchQueryReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_RpbSearchQueryResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_RpbSearchQueryResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakSCH.RpbSearchQueryResp); !ok {
@@ -245,11 +269,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	// CRDT commands
 	// UpdateCounter
 	cmd = &UpdateCounterCommand{}
-	if expected, actual := rpbCode_DtUpdateReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_DtUpdateReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_DtUpdateResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_DtUpdateResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakDT.DtUpdateResp); !ok {
@@ -257,11 +281,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// FetchCounter
 	cmd = &FetchCounterCommand{}
-	if expected, actual := rpbCode_DtFetchReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_DtFetchReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_DtFetchResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_DtFetchResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakDT.DtFetchResp); !ok {
@@ -269,11 +293,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// UpdateSet
 	cmd = &UpdateSetCommand{}
-	if expected, actual := rpbCode_DtUpdateReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_DtUpdateReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_DtUpdateResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_DtUpdateResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakDT.DtUpdateResp); !ok {
@@ -281,11 +305,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// FetchSet
 	cmd = &FetchSetCommand{}
-	if expected, actual := rpbCode_DtFetchReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_DtFetchReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_DtFetchResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_DtFetchResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakDT.DtFetchResp); !ok {
@@ -293,11 +317,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// UpdateMap
 	cmd = &UpdateMapCommand{}
-	if expected, actual := rpbCode_DtUpdateReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_DtUpdateReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_DtUpdateResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_DtUpdateResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakDT.DtUpdateResp); !ok {
@@ -305,11 +329,11 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	}
 	// FetchMap
 	cmd = &FetchMapCommand{}
-	if expected, actual := rpbCode_DtFetchReq, cmd.getRequestCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getRequestCode(), rpbCode_DtFetchReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
-	if expected, actual := rpbCode_DtFetchResp, cmd.getResponseCode(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cmd.getResponseCode(), rpbCode_DtFetchResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	msg = cmd.getResponseProtobufMessage()
 	if _, ok := msg.(*rpbRiakDT.DtFetchResp); !ok {
