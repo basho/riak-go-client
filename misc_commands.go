@@ -527,7 +527,6 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithW(w uint32) *StoreBucketT
 
 // WithPw sets the number of primary nodes (N) that must report back a successful write in order for
 // the command operation to be considered a success by Riak.
-// used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketTypePropsCommandBuilder) WithPw(pw uint32) *StoreBucketTypePropsCommandBuilder {
@@ -738,7 +737,6 @@ func (builder *StoreBucketPropsCommandBuilder) WithW(w uint32) *StoreBucketProps
 
 // WithPw sets the number of primary nodes (N) that must report back a successful write in order for
 // the command operation to be considered a success by Riak.
-// used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithPw(pw uint32) *StoreBucketPropsCommandBuilder {
