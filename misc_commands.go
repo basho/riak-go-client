@@ -454,7 +454,7 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithBucketType(bucketType str
 }
 
 // WithNVal sets the number of times this command operation is replicated in the Cluster. If
-// ommitted, the ring default is used.
+// omitted, the ring default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketTypePropsCommandBuilder) WithNVal(nval uint32) *StoreBucketTypePropsCommandBuilder {
@@ -499,7 +499,7 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithSmallVClock(smallVClock u
 }
 
 // WithR sets the number of nodes that must report back a successful read in order for the
-// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// command operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketTypePropsCommandBuilder) WithR(r uint32) *StoreBucketTypePropsCommandBuilder {
@@ -508,7 +508,7 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithR(r uint32) *StoreBucketT
 }
 
 // WithPr sets the number of primary nodes (N) that must be read from in order for the command
-// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketTypePropsCommandBuilder) WithPr(pr uint32) *StoreBucketTypePropsCommandBuilder {
@@ -517,7 +517,7 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithPr(pr uint32) *StoreBucke
 }
 
 // WithW sets the number of nodes that must report back a successful write in order for the
-// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// command operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketTypePropsCommandBuilder) WithW(w uint32) *StoreBucketTypePropsCommandBuilder {
@@ -526,7 +526,7 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithW(w uint32) *StoreBucketT
 }
 
 // WithPw sets the number of primary nodes (N) that must report back a successful write in order for
-// the command operation to be considered a success by Riak. If ommitted, the bucket default is
+// the command operation to be considered a success by Riak.
 // used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
@@ -537,7 +537,7 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithPw(pw uint32) *StoreBucke
 
 // WithDw (durable writes) sets the number of nodes that must report back a successful write to
 // backend storage in order for the command operation to be considered a success by Riak. If
-// ommitted, the bucket default is used.
+// omitted, the bucket default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketTypePropsCommandBuilder) WithDw(dw uint32) *StoreBucketTypePropsCommandBuilder {
@@ -548,7 +548,6 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithDw(dw uint32) *StoreBucke
 // WithRw (delete quorum) sets the number of nodes that must report back a successful delete to
 // backend storage in order for the command operation to be considered a success by Riak. It
 // represents the read and write operations that are completed internal to Riak to complete a delete.
-// If ommitted, the bucket default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketTypePropsCommandBuilder) WithRw(rw uint32) *StoreBucketTypePropsCommandBuilder {
@@ -666,7 +665,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithBucket(bucket string) *StoreB
 }
 
 // WithNVal sets the number of times this command operation is replicated in the Cluster. If
-// ommitted, the ring default is used.
+// omitted, the ring default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithNVal(nval uint32) *StoreBucketPropsCommandBuilder {
@@ -711,7 +710,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithSmallVClock(smallVClock uint3
 }
 
 // WithR sets the number of nodes that must report back a successful read in order for the
-// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// command operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithR(r uint32) *StoreBucketPropsCommandBuilder {
@@ -720,7 +719,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithR(r uint32) *StoreBucketProps
 }
 
 // WithPr sets the number of primary nodes (N) that must be read from in order for the command
-// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithPr(pr uint32) *StoreBucketPropsCommandBuilder {
@@ -729,7 +728,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithPr(pr uint32) *StoreBucketPro
 }
 
 // WithW sets the number of nodes that must report back a successful write in order for the
-// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+// command operation to be considered a success by Riak.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithW(w uint32) *StoreBucketPropsCommandBuilder {
@@ -738,7 +737,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithW(w uint32) *StoreBucketProps
 }
 
 // WithPw sets the number of primary nodes (N) that must report back a successful write in order for
-// the command operation to be considered a success by Riak. If ommitted, the bucket default is
+// the command operation to be considered a success by Riak.
 // used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
@@ -749,7 +748,7 @@ func (builder *StoreBucketPropsCommandBuilder) WithPw(pw uint32) *StoreBucketPro
 
 // WithDw (durable writes) sets the number of nodes that must report back a successful write to
 // backend storage in order for the command operation to be considered a success by Riak. If
-// ommitted, the bucket default is used.
+// omitted, the bucket default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithDw(dw uint32) *StoreBucketPropsCommandBuilder {
@@ -760,7 +759,6 @@ func (builder *StoreBucketPropsCommandBuilder) WithDw(dw uint32) *StoreBucketPro
 // WithRw (delete quorum) sets the number of nodes that must report back a successful delete to
 // backend storage in order for the command operation to be considered a success by Riak. It
 // represents the read and write operations that are completed internal to Riak to complete a delete.
-// If ommitted, the bucket default is used.
 //
 // See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
 func (builder *StoreBucketPropsCommandBuilder) WithRw(rw uint32) *StoreBucketPropsCommandBuilder {
