@@ -6,8 +6,17 @@ import (
 	riak "github.com/basho/riak-go-client"
 )
 
-// make sure these bucket-types are created:
-// 'animals', 'quotes', 'sports', 'cars', 'users', 'n_val_of_5'
+/*
+	make sure these bucket-types are created:
+	animals', 'quotes', 'sports', 'cars', 'users', 'n_val_of_5'
+
+	Simple example:
+	for bt in animals sports quotes cars users n_val_of_5
+	do
+		riak-admin bucket-type create $bt
+		riak-admin bucket-type activate $bt
+	done
+*/
 func main() {
 	//riak.EnableDebugLogging = true
 
@@ -57,6 +66,7 @@ func main() {
 	storeAndUpdateSport(cluster)
 	storeCar(cluster)
 	storeUserThenDelete(cluster)
+	fetchBucketTypeProps(cluster)
 }
 
 func storeRufus(cluster *riak.Cluster) {
@@ -372,4 +382,7 @@ func fetchChampion(cluster *riak.Cluster) {
 		fmt.Println(err.Error())
 		return
 	}
+}
+
+func fetchBucketTypeProps(cluster *riak.Cluster) {
 }
