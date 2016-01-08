@@ -1,5 +1,27 @@
 package riak
 
+// RpbGetBucketTypeReq
+
+func (m *RpbGetBucketTypeReq) GetKey() []byte {
+	return nil
+}
+
+func (m *RpbGetBucketTypeReq) SetType(bt []byte) {
+	m.Type = bt
+}
+
+func (m *RpbGetBucketTypeReq) BucketIsRequired() bool {
+	return false
+}
+
+func (m *RpbGetBucketTypeReq) GetBucket() []byte {
+	return nil
+}
+
+func (m *RpbGetBucketTypeReq) KeyIsRequired() bool {
+	return false
+}
+
 // RpbGetBucketReq
 
 func (m *RpbGetBucketReq) GetKey() []byte {
@@ -15,6 +37,28 @@ func (m *RpbGetBucketReq) BucketIsRequired() bool {
 }
 
 func (m *RpbGetBucketReq) KeyIsRequired() bool {
+	return false
+}
+
+// RpbSetBucketTypeReq
+
+func (m *RpbSetBucketTypeReq) GetKey() []byte {
+	return nil
+}
+
+func (m *RpbSetBucketTypeReq) SetType(bt []byte) {
+	m.Type = bt
+}
+
+func (m *RpbSetBucketTypeReq) BucketIsRequired() bool {
+	return false
+}
+
+func (m *RpbSetBucketTypeReq) GetBucket() []byte {
+	return nil
+}
+
+func (m *RpbSetBucketTypeReq) KeyIsRequired() bool {
 	return false
 }
 

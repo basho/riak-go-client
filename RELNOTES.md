@@ -4,6 +4,8 @@
 Release Notes
 =============
 
+* 1.5.0 - Following PRs addressed:
+ * [Add `FetchBucketTypePropsCommand` and `StoreBucketTypePropsCommand`](https://github.com/basho/riak-go-client/pull/42)
 * 1.4.0 - Following issues / PRs addressed:
  * [Add `ResetBucketCommand`](https://github.com/basho/riak-go-client/pull/35)
  * [Legacy Counter support](https://github.com/basho/riak-go-client/pull/33)
