@@ -66,7 +66,7 @@ func main() {
 	storeAndUpdateSport(cluster)
 	storeCar(cluster)
 	storeUserThenDelete(cluster)
-	fetchBucketTypeProps(cluster)
+	fetchBucketProps(cluster)
 }
 
 func storeRufus(cluster *riak.Cluster) {
@@ -384,5 +384,22 @@ func fetchChampion(cluster *riak.Cluster) {
 	}
 }
 
-func fetchBucketTypeProps(cluster *riak.Cluster) {
+func fetchBucketProps(cluster *riak.Cluster) {
+	cmd, err := riak.NewFetchBucketPropsCommandBuilder().
+		WithBucketType("n_val_of_5").
+		WithBucket("any_bucket_name").
+		Build()
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	fbc := cmd.(*riak.FetchBucketPropsCommand)
+	fmt.Println("bucket props:", fbc.Response)
 }
