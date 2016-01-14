@@ -69,11 +69,20 @@ func main() {
 	storeObject(cluster, obj)
 	readSiblings(cluster)
 
+	resolveViaOverwrite(cluster)
+	readSiblings(cluster)
+
+	storeObject(cluster, obj)
+	storeObject(cluster, obj)
+	readSiblings(cluster)
+
 	resolveChoosingFirst(cluster)
 	readSiblings(cluster)
 
 	storeObject(cluster, obj)
 	storeObject(cluster, obj)
+	readSiblings(cluster)
+
 	resolveUsingResolver(cluster)
 	readSiblings(cluster)
 }
@@ -113,6 +122,29 @@ func readSiblings(cluster *riak.Cluster) error {
 	return nil
 }
 
+func resolveViaOverwrite(cluster *riak.Cluster) error {
+	cmd, err := riak.NewFetchValueCommandBuilder().
+		WithBucketType("siblings").
+		WithBucket("nickelodeon").
+		WithKey("best_character").
+		Build()
+	if err != nil {
+		return err
+	}
+
+	err = cluster.Execute(cmd)
+	if err != nil {
+		return err
+	}
+
+	fcmd := cmd.(*riak.FetchValueCommand)
+	obj := fcmd.Response.Values[0]
+	// This overwrites the value and provides the canonical one
+	obj.Value = []byte("Stimpy")
+
+	return storeObject(cluster, obj)
+}
+
 func resolveChoosingFirst(cluster *riak.Cluster) error {
 	cmd, err := riak.NewFetchValueCommandBuilder().
 		WithBucketType("siblings").
@@ -130,7 +162,6 @@ func resolveChoosingFirst(cluster *riak.Cluster) error {
 
 	fcmd := cmd.(*riak.FetchValueCommand)
 	obj := fcmd.Response.Values[0]
-	obj.Value = []byte("Stimpy")
 
 	return storeObject(cluster, obj)
 }
