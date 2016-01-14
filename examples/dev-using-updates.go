@@ -7,6 +7,9 @@ import (
 )
 
 /*
+    Code samples from:
+    http://docs.basho.com/riak/latest/dev/using/updates/
+
 	make sure this bucket-type is created:
 	siblings
 
