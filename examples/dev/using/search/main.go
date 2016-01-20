@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	riak "github.com/basho/riak-go-client"
@@ -21,6 +23,7 @@ func main() {
 
 	nodeOpts := &riak.NodeOptions{
 		RemoteAddress: "riak-test:10017",
+		RequestTimeout: time.Second * 60,
 	}
 
 	var node *riak.Node
@@ -59,7 +62,20 @@ func main() {
 
 	if err := storeIndex(cluster); err != nil {
 		ErrExit(err)
-		fmt.Println(err.Error())
+	}
+
+	if err := storeBucketProperties(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := storeObjects(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	time.Sleep(time.Millisecond * 1250)
+
+	if err := doSearchRequest(cluster); err != nil {
+		ErrExit(err)
 	}
 }
 
@@ -71,6 +87,7 @@ func ErrExit(err error) {
 func storeIndex(cluster *riak.Cluster) error {
 	cmd, err := riak.NewStoreIndexCommandBuilder().
 		WithIndexName("famous").
+		WithSchemaName("_yz_default").
 		WithTimeout(time.Second * 30).
 		Build()
 	if err != nil {
@@ -80,121 +97,92 @@ func storeIndex(cluster *riak.Cluster) error {
 	return cluster.Execute(cmd)
 }
 
+func storeBucketProperties(cluster *riak.Cluster) error {
+	cmd, err := riak.NewStoreBucketPropsCommandBuilder().
+		WithBucketType("animals").
+		WithBucket("cats").
+		WithSearchIndex("famous").
+		Build()
+	if err != nil {
+		return err
+	}
+
+	return cluster.Execute(cmd)
+}
+
+func storeObjects(cluster *riak.Cluster) error {
+	o1 := &riak.Object{
+		Key:             "liono",
+		Value:           []byte("{\"name_s\":\"Lion-o\",\"age_i\":30,\"leader_b\":true}"),
+	}
+	o2 := &riak.Object{
+		Key:             "cheetara",
+		Value:           []byte("{\"name_s\":\"Cheetara\",\"age_i\":30,\"leader_b\":false}"),
+	}
+	o3 := &riak.Object{
+		Key:             "snarf",
+		Value:           []byte("{\"name_s\":\"Snarf\",\"age_i\":43,\"leader_b\":false}"),
+	}
+	o4 := &riak.Object{
+		Key:             "panthro",
+		Value:           []byte("{\"name_s\":\"Panthro\",\"age_i\":36,\"leader_b\":false}"),
+	}
+
+	objs := [...]*riak.Object{o1, o2, o3, o4}
+
+	wg := &sync.WaitGroup{}
+	for _, obj := range objs {
+		obj.ContentType = "application/json"
+		obj.Charset = "utf-8"
+		obj.ContentEncoding = "utf-8"
+
+		cmd, err := riak.NewStoreValueCommandBuilder().
+			WithBucketType("animals").
+			WithBucket("cats").
+			WithContent(obj).
+			Build()
+		if err != nil {
+			return err
+		}
+
+		args := &riak.Async{
+			Command: cmd,
+			Wait:    wg,
+		}
+		if err := cluster.ExecuteAsync(args); err != nil {
+			return err
+		}
+	}
+
+	wg.Wait()
+
+	return nil;
+}
+
+func doSearchRequest(cluster *riak.Cluster) error {
+	cmd, err := riak.NewSearchCommandBuilder().
+		WithIndexName("famous").
+		WithQuery("name_s:Lion*").
+		Build();
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+	
+	sc := cmd.(*riak.SearchCommand)
+	if json, jerr := json.MarshalIndent(sc.Response.Docs, "", "  "); jerr != nil {
+		return jerr
+	} else {
+		fmt.Println(string(json))
+	}
+
+	return nil
+}
+
 /*
-var assert = require('assert');
-var async = require('async');
-var logger = require('winston');
-var Riak = require('basho-riak-client');
-
-function DevUsingSearch(done) {
-    var client = config.createClient(function (err, c) {
-        create_famous_index();
-    });
-
-    function create_famous_index() {
-        var storeIndex_cb = function (err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            if (rslt === true) {
-                logger.info("[DevUsingSearch] famous index created with _yz_default schema.");
-                store_bucket_properties();
-            } else {
-                logger.error("[DevUsingSearch] StoreIndex false result!");
-                client.stop(function () {
-                    done();
-                });
-            }
-        };
-
-        var store = new Riak.Commands.YZ.StoreIndex.Builder()
-            .withIndexName("famous")
-            .withSchemaName("_yz_default")
-            .withCallback(storeIndex_cb)
-            .build();
-
-        client.execute(store);
-    }
-
-    function store_bucket_properties() {
-        var bucketProps_cb = function (err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            if (rslt === true) {
-                logger.info("[DevUsingSearch] cats bucket associated with famous index.");
-                store_objects();
-            } else {
-                logger.error("[DevUsingSearch] StoreBucketProps false result!");
-                client.stop(function () {
-                    done();
-                });
-            }
-        };
-
-        var store = new Riak.Commands.KV.StoreBucketProps.Builder()
-            .withBucketType("animals")
-            .withBucket("cats")
-            .withSearchIndex("famous")
-            .withCallback(bucketProps_cb)
-            .build();
-
-        client.execute(store);
-    }
-
-    function store_objects() {
-
-        function store_cb(err, rslt, async_cb) {
-            if (err) {
-                throw new Error(err);
-            }
-            async_cb(null, rslt);
-        }
-
-        var objs = [
-            [ 'liono', { name_s: 'Lion-o', age_i: 30, leader_b: true } ],
-            [ 'cheetara', { name_s: 'Cheetara', age_i: 30, leader_b: false } ],
-            [ 'snarf', { name_s: 'Snarf', age_i: 43, leader_b: false } ],
-            [ 'panthro', { name_s: 'Panthro', age_i: 36, leader_b: false } ],
-        ];
-
-        var storeFuncs = [];
-        objs.forEach(function (o) {
-            var storeFunc = function (async_cb) {
-                var key = o[0];
-                var value = o[1];
-                var riakObj = new Riak.Commands.KV.RiakObject();
-                riakObj.setContentType('application/json');
-                riakObj.setBucketType('animals');
-                riakObj.setBucket('cats');
-                riakObj.setKey(key);
-                riakObj.setValue(value);
-                client.storeValue({ value: riakObj }, function (err, rslt) {
-                    store_cb(err, rslt, async_cb);
-                });
-            };
-            storeFuncs.push(storeFunc);
-        });
-
-        async.parallel(storeFuncs, function (err, rslts) {
-            if (err) {
-                throw new Error(err);
-            }
-            // NB: wait to let Solr index docs
-            logger.info("[DevUsingSearch] four objects stored in cats bucket and indexing.");
-            setTimeout(do_search_request, 1250);
-        });
-    }
-
-    function do_search_request() {
-        logger.info("[DevUsingSearch] indexing complete, searching for objects.");
-
-        function search_cb(err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            logger.info("[DevUsingSearch] docs:", JSON.stringify(rslt.docs));
-
             var doc = rslt.docs.pop();
             var args = {
                 bucketType: doc._yz_rt,
