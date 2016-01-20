@@ -7,16 +7,20 @@ import (
 )
 
 /*
-	make sure these bucket-types are created:
-	animals', 'quotes', 'sports', 'cars', 'users', 'n_val_of_5'
+   Code samples from:
+   http://docs.basho.com/riak/latest/dev/using/search/
 
-	Simple example:
-	for bt in animals sports quotes cars users n_val_of_5
-	do
-		riak-admin bucket-type create $bt
-		riak-admin bucket-type activate $bt
-	done
+   make sure these bucket-types are created:
+   'animals', 'quotes', 'sports', 'cars', 'users', 'n_val_of_5'
+
+   Simple example:
+   for bt in animals sports quotes cars users n_val_of_5
+   do
+   	riak-admin bucket-type create $bt
+   	riak-admin bucket-type activate $bt
+   done
 */
+
 func main() {
 	//riak.EnableDebugLogging = true
 

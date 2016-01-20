@@ -15,7 +15,7 @@ import (
 
 	riak-admin bucket-type create siblings '{"props":{"allow_mult":true}}'
 	riak-admin bucket-type activate siblings
- */
+*/
 
 func main() {
 	//riak.EnableDebugLogging = true
