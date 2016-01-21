@@ -22,7 +22,7 @@ func main() {
 	//riak.EnableDebugLogging = true
 
 	nodeOpts := &riak.NodeOptions{
-		RemoteAddress: "riak-test:10017",
+		RemoteAddress:  "riak-test:10017",
 		RequestTimeout: time.Second * 60,
 	}
 
@@ -128,20 +128,20 @@ func storeBucketProperties(cluster *riak.Cluster) error {
 
 func storeObjects(cluster *riak.Cluster) error {
 	o1 := &riak.Object{
-		Key:             "liono",
-		Value:           []byte("{\"name_s\":\"Lion-o\",\"age_i\":30,\"leader_b\":true}"),
+		Key:   "liono",
+		Value: []byte("{\"name_s\":\"Lion-o\",\"age_i\":30,\"leader_b\":true}"),
 	}
 	o2 := &riak.Object{
-		Key:             "cheetara",
-		Value:           []byte("{\"name_s\":\"Cheetara\",\"age_i\":30,\"leader_b\":false}"),
+		Key:   "cheetara",
+		Value: []byte("{\"name_s\":\"Cheetara\",\"age_i\":30,\"leader_b\":false}"),
 	}
 	o3 := &riak.Object{
-		Key:             "snarf",
-		Value:           []byte("{\"name_s\":\"Snarf\",\"age_i\":43,\"leader_b\":false}"),
+		Key:   "snarf",
+		Value: []byte("{\"name_s\":\"Snarf\",\"age_i\":43,\"leader_b\":false}"),
 	}
 	o4 := &riak.Object{
-		Key:             "panthro",
-		Value:           []byte("{\"name_s\":\"Panthro\",\"age_i\":36,\"leader_b\":false}"),
+		Key:   "panthro",
+		Value: []byte("{\"name_s\":\"Panthro\",\"age_i\":36,\"leader_b\":false}"),
 	}
 
 	objs := [...]*riak.Object{o1, o2, o3, o4}
@@ -172,7 +172,7 @@ func storeObjects(cluster *riak.Cluster) error {
 
 	wg.Wait()
 
-	return nil;
+	return nil
 }
 
 func printDocs(cmd riak.Command, desc string) error {
@@ -191,7 +191,7 @@ func doSearchRequest(cluster *riak.Cluster) error {
 	cmd, err := riak.NewSearchCommandBuilder().
 		WithIndexName("famous").
 		WithQuery("name_s:Lion*").
-		Build();
+		Build()
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func doSearchRequest(cluster *riak.Cluster) error {
 	if err := cluster.Execute(cmd); err != nil {
 		return err
 	}
-	
+
 	if err := printDocs(cmd, "Search Request Documents:"); err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func doAgeSearchRequest(cluster *riak.Cluster) error {
 	cmd, err := riak.NewSearchCommandBuilder().
 		WithIndexName("famous").
 		WithQuery("age_i:[30 TO *]").
-		Build();
+		Build()
 	if err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func doAgeSearchRequest(cluster *riak.Cluster) error {
 	if err := cluster.Execute(cmd); err != nil {
 		return err
 	}
-	
+
 	return printDocs(cmd, "Age Search Documents:")
 }
 
@@ -250,7 +250,7 @@ func doAndSearchRequest(cluster *riak.Cluster) error {
 	cmd, err := riak.NewSearchCommandBuilder().
 		WithIndexName("famous").
 		WithQuery("leader_b:true AND age_i:[30 TO *]").
-		Build();
+		Build()
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func doAndSearchRequest(cluster *riak.Cluster) error {
 	if err := cluster.Execute(cmd); err != nil {
 		return err
 	}
-	
+
 	return printDocs(cmd, "AND Search Documents:")
 }
 
@@ -272,7 +272,7 @@ func doPaginatedSearchRequest(cluster *riak.Cluster) error {
 		WithQuery("*:*").
 		WithStart(start).
 		WithNumRows(rowsPerPage).
-		Build();
+		Build()
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func doPaginatedSearchRequest(cluster *riak.Cluster) error {
 	if err := cluster.Execute(cmd); err != nil {
 		return err
 	}
-	
+
 	return printDocs(cmd, "Paginated Search Documents:")
 }
 

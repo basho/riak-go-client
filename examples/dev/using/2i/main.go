@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -16,7 +17,7 @@ import (
 */
 
 func main() {
-	//riak.EnableDebugLogging = true
+	riak.EnableDebugLogging = false
 
 	nodeOpts := &riak.NodeOptions{
 		RemoteAddress: "riak-test:10017",
@@ -30,7 +31,8 @@ func main() {
 
 	nodes := []*riak.Node{node}
 	opts := &riak.ClusterOptions{
-		Nodes: nodes,
+		Nodes:             nodes,
+		ExecutionAttempts: 1,
 	}
 
 	cluster, err := riak.NewCluster(opts)
@@ -68,9 +70,15 @@ func main() {
 		ErrExit(err)
 	}
 
+	if err := invalidFieldNames(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := incorrectDataType(cluster); err != nil {
+		ErrExit(err)
+	}
+
 	/*
-		invalid_field_names,
-		incorrect_data_type,
 		querying_exact_match,
 		querying_range,
 		querying_range_with_terms,
@@ -115,7 +123,7 @@ func insertingObjects(cluster *riak.Cluster) error {
 		return err
 	}
 
-	return nil;
+	return nil
 }
 
 func queryingIndexes(cluster *riak.Cluster) error {
@@ -139,29 +147,29 @@ func queryingIndexes(cluster *riak.Cluster) error {
 
 func indexingObjects(cluster *riak.Cluster) error {
 	o1 := &riak.Object{
-		Key:             "larry",
-		Value:           []byte("My name is Larry"),
+		Key:   "larry",
+		Value: []byte("My name is Larry"),
 	}
 	o1.AddToIndex("field1_bin", "val1")
 	o1.AddToIntIndex("field2_int", 1001)
 
 	o2 := &riak.Object{
-		Key:             "Moe",
-		Value:           []byte("My name is Moe"),
+		Key:   "Moe",
+		Value: []byte("My name is Moe"),
 	}
 	o2.AddToIndex("Field1_bin", "val2")
 	o2.AddToIntIndex("Field2_int", 1002)
 
 	o3 := &riak.Object{
-		Key:             "curly",
-		Value:           []byte("My name is Curly"),
+		Key:   "curly",
+		Value: []byte("My name is Curly"),
 	}
 	o3.AddToIndex("FIELD1_BIN", "val3")
 	o3.AddToIntIndex("FIELD2_INT", 1003)
 
 	o4 := &riak.Object{
-		Key:             "veronica",
-		Value:           []byte("My name is Veronica"),
+		Key:   "veronica",
+		Value: []byte("My name is Veronica"),
 	}
 	o4.AddToIndex("FIELD1_bin", "val4")
 	o4.AddToIndex("FIELD1_bin", "val4")
@@ -202,7 +210,55 @@ func indexingObjects(cluster *riak.Cluster) error {
 
 	wg.Wait()
 
-	return nil;
+	return nil
+}
+
+func invalidFieldNames(cluster *riak.Cluster) error {
+	cmd, err := riak.NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("indexes").
+		WithBucket("users").
+		WithIndexName("field2_foo").
+		WithIndexKey("jsmith123").
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		fmt.Println("[DevUsing2i] field name error:", err)
+	} else {
+		return errors.New("[DevUsing2i] expected an error!")
+	}
+
+	return nil
+}
+
+func incorrectDataType(cluster *riak.Cluster) error {
+	obj := &riak.Object{
+		BucketType:      "indexes",
+		Bucket:          "people",
+		Key:             "larry",
+		ContentType:     "text/plain",
+		Charset:         "utf-8",
+		ContentEncoding: "utf-8",
+		Value:           []byte("My name is Larry"),
+	}
+	obj.AddToIndex("field2_int", "bar")
+
+	cmd, err := riak.NewStoreValueCommandBuilder().
+		WithContent(obj).
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		fmt.Println("[DevUsing2i] index data type error:", err)
+	} else {
+		return errors.New("[DevUsing2i] expected an error!")
+	}
+
+	return nil
 }
 
 /*
@@ -308,7 +364,7 @@ func indexingObjects(cluster *riak.Cluster) error {
                 }
             }).build();
         client.execute(binIdxCmd);
-    }   
+    }
 
     function querying_range(async_cb) {
         var f1 = function (acb) {
@@ -347,39 +403,6 @@ func indexingObjects(cluster *riak.Cluster) error {
             }
             async_cb();
         });
-    }
-
-    function invalid_field_names(async_cb) {
-        var cmd = new Riak.Commands.KV.SecondaryIndexQuery.Builder()
-            .withBucketType('indexes')
-            .withBucket('people')
-            .withIndexName('field2_foo')
-            .withIndexKey('jsmith123')
-            .withCallback(function (err, rslt) {
-                query_cb(err, rslt);
-                if (!rslt || rslt.done) {
-                    async_cb();
-                }
-            }).build();
-        client.execute(cmd);
-    }
-
-    function incorrect_data_type(async_cb) {
-        var riakObj = new Riak.Commands.KV.RiakObject();
-        riakObj.setContentType('text/plain');
-        riakObj.setBucketType('indexes');
-        riakObj.setBucket('people');
-        riakObj.setKey('larry');
-        riakObj.addToIndex('field2_int', 'bar');
-        try {
-            client.storeValue({ value: riakObj }, function (err, rslt) {
-                logger.error("[DevUsing2i] incorrect_data_type err: '%s'", err);
-                async_cb();
-            });
-        } catch (e) {
-            logger.error("[DevUsing2i] incorrect_data_type err: '%s'", e);
-        }
-        async_cb();
     }
 
     var query_keys = [];

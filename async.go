@@ -48,7 +48,7 @@ func (a *Async) onEnqueued() {
 
 func (a *Async) done(err error) {
 	if err != nil {
-		logErr("[Async]", err)
+		logDebug("[Async]", "done error:", err)
 		a.Error = err
 	}
 	if a.Done != nil {
