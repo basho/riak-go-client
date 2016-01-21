@@ -77,6 +77,22 @@ func main() {
 	if err := doSearchRequest(cluster); err != nil {
 		ErrExit(err)
 	}
+
+	if err := doAgeSearchRequest(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := doAndSearchRequest(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := doPaginatedSearchRequest(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := deleteIndex(cluster); err != nil {
+		ErrExit(err)
+	}
 }
 
 func ErrExit(err error) {
@@ -159,6 +175,18 @@ func storeObjects(cluster *riak.Cluster) error {
 	return nil;
 }
 
+func printDocs(cmd riak.Command, desc string) error {
+	sc := cmd.(*riak.SearchCommand)
+	if json, jerr := json.MarshalIndent(sc.Response.Docs, "", "  "); jerr != nil {
+		return jerr
+	} else {
+		fmt.Println("------------------------------------------------------------------------")
+		fmt.Println(desc)
+		fmt.Println(string(json))
+	}
+	return nil
+}
+
 func doSearchRequest(cluster *riak.Cluster) error {
 	cmd, err := riak.NewSearchCommandBuilder().
 		WithIndexName("famous").
@@ -172,8 +200,28 @@ func doSearchRequest(cluster *riak.Cluster) error {
 		return err
 	}
 	
+	if err := printDocs(cmd, "Search Request Documents:"); err != nil {
+		return err
+	}
+
 	sc := cmd.(*riak.SearchCommand)
-	if json, jerr := json.MarshalIndent(sc.Response.Docs, "", "  "); jerr != nil {
+	doc := sc.Response.Docs[0] // NB: SearchDoc struct type
+
+	cmd, err = riak.NewFetchValueCommandBuilder().
+		WithBucketType(doc.BucketType).
+		WithBucket(doc.Bucket).
+		WithKey(doc.Key).
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+
+	fc := cmd.(*riak.FetchValueCommand)
+	if json, jerr := json.MarshalIndent(fc.Response, "", "  "); jerr != nil {
 		return jerr
 	} else {
 		fmt.Println(string(json))
@@ -182,127 +230,80 @@ func doSearchRequest(cluster *riak.Cluster) error {
 	return nil
 }
 
-/*
-            var doc = rslt.docs.pop();
-            var args = {
-                bucketType: doc._yz_rt,
-                bucket: doc._yz_rb,
-                key: doc._yz_rk,
-                convertToJs: true
-            };
-            client.fetchValue(args, function (err, rslt) {
-                if (err) {
-                    throw new Error(err);
-                }
-                logger.info("[DevUsingSearch] first doc:", rslt.values[0].value);
-                do_age_search_request();
-            });
-        }
+func doAgeSearchRequest(cluster *riak.Cluster) error {
+	cmd, err := riak.NewSearchCommandBuilder().
+		WithIndexName("famous").
+		WithQuery("age_i:[30 TO *]").
+		Build();
+	if err != nil {
+		return err
+	}
 
-        var search = new Riak.Commands.YZ.Search.Builder()
-            .withIndexName('famous')
-            .withQuery('name_s:Lion*')
-            .withCallback(search_cb)
-            .build();
-        client.execute(search);
-    }
-
-    function do_age_search_request() {
-        function search_cb(err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            logger.info("[DevUsingSearch] age search docs:", JSON.stringify(rslt.docs));
-            do_and_search_request();
-        }
-
-        var search = new Riak.Commands.YZ.Search.Builder()
-            .withIndexName('famous')
-            .withQuery('age_i:[30 TO *]')
-            .withCallback(search_cb)
-            .build();
-        client.execute(search);
-    }
-
-    function do_and_search_request() {
-        function search_cb(err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            logger.info("[DevUsingSearch] AND search docs:", JSON.stringify(rslt.docs));
-            paginated_search_request();
-        }
-
-        var search = new Riak.Commands.YZ.Search.Builder()
-            .withIndexName('famous')
-            .withQuery('leader_b:true AND age_i:[30 TO *]')
-            .withCallback(search_cb)
-            .build();
-        client.execute(search);
-    }
-
-    function paginated_search_request() {
-        function search_cb(err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            logger.info("[DevUsingSearch] paginated search docs:", JSON.stringify(rslt.docs));
-            delete_search_index();
-        }
-
-        var rowsPerPage = 2;
-        var page = 2;
-        var start = rowsPerPage * (page - 1);
-
-        var search = new Riak.Commands.YZ.Search.Builder()
-            .withIndexName('famous')
-            .withQuery('*:*')
-            .withStart(start)
-            .withNumRows(rowsPerPage)
-            .withCallback(search_cb)
-            .build();
-        client.execute(search);
-    }
-
-    function delete_search_index() {
-        function delete_cb(err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            if (rslt !== true) {
-                logger.error("[DevUsingSearch] DeleteIndex false result!");
-            }
-            client.stop(function () {
-                done();
-            });
-        }
-
-        var bucketProps_cb = function (err, rslt) {
-            if (err) {
-                throw new Error(err);
-            }
-            if (rslt === true) {
-                var deleteCmd = new Riak.Commands.YZ.DeleteIndex.Builder()
-                    .withIndexName('famous')
-                    .withCallback(delete_cb)
-                    .build();
-                client.execute(deleteCmd);
-            } else {
-                logger.error("[DevUsingSearch] StoreBucketProps false result!");
-                client.stop(function () {
-                    done();
-                });
-            }
-        };
-
-        var store = new Riak.Commands.KV.StoreBucketProps.Builder()
-            .withBucketType("animals")
-            .withBucket("cats")
-            .withSearchIndex("_dont_index_")
-            .withCallback(bucketProps_cb)
-            .build();
-
-        client.execute(store);
-    }
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+	
+	return printDocs(cmd, "Age Search Documents:")
 }
-*/
+
+func doAndSearchRequest(cluster *riak.Cluster) error {
+	cmd, err := riak.NewSearchCommandBuilder().
+		WithIndexName("famous").
+		WithQuery("leader_b:true AND age_i:[30 TO *]").
+		Build();
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+	
+	return printDocs(cmd, "AND Search Documents:")
+}
+
+func doPaginatedSearchRequest(cluster *riak.Cluster) error {
+	rowsPerPage := uint32(2)
+	page := uint32(2)
+	start := rowsPerPage * (page - uint32(1))
+
+	cmd, err := riak.NewSearchCommandBuilder().
+		WithIndexName("famous").
+		WithQuery("*:*").
+		WithStart(start).
+		WithNumRows(rowsPerPage).
+		Build();
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+	
+	return printDocs(cmd, "Paginated Search Documents:")
+}
+
+func deleteIndex(cluster *riak.Cluster) error {
+	cmd, err := riak.NewStoreBucketPropsCommandBuilder().
+		WithBucketType("animals").
+		WithBucket("cats").
+		WithSearchIndex("_dont_index_").
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+
+	cmd, err = riak.NewDeleteIndexCommandBuilder().
+		WithIndexName("famous").
+		Build()
+	if err != nil {
+		return err
+	}
+
+	return cluster.Execute(cmd)
+}
