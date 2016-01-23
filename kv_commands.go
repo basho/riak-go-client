@@ -1131,7 +1131,6 @@ func (cmd *SecondaryIndexQueryCommand) Name() string {
 
 func (cmd *SecondaryIndexQueryCommand) constructPbRequest() (proto.Message, error) {
 	if cmd.protobuf.GetKey() != nil {
-		cmd.protobuf.Key = []byte(cmd.protobuf.GetKey())
 		cmd.protobuf.Qtype = rpbRiakKV.RpbIndexReq_eq.Enum()
 	} else {
 		cmd.protobuf.Qtype = rpbRiakKV.RpbIndexReq_range.Enum()
@@ -1235,6 +1234,7 @@ type SecondaryIndexQueryResponse struct {
 //		WithBucket("myBucket").
 //		WithIndexName("myIndexName").
 //		WithIndexKey("myIndexKey").
+//		WithIntIndexKey(1234).
 //		Build()
 type SecondaryIndexQueryCommandBuilder struct {
 	protobuf *rpbRiakKV.RpbIndexReq
@@ -1283,6 +1283,12 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithIntRange(min int64, max in
 // WithIndexKey defines the index to search against
 func (builder *SecondaryIndexQueryCommandBuilder) WithIndexKey(key string) *SecondaryIndexQueryCommandBuilder {
 	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+// WithIntIndexKey defines the integer index to search against
+func (builder *SecondaryIndexQueryCommandBuilder) WithIntIndexKey(key int) *SecondaryIndexQueryCommandBuilder {
+	builder.protobuf.Key = []byte(strconv.Itoa(key))
 	return builder
 }
 
