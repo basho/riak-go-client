@@ -78,12 +78,21 @@ func main() {
 		ErrExit(err)
 	}
 
-	/*
-		querying_exact_match,
-		querying_range,
-		querying_range_with_terms,
-		querying_pagination
-	*/
+	if err := queryingExactMatch(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := queryingRange(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := queryingRangeWithTerms(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err := queryingPagination(cluster); err != nil {
+		ErrExit(err)
+	}
 }
 
 func ErrExit(err error) {
@@ -93,6 +102,16 @@ func ErrExit(err error) {
 
 func printIndexQueryResults(cmd riak.Command) {
 	sciq := cmd.(*riak.SecondaryIndexQueryCommand)
+	if sciq.Response == nil {
+		fmt.Println("[DevUsing2i] print query results: no response")
+		return
+	}
+
+	if sciq.Response.Results == nil {
+		fmt.Println("[DevUsing2i] print query results: no results")
+		return
+	}
+
 	for _, r := range sciq.Response.Results {
 		fmt.Println("[DevUsing2i] index key:", string(r.IndexKey), "object key:", string(r.ObjectKey))
 	}
@@ -154,7 +173,7 @@ func indexingObjects(cluster *riak.Cluster) error {
 	o1.AddToIntIndex("field2_int", 1001)
 
 	o2 := &riak.Object{
-		Key:   "Moe",
+		Key:   "moe",
 		Value: []byte("My name is Moe"),
 	}
 	o2.AddToIndex("Field1_bin", "val2")
@@ -261,170 +280,147 @@ func incorrectDataType(cluster *riak.Cluster) error {
 	return nil
 }
 
-/*
-    function querying_pagination(async_cb) {
+func queryingExactMatch(cluster *riak.Cluster) error {
+	c1, c1err := riak.NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("indexes").
+		WithBucket("people").
+		WithIndexName("field1_bin").
+		WithIndexKey("val1").
+		Build()
+	if c1err != nil {
+		return c1err
+	}
 
-        function do_query(continuation) {
-            var binIdxCmdBuilder = new Riak.Commands.KV.SecondaryIndexQuery.Builder()
-                .withBucketType('indexes')
-                .withBucket('tweets')
-                .withIndexName('hashtags_bin')
-                .withRange('ri', 'ru')
-                .withMaxResults(5)
-                .withCallback(pagination_cb);
+	c2, c2err := riak.NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("indexes").
+		WithBucket("people").
+		WithIndexName("field2_int").
+		WithIntIndexKey(1001).
+		Build()
+	if c2err != nil {
+		return c2err
+	}
 
-            if (continuation) {
-                binIdxCmdBuilder.withContinuation(continuation);
-            }
+	wg := &sync.WaitGroup{}
+	cmds := [...]riak.Command{c1, c2}
 
-            client.execute(binIdxCmdBuilder.build());
-        }
+	for _, cmd := range cmds {
+		args := &riak.Async{
+			Command: cmd,
+			Wait:    wg,
+		}
+		if err := cluster.ExecuteAsync(args); err != nil {
+			return err
+		}
+	}
 
-        var query_keys = [];
-        function pagination_cb(err, rslt) {
-            if (err) {
-                logger.error("[DevUsing2i] pagination_cb err: '%s'", err);
-                return;
-            }
+	wg.Wait()
 
-            if (rslt.done) {
-                query_keys.forEach(function (key) {
-                    logger.info("[DevUsing2i] pagination_cb 2i query key: '%s'", key);
-                });
-                query_keys = [];
+	for _, cmd := range cmds {
+		printIndexQueryResults(cmd)
+	}
 
-                if (rslt.continuation) {
-                    do_query(rslt.continuation);
-                }
-
-                async_cb();
-            }
-
-            if (rslt.values.length > 0) {
-                Array.prototype.push.apply(query_keys,
-                    rslt.values.map(function (value) {
-                        return value.objectKey;
-                    }));
-            }
-        }
-
-        do_query();
-    }
-
-    function querying_exact_match(async_cb) {
-        var f1 = function (acb) {
-            var binIdxCmd = new Riak.Commands.KV.SecondaryIndexQuery.Builder()
-                .withBucketType('indexes')
-                .withBucket('people')
-                .withIndexName('field1_bin')
-                .withIndexKey('val1')
-                .withCallback(function (err, rslt) {
-                    query_cb(err, rslt);
-                    if (!rslt || rslt.done) {
-                        acb();
-                    }
-                }).build();
-            client.execute(binIdxCmd);
-        };
-
-        var f2 = function (acb) {
-            var intIdxCmd = new Riak.Commands.KV.SecondaryIndexQuery.Builder()
-                .withBucketType('indexes')
-                .withBucket('people')
-                .withIndexName('field2_int')
-                .withIndexKey(1001)
-                .withCallback(function (err, rslt) {
-                    query_cb(err, rslt);
-                    if (!rslt || rslt.done) {
-                        acb();
-                    }
-                }).build();
-            client.execute(intIdxCmd);
-        };
-
-        async.parallel([f1, f2], function (err, rslts) {
-            if (err) {
-                logger.error("[DevUsing2i] querying_exact_match err: '%s'", err);
-            }
-            async_cb();
-        });
-    }
-
-    function querying_range_with_terms(async_cb) {
-        var binIdxCmd = new Riak.Commands.KV.SecondaryIndexQuery.Builder()
-            .withBucketType('indexes')
-            .withBucket('tweets')
-            .withIndexName('hashtags_bin')
-            .withRange('rock', 'rocl')
-            .withReturnKeyAndIndex(true)
-            .withCallback(function (err, rslt) {
-                query_cb(err, rslt);
-                if (!rslt || rslt.done) {
-                    async_cb();
-                }
-            }).build();
-        client.execute(binIdxCmd);
-    }
-
-    function querying_range(async_cb) {
-        var f1 = function (acb) {
-            var binIdxCmd = new Riak.Commands.KV.SecondaryIndexQuery.Builder()
-                .withBucketType('indexes')
-                .withBucket('people')
-                .withIndexName('field1_bin')
-                .withRange('val2', 'val4')
-                .withCallback(function (err, rslt) {
-                    query_cb(err, rslt);
-                    if (!rslt || rslt.done) {
-                        acb();
-                    }
-                }).build();
-            client.execute(binIdxCmd);
-        };
-
-        var f2 = function (acb) {
-            var intIdxCmd = new Riak.Commands.KV.SecondaryIndexQuery.Builder()
-                .withBucketType('indexes')
-                .withBucket('people')
-                .withIndexName('field2_int')
-                .withRange(1002, 1004)
-                .withCallback(function (err, rslt) {
-                    query_cb(err, rslt);
-                    if (!rslt || rslt.done) {
-                        acb();
-                    }
-                }).build();
-            client.execute(intIdxCmd);
-        };
-
-        async.parallel([f1, f2], function (err, rslts) {
-            if (err) {
-                logger.error("[DevUsing2i] querying_range err: '%s'", err);
-            }
-            async_cb();
-        });
-    }
-
-    var query_keys = [];
-    function query_cb(err, rslt) {
-        if (err) {
-            logger.error("[DevUsing2i] query_cb err: '%s'", err);
-            return;
-        }
-
-        if (rslt.done) {
-            query_keys.forEach(function (key) {
-                logger.info("[DevUsing2i] query_cb 2i query key: '%s'", key);
-            });
-            query_keys = [];
-        }
-
-        if (rslt.values.length > 0) {
-            Array.prototype.push.apply(query_keys,
-                rslt.values.map(function (value) {
-                    return value.objectKey;
-                }));
-        }
-    }
+	return nil
 }
-*/
+
+func queryingRange(cluster *riak.Cluster) error {
+	c1, c1err := riak.NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("indexes").
+		WithBucket("people").
+		WithIndexName("field1_bin").
+		WithRange("val2", "val4").
+		Build()
+	if c1err != nil {
+		return c1err
+	}
+
+	c2, c2err := riak.NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("indexes").
+		WithBucket("people").
+		WithIndexName("field2_int").
+		WithIntRange(1002, 1004).
+		Build()
+	if c2err != nil {
+		return c2err
+	}
+
+	wg := &sync.WaitGroup{}
+	cmds := [...]riak.Command{c1, c2}
+
+	for _, cmd := range cmds {
+		args := &riak.Async{
+			Command: cmd,
+			Wait:    wg,
+		}
+		if err := cluster.ExecuteAsync(args); err != nil {
+			return err
+		}
+	}
+
+	wg.Wait()
+
+	for _, cmd := range cmds {
+		printIndexQueryResults(cmd)
+	}
+
+	return nil
+}
+
+func queryingRangeWithTerms(cluster *riak.Cluster) error {
+	cmd, err := riak.NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("indexes").
+		WithBucket("tweets").
+		WithIndexName("hashtags_bin").
+		WithRange("rock", "rocl").
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+
+	printIndexQueryResults(cmd)
+	return nil
+}
+
+func doPaginatedQuery(cluster *riak.Cluster, continuation []byte) error {
+	builder := riak.NewSecondaryIndexQueryCommandBuilder().
+		WithBucketType("indexes").
+		WithBucket("tweets").
+		WithIndexName("hashtags_bin").
+		WithRange("ri", "ru").
+		WithMaxResults(5)
+
+	if continuation != nil && len(continuation) > 0 {
+		builder.WithContinuation(continuation)
+	}
+
+	cmd, err := builder.Build()
+	if err != nil {
+		return err
+	}
+
+	if err := cluster.Execute(cmd); err != nil {
+		return err
+	}
+
+	printIndexQueryResults(cmd)
+
+	sciq := cmd.(*riak.SecondaryIndexQueryCommand)
+	if sciq.Response == nil {
+		return errors.New("[DevUsing2i] expected response but did not get one")
+	}
+
+	rc := sciq.Response.Continuation 
+	if rc != nil && len(rc) > 0 {
+		return doPaginatedQuery(cluster, sciq.Response.Continuation)
+	}
+
+	return nil
+}
+
+func queryingPagination(cluster *riak.Cluster) error {
+	return doPaginatedQuery(cluster, nil)
+}
