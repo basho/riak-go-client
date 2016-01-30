@@ -41,7 +41,7 @@ func TestConnectionManagerDoesNotExpirePastMinConnections(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Millisecond * 250)
-		if actual, expected := cm.connectionCount, minConnections; actual != expected {
+		if actual, expected := cm.connectionCounter.count(), minConnections; actual != expected {
 			t.Errorf("got: %v, expected: %v", actual, expected)
 		}
 	}

@@ -2,6 +2,7 @@ package riak
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -15,6 +16,35 @@ const (
 	cmShutdown
 	cmError
 )
+
+type connectionCounter struct {
+	value uint16
+	mutex sync.RWMutex
+}
+
+func (counter *connectionCounter) count() uint16 {
+	counter.mutex.RLock()
+	defer counter.mutex.RUnlock()
+	return counter.value
+}
+
+func (counter *connectionCounter) increment() uint16 {
+	counter.mutex.Lock()
+	defer counter.mutex.Unlock()
+	if counter.value < math.MaxUint16 {
+		counter.value++
+	}
+	return counter.value
+}
+
+func (counter *connectionCounter) decrement() uint16 {
+	counter.mutex.Lock()
+	defer counter.mutex.Unlock()
+	if counter.value > 0 {
+		counter.value--
+	}
+	return counter.value
+}
 
 type connectionManagerOptions struct {
 	addr                   *net.TCPAddr
@@ -39,7 +69,7 @@ type connectionManager struct {
 	stopChan               chan struct{}
 	q                      *queue
 	expireTicker           *time.Ticker
-	connectionCount        uint16
+	connectionCounter      connectionCounter
 	sync.RWMutex
 	stateData
 }
@@ -144,8 +174,8 @@ func (cm *connectionManager) stop() error {
 		if err := conn.close(); err != nil {
 			logErr("[connectionManager] error when closing connection in stop()", err)
 		}
-		cm.connectionCount--
-		if cm.connectionCount == 0 {
+
+		if cm.connectionCounter.decrement() == 0 {
 			return true, false
 		} else {
 			return false, false
@@ -164,9 +194,7 @@ func (cm *connectionManager) stop() error {
 }
 
 func (cm *connectionManager) count() uint16 {
-	cm.RLock()
-	defer cm.RUnlock()
-	return cm.connectionCount
+	return cm.connectionCounter.count()
 }
 
 func (cm *connectionManager) create() (*connection, error) {
@@ -177,7 +205,7 @@ func (cm *connectionManager) create() (*connection, error) {
 	cm.Lock()
 	defer cm.Unlock()
 
-	if cm.connectionCount >= cm.maxConnections {
+	if cm.connectionCounter.count() >= cm.maxConnections {
 		return nil, ErrConnMgrAllConnectionsInUse
 	}
 
@@ -186,7 +214,7 @@ func (cm *connectionManager) create() (*connection, error) {
 		return nil, err
 	}
 
-	cm.connectionCount++
+	cm.connectionCounter.increment()
 	return conn, nil
 }
 
@@ -240,9 +268,7 @@ func (cm *connectionManager) put(conn *connection) error {
 	} else {
 		// shutting down
 		logDebug("[connectionManager]", "(%v)|Connection returned during shutdown.", cm)
-		cm.Lock()
-		defer cm.Unlock()
-		cm.connectionCount--
+		cm.connectionCounter.decrement()
 		conn.close() // NB: discard error
 	}
 	return nil
@@ -250,9 +276,7 @@ func (cm *connectionManager) put(conn *connection) error {
 
 func (cm *connectionManager) remove(conn *connection) error {
 	if cm.isStateLessThan(cmShuttingDown) {
-		cm.Lock()
-		defer cm.Unlock()
-		cm.connectionCount--
+		cm.connectionCounter.decrement()
 		return conn.close()
 	}
 	return nil
@@ -286,10 +310,10 @@ func (cm *connectionManager) expireConnections() {
 				conn := v.(*connection)
 				cm.Lock()
 				defer cm.Unlock()
-				if cm.connectionCount > cm.minConnections {
+				if cm.connectionCounter.count() > cm.minConnections {
 					// expire connection if not available or if it has passed idle timeout
 					if !conn.available() || (now.Sub(conn.lastUsed) >= cm.idleTimeout) {
-						cm.connectionCount--
+						cm.connectionCounter.decrement()
 						if err := conn.close(); err != nil {
 							logErr("[connectionManager]", err)
 						}
