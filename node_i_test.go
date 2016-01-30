@@ -11,8 +11,6 @@ import (
 func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 	o := &testListenerOpts{
 		test: t,
-		host: "127.0.0.1",
-		port: 13340,
 	}
 	tl := newTestListener(o)
 	tl.start()
@@ -20,7 +18,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 
 	count := uint16(16)
 	opts := &NodeOptions{
-		RemoteAddress:       tl.addr,
+		RemoteAddress:       tl.addr.String(),
 		MinConnections:      count,
 		MaxConnections:      count,
 		IdleTimeout:         tenSeconds,
@@ -108,7 +106,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 
 	go func() {
 		opts := &NodeOptions{
-			RemoteAddress:       tl.addr,
+			RemoteAddress:       tl.addr.String(),
 			MinConnections:      0,
 			HealthCheckInterval: 50 * time.Millisecond,
 		}
@@ -168,6 +166,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	close(stateChan)
 }
 
+// TODO FUTURE NB: this has been a bit of a Heisen-test
 func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 	o := &testListenerOpts{
 		test: t,
@@ -182,8 +181,8 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 
 	var node *Node
 	opts := &NodeOptions{
-		ConnectTimeout: 125 * time.Millisecond,
-		RemoteAddress:  tl.addr,
+		ConnectTimeout: 500 * time.Millisecond,
+		RemoteAddress:  "127.0.0.1:13338", // NB: can't use tl.addr since it isn't set until start()
 	}
 	var err error
 	node, err = NewNode(opts)
@@ -224,8 +223,8 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 					nodeIsRunningCount++
 				}
 				if nodeIsRunningCount == 2 {
-					// This is the second time node has entered nodeRunning state, so it must have recovered via the health check
-					logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SUCCESS node recovered via health check")
+					// This is the second time node has entered nodeRunning state, so it must have recovered via the healthcheck
+					logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SUCCESS node recovered via healthcheck")
 					close(recoveredChan)
 					break
 				}
@@ -234,7 +233,7 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 					tl.start()
 				}
 			} else {
-				t.Error("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck] stateChan closed before recovering via health check")
+				t.Error("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck] stateChan closed before recovering via healthcheck")
 				break
 			}
 		}
@@ -246,7 +245,7 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 		node.setStateFunc = origSetStateFunc
 		node.stop()
 		close(stateChan)
-	case <-time.After(10 * time.Second):
+	case <-time.After(2 * time.Second):
 		t.Error("test timed out")
 	}
 }

@@ -1,8 +1,16 @@
 package riak
 
+import (
+	"fmt"
+	"sync/atomic"
+)
+
+var c uint64 = 0
+
 type commandImpl struct {
 	error          error
 	success        bool
+	name           string
 	remainingTries byte
 	lastNode       *Node
 }
@@ -21,6 +29,20 @@ func (cmd *commandImpl) onError(err error) {
 	if !cmd.hasRemainingTries() {
 		cmd.error = err
 	}
+}
+
+func (cmd *commandImpl) getName(n string) string {
+	if n == "" {
+		panic("getName: n must not be empty")
+	}
+	if cmd.name == "" {
+		if EnableDebugLogging == true {
+			cmd.name = fmt.Sprintf("%s-%v", n, atomic.AddUint64(&c, 1))
+		} else {
+			cmd.name = n
+		}
+	}
+	return cmd.name
 }
 
 func (cmd *commandImpl) setRemainingTries(tries byte) {

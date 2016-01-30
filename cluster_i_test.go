@@ -5,6 +5,7 @@ package riak
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -132,7 +133,6 @@ func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
 
 func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	nodeCount := 3
-	port := uint16(6666)
 	listenerChan := make(chan bool, nodeCount)
 	listeners := make([]*testListener, nodeCount)
 	defer func() {
@@ -150,18 +150,15 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 		}
 		o := &testListenerOpts{
 			test:   t,
-			host:   "127.0.0.1",
-			port:   port,
 			onConn: onConn,
 		}
 		tl := newTestListener(o)
 		tl.start()
 
-		port++
 		listeners[i] = tl
 
 		nodeOptions := &NodeOptions{
-			RemoteAddress:  tl.addr,
+			RemoteAddress:  tl.addr.String(),
 			MinConnections: 0,
 			MaxConnections: 1,
 		}
@@ -310,7 +307,7 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 	go func() {
 		var err error
 		nodeOpts := &NodeOptions{
-			RemoteAddress:  tl.addr,
+			RemoteAddress:  tl.addr.String(),
 			MinConnections: 0,
 		}
 		node, err = NewNode(nodeOpts)
@@ -377,6 +374,78 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 		} else {
 			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "stateChan CLOSED")
 			break
+		}
+	}
+}
+
+func TestRecoverFromReadTimeout(t *testing.T) {
+	var connects int32 = 0
+	var nc int32 = 2
+
+	var onConn = func(c net.Conn) bool {
+		var j int32 = atomic.AddInt32(&connects, 1)
+		if j%nc == 0 {
+			time.Sleep(time.Millisecond * 150)
+		}
+		if readWritePingResp(t, c, false) {
+			return false // connection is not done
+		} else {
+			return true // close connection
+		}
+	}
+
+	nodes := make([]*Node, 2)
+
+	for i := 0; i < int(nc); i++ {
+		o := &testListenerOpts{
+			test:   t,
+			onConn: onConn,
+		}
+		tl := newTestListener(o)
+		defer tl.stop()
+		tl.start()
+
+		nodeOpts := &NodeOptions{
+			MinConnections: 1,
+			MaxConnections: 2,
+			RequestTimeout: time.Millisecond * 100,
+			RemoteAddress:  tl.addr.String(),
+		}
+		var node *Node
+		var err error
+		if node, err = NewNode(nodeOpts); err != nil {
+			t.Fatal(err)
+		}
+		if node == nil {
+			t.Fatal()
+		}
+		nodes[i] = node
+	}
+
+	opts := &ClusterOptions{
+		Nodes:             nodes,
+		ExecutionAttempts: 3,
+	}
+
+	cluster, err := NewCluster(opts)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	if err := cluster.Start(); err != nil {
+		t.Error(err.Error())
+	}
+
+	for i := 0; i < 16; i++ {
+		command := &PingCommand{}
+		if err := cluster.Execute(command); err != nil {
+			t.Error(err.Error())
 		}
 	}
 }

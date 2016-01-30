@@ -31,7 +31,7 @@ func (a *Async) onExecute() {
 
 func (a *Async) onRetry() {
 	d := a.rb.Duration()
-	logDebug("[Async]", "onRetry sleep: %v", d)
+	logDebug("[Async]", "onRetry cmd: %s sleep: %v", a.Command.Name(), d)
 	time.Sleep(d)
 }
 
@@ -48,15 +48,15 @@ func (a *Async) onEnqueued() {
 
 func (a *Async) done(err error) {
 	if err != nil {
-		logDebug("[Async]", "done error:", err)
+		logDebugln("[Async]", "done error:", err)
 		a.Error = err
 	}
 	if a.Done != nil {
-		logDebug("[Cluster]", "signaling a.Done channel with '%s'", a.Command.Name())
+		logDebug("[Async]", "signaling a.Done channel with '%s'", a.Command.Name())
 		a.Done <- a.Command
 	}
 	if a.Wait != nil {
-		logDebug("[Cluster]", "signaling a.Wait WaitGroup for '%s'", a.Command.Name())
+		logDebug("[Async]", "signaling a.Wait WaitGroup for '%s'", a.Command.Name())
 		a.Wait.Done()
 	}
 }

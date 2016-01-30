@@ -24,7 +24,7 @@ type UpdateCounterCommand struct {
 
 // Name identifies this command
 func (cmd *UpdateCounterCommand) Name() string {
-	return "UpdateCounter"
+	return cmd.getName("UpdateCounter")
 }
 
 func (cmd *UpdateCounterCommand) constructPbRequest() (proto.Message, error) {
@@ -241,7 +241,7 @@ type FetchCounterCommand struct {
 
 // Name identifies this command
 func (cmd *FetchCounterCommand) Name() string {
-	return "FetchCounter"
+	return cmd.getName("FetchCounter")
 }
 
 func (cmd *FetchCounterCommand) constructPbRequest() (proto.Message, error) {
@@ -386,7 +386,7 @@ type UpdateSetCommand struct {
 
 // Name identifies this command
 func (cmd *UpdateSetCommand) Name() string {
-	return "UpdateSet"
+	return cmd.getName("UpdateSet")
 }
 
 func (cmd *UpdateSetCommand) constructPbRequest() (proto.Message, error) {
@@ -567,7 +567,7 @@ type FetchSetCommand struct {
 
 // Name identifies this command
 func (cmd *FetchSetCommand) Name() string {
-	return "FetchSet"
+	return cmd.getName("FetchSet")
 }
 
 func (cmd *FetchSetCommand) constructPbRequest() (proto.Message, error) {
@@ -716,7 +716,7 @@ type UpdateMapCommand struct {
 
 // Name identifies this command
 func (cmd *UpdateMapCommand) Name() string {
-	return "UpdateMap"
+	return cmd.getName("UpdateMap")
 }
 
 func (cmd *UpdateMapCommand) constructPbRequest() (proto.Message, error) {
@@ -1258,7 +1258,7 @@ type FetchMapCommand struct {
 
 // Name identifies this command
 func (cmd *FetchMapCommand) Name() string {
-	return "FetchMap"
+	return cmd.getName("FetchMap")
 }
 
 func (cmd *FetchMapCommand) constructPbRequest() (proto.Message, error) {

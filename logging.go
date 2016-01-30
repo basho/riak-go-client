@@ -15,6 +15,12 @@ var EnableDebugLogging = false
 var errLogger = log.New(os.Stderr, "", log.LstdFlags)
 var logger = log.New(os.Stderr, "", log.LstdFlags)
 
+func init() {
+	if debugEnvVar := os.Getenv("RIAK_GO_CLIENT_DEBUG"); debugEnvVar != "" {
+		EnableDebugLogging = true
+	}
+}
+
 // setLogWriter replaces the default log writer, which uses Stderr
 func setLogWriter(out io.Writer) {
 	logger = log.New(out, "", log.LstdFlags)
@@ -27,10 +33,10 @@ func logDebug(source, format string, v ...interface{}) {
 	}
 }
 
-// logDebug writes string debug messages using Println
-func logDebugln(source, err string) {
+// logDebugln writes string debug messages using Println
+func logDebugln(source string, v ...interface{}) {
 	if EnableDebugLogging {
-		logger.Println("[DEBUG]", source, err)
+		logger.Println("[DEBUG]", source, v)
 	}
 }
 
@@ -40,8 +46,8 @@ func logWarn(source, format string, v ...interface{}) {
 }
 
 // logWarnln writes string warning messages using Println
-func logWarnln(source, err string) {
-	logger.Println("[WARNING]", source, err)
+func logWarnln(source string, v ...interface{}) {
+	logger.Println("[WARNING]", source, v)
 }
 
 // logError writes formatted string error messages using Printf
@@ -54,7 +60,7 @@ func logErr(source string, err error) {
 	errLogger.Println("[ERROR]", source, err)
 }
 
-// logErrorln writes a string error message using Println
-func logErrorln(source string, err string) {
-	errLogger.Println("[ERROR]", source, err)
+// logErrorln writes an error message using Println
+func logErrorln(source string, v ...interface{}) {
+	errLogger.Println("[ERROR]", source, v)
 }
