@@ -4,6 +4,8 @@
 Release Notes
 =============
 
+* 1.5.1 - Following PRs addressed:
+ * [Improve connection error handling](https://github.com/basho/riak-go-client/pull/48)
 * 1.5.0 - Following PRs addressed:
  * [Add `FetchBucketTypePropsCommand` and `StoreBucketTypePropsCommand`](https://github.com/basho/riak-go-client/pull/42)
 * 1.4.0 - Following issues / PRs addressed:

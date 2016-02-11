@@ -20,21 +20,14 @@ func TestSuccessfulConnection(t *testing.T) {
 	}
 	o := &testListenerOpts{
 		test:   t,
-		host:   "127.0.0.1",
-		port:   1337,
 		onConn: onConn,
 	}
 	tl := newTestListener(o)
 	defer tl.stop()
 	tl.start()
 
-	addr, err := net.ResolveTCPAddr("tcp4", tl.addr)
-	if err != nil {
-		t.Error(err.Error())
-	}
-
 	opts := &connectionOptions{
-		remoteAddress: addr,
+		remoteAddress: tl.addr.(*net.TCPAddr),
 	}
 
 	conn, err := newConnection(opts)
@@ -66,20 +59,13 @@ func TestConnectionClosed(t *testing.T) {
 	}
 	o := &testListenerOpts{
 		test:   t,
-		host:   "127.0.0.1",
-		port:   1338,
 		onConn: onConn,
 	}
 	tl := newTestListener(o)
 	tl.start()
 
-	addr, err := net.ResolveTCPAddr("tcp4", tl.addr)
-	if err != nil {
-		t.Error(err.Error())
-	}
-
 	opts := &connectionOptions{
-		remoteAddress: addr,
+		remoteAddress: tl.addr.(*net.TCPAddr),
 	}
 
 	conn, err := newConnection(opts)

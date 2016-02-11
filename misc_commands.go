@@ -24,7 +24,7 @@ type PingCommand struct {
 
 // Name identifies this command
 func (cmd *PingCommand) Name() string {
-	return "Ping"
+	return cmd.getName("Ping")
 }
 
 func (cmd *PingCommand) getRequestCode() byte {
@@ -54,7 +54,7 @@ type startTlsCommand struct {
 
 // Name identifies this command
 func (cmd *startTlsCommand) Name() string {
-	return "StartTls"
+	return cmd.getName("StartTls")
 }
 
 func (cmd *startTlsCommand) constructPbRequest() (msg proto.Message, err error) {
@@ -217,7 +217,7 @@ type FetchBucketTypePropsCommand struct {
 }
 
 func (cmd *FetchBucketTypePropsCommand) Name() string {
-	return "FetchBucketTypeProps"
+	return cmd.getName("FetchBucketTypeProps")
 }
 
 func (cmd *FetchBucketTypePropsCommand) constructPbRequest() (proto.Message, error) {
@@ -290,7 +290,7 @@ type FetchBucketPropsCommand struct {
 }
 
 func (cmd *FetchBucketPropsCommand) Name() string {
-	return "FetchBucketProps"
+	return cmd.getName("FetchBucketProps")
 }
 
 func (cmd *FetchBucketPropsCommand) constructPbRequest() (proto.Message, error) {
@@ -370,7 +370,7 @@ type StoreBucketTypePropsCommand struct {
 
 // Name identifies this command
 func (cmd *StoreBucketTypePropsCommand) Name() string {
-	return "StoreBucketTypeProps"
+	return cmd.getName("StoreBucketTypeProps")
 }
 
 func (cmd *StoreBucketTypePropsCommand) constructPbRequest() (proto.Message, error) {
@@ -402,7 +402,7 @@ type StoreBucketPropsCommand struct {
 
 // Name identifies this command
 func (cmd *StoreBucketPropsCommand) Name() string {
-	return "StoreBucketProps"
+	return cmd.getName("StoreBucketProps")
 }
 
 func (cmd *StoreBucketPropsCommand) constructPbRequest() (proto.Message, error) {
@@ -881,7 +881,7 @@ type ResetBucketCommand struct {
 
 // Name identifies this command
 func (cmd *ResetBucketCommand) Name() string {
-	return "ResetBucket"
+	return cmd.getName("ResetBucket")
 }
 
 func (cmd *ResetBucketCommand) getRequestCode() byte {
@@ -929,7 +929,7 @@ type authCommand struct {
 }
 
 func (cmd *authCommand) Name() string {
-	return "Auth"
+	return cmd.getName("Auth")
 }
 
 func (cmd *authCommand) constructPbRequest() (msg proto.Message, err error) {

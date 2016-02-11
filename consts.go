@@ -12,7 +12,7 @@ const (
 	defaultBucketType             = "default"
 	defaultRemotePort             = uint16(8087)
 	defaultMinConnections         = uint16(1)
-	defaultMaxConnections         = uint16(8096)
+	defaultMaxConnections         = uint16(256)
 	defaultIdleExpirationInterval = fiveSeconds
 	defaultIdleTimeout            = tenSeconds
 	defaultConnectTimeout         = threeSeconds

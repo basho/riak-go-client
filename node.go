@@ -38,11 +38,7 @@ type Node struct {
 	healthCheckBuilder  CommandBuilder
 	authOptions         *AuthOptions
 	stopChan            chan struct{}
-	// Health Check
-	expireTicker *time.Ticker
-	// Connections
-	cm *connectionManager
-	// State
+	cm                  *connectionManager
 	stateData
 }
 
@@ -187,7 +183,7 @@ func (n *Node) execute(cmd Command) (bool, error) {
 				return true, err
 			default:
 				// NB: must be a non-Riak, non-Client error
-				if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
+				if isTemporaryNetError(err) {
 					// Don't nuke the connection on a Temporary error
 					if cmErr := n.cm.put(conn); cmErr != nil {
 						logErr("[Node]", cmErr)
@@ -207,12 +203,12 @@ func (n *Node) execute(cmd Command) (bool, error) {
 }
 
 func (n *Node) doHealthCheck() {
-	// NB: ensure we're not already health checking or shutting down
+	// NB: ensure we're not already healthchecking or shutting down
 	if n.isStateLessThan(nodeHealthChecking) {
 		n.setState(nodeHealthChecking)
 		go n.healthCheck()
 	} else {
-		logDebug("[Node]", "(%v) is already health checking or shutting down.", n)
+		logDebug("[Node]", "(%v) is already healthchecking or shutting down.", n)
 	}
 }
 
@@ -236,9 +232,9 @@ func (n *Node) getHealthCheckCommand() (hc Command) {
 }
 
 func (n *Node) ensureHealthCheckCanContinue() bool {
-	// ensure we ARE health checking
+	// ensure we ARE healthchecking
 	if !n.isCurrentState(nodeHealthChecking) {
-		logDebug("[Node]", "(%v) expected health checking state, got %s", n, n.stateData.String())
+		logDebug("[Node]", "(%v) expected healthchecking state, got %s", n, n.stateData.String())
 		return false
 	}
 	return true
@@ -247,42 +243,47 @@ func (n *Node) ensureHealthCheckCanContinue() bool {
 // private goroutine funcs
 
 func (n *Node) healthCheck() {
-
-	logDebug("[Node]", "(%v) starting health check routine", n)
+	logDebug("[Node]", "(%v) starting healthcheck routine", n)
 
 	healthCheckTicker := time.NewTicker(n.healthCheckInterval)
 	defer healthCheckTicker.Stop()
-	healthCheckCommand := n.getHealthCheckCommand()
 
 	for {
-		if n.ensureHealthCheckCanContinue() {
-			select {
-			case <-n.stopChan:
-				logDebug("[Node]", "(%v) health check quitting", n)
+		if !n.ensureHealthCheckCanContinue() {
+			return
+		}
+		select {
+		case <-n.stopChan:
+			logDebug("[Node]", "(%v) healthcheck quitting", n)
+			return
+		case t := <-healthCheckTicker.C:
+			if !n.ensureHealthCheckCanContinue() {
 				return
-			case t := <-healthCheckTicker.C:
-				if n.ensureHealthCheckCanContinue() {
-					logDebug("[Node]", "(%v) running health check at %v", n, t)
-					conn, cerr := n.cm.createConnection()
-					if cerr != nil {
-						conn.close()
-						logDebug("[Node]", "(%v) failed healthcheck in create(false), err: %v", n, cerr)
-					} else {
-						defer conn.close()
-						if n.ensureHealthCheckCanContinue() {
-							if hcerr := conn.execute(healthCheckCommand); hcerr != nil || !healthCheckCommand.Success() {
-								logDebug("[Node]", "(%v) failed healthcheck in execute, err: %v", n, hcerr)
-							} else {
-								n.setState(nodeRunning)
-								logDebug("[Node]", "(%v) healthcheck success", n)
-							}
-						}
-						return
+			}
+			logDebug("[Node]", "(%v) running healthcheck at %v", n, t)
+			conn, cerr := n.cm.createConnection()
+			if cerr != nil {
+				conn.close()
+				logError("[Node]", "(%v) failed healthcheck in createConnection, err: %v", n, cerr)
+			} else {
+				if !n.ensureHealthCheckCanContinue() {
+					conn.close()
+					return
+				}
+				hcmd := n.getHealthCheckCommand()
+				logDebug("[Node]", "(%v) healthcheck executing %v", n, hcmd.Name())
+				if hcerr := conn.execute(hcmd); hcerr != nil || !hcmd.Success() {
+					conn.close()
+					logError("[Node]", "(%v) failed healthcheck, err: %v", n, hcerr)
+				} else {
+					conn.close()
+					logDebug("[Node]", "(%v) healthcheck success, err: %v, success: %v", n, hcerr, hcmd.Success())
+					if n.ensureHealthCheckCanContinue() {
+						n.setState(nodeRunning)
 					}
+					return
 				}
 			}
-		} else {
-			return
 		}
 	}
 }

@@ -42,6 +42,7 @@ type Cluster struct {
 
 // Cluster errors
 var (
+	ErrClusterNodesMustBeNonNil               = newClientError("[Cluster] all nodes must be non-nil", nil)
 	ErrClusterCommandRequired                 = newClientError("[Cluster] Command must be non-nil", nil)
 	ErrClusterAsyncRequiresChannelOrWaitGroup = newClientError("[Cluster] ExecuteAsync argument requires a channel or sync.WaitGroup to indicate completion", nil)
 	ErrClusterEnqueueWhileShuttingDown        = newClientError("[Cluster] will not enqueue command, shutting down", nil)
@@ -87,6 +88,12 @@ func NewCluster(options *ClusterOptions) (*Cluster, error) {
 			return nil, nerr
 		}
 		c.nodes = append(c.nodes, defaultNode)
+	}
+
+	for _, node := range c.nodes {
+		if node == nil {
+			return nil, ErrClusterNodesMustBeNonNil
+		}
 	}
 
 	if options.QueueMaxDepth > 0 {

@@ -93,6 +93,7 @@ func (c *connection) connect() (err error) {
 	} else {
 		logDebug("[Connection]", "connected to: %s", c.addr)
 		if err = c.startTls(); err != nil {
+			c.close()
 			c.setState(connInactive)
 			return
 		}
@@ -151,7 +152,6 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
-	logDebug("[Connection]", "execute command: %v", cmd.Name())
 	c.setInFlight(true)
 	defer c.setInFlight(false)
 	c.lastUsed = time.Now()
@@ -245,7 +245,9 @@ func (c *connection) read() ([]byte, error) {
 	if err == nil {
 		return c.dataBuf, nil
 	} else {
-		c.setState(connInactive)
+		if !isTemporaryNetError(err) {
+			c.setState(connInactive)
+		}
 		return nil, err
 	}
 }
@@ -259,12 +261,12 @@ func (c *connection) write(data []byte) error {
 	count, err := c.conn.Write(data)
 	if err != nil {
 		logDebug("[Connection]", "error in write: '%v'", err)
-		c.setState(connInactive)
+		if !isTemporaryNetError(err) {
+			c.setState(connInactive)
+		}
 		return err
 	}
 	if count != len(data) {
-		// connection will eventually be expired
-		c.setState(connInactive)
 		return newClientError(fmt.Sprintf("[Connection] data length: %d, only wrote: %d", len(data), count), nil)
 	}
 	return nil

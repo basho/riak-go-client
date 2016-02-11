@@ -32,6 +32,7 @@ func (q *queue) _do_enqueue(v interface{}) error {
 		return newClientError("attempt to enqueue when queue is full", nil)
 	}
 	q.queueChan <- v
+	// logDebug("[queue]", "post-_do_ENqueue len: %v", len(q.queueChan))
 	return nil
 }
 
@@ -47,6 +48,7 @@ func (q *queue) _do_dequeue() (interface{}, error) {
 		if !ok {
 			return nil, newClientError("attempt to dequeue from closed queue", nil)
 		}
+		// logDebug("[queue]", "post-DEqueue len: %v", len(q.queueChan))
 		return v, nil
 	default:
 		return nil, nil

@@ -36,7 +36,7 @@ type StoreIndexCommand struct {
 
 // Name identifies this command
 func (cmd *StoreIndexCommand) Name() string {
-	return "StoreIndex"
+	return cmd.getName("StoreIndex")
 }
 
 func (cmd *StoreIndexCommand) constructPbRequest() (proto.Message, error) {
@@ -129,7 +129,7 @@ type FetchIndexCommand struct {
 
 // Name identifies this command
 func (cmd *FetchIndexCommand) Name() string {
-	return "FetchIndex"
+	return cmd.getName("FetchIndex")
 }
 
 func (cmd *FetchIndexCommand) constructPbRequest() (proto.Message, error) {
@@ -213,7 +213,7 @@ type DeleteIndexCommand struct {
 
 // Name identifies this command
 func (cmd *DeleteIndexCommand) Name() string {
-	return "DeleteIndex"
+	return cmd.getName("DeleteIndex")
 }
 
 func (cmd *DeleteIndexCommand) constructPbRequest() (proto.Message, error) {
@@ -280,7 +280,7 @@ type StoreSchemaCommand struct {
 
 // Name identifies this command
 func (cmd *StoreSchemaCommand) Name() string {
-	return "StoreSchema"
+	return cmd.getName("StoreSchema")
 }
 
 func (cmd *StoreSchemaCommand) constructPbRequest() (proto.Message, error) {
@@ -357,7 +357,7 @@ type FetchSchemaCommand struct {
 
 // Name identifies this command
 func (cmd *FetchSchemaCommand) Name() string {
-	return "FetchSchema"
+	return cmd.getName("FetchSchema")
 }
 
 func (cmd *FetchSchemaCommand) constructPbRequest() (proto.Message, error) {
@@ -436,7 +436,7 @@ type SearchCommand struct {
 
 // Name identifies this command
 func (cmd *SearchCommand) Name() string {
-	return "Search"
+	return cmd.getName("Search")
 }
 
 func (cmd *SearchCommand) constructPbRequest() (proto.Message, error) {

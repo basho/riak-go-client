@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
@@ -58,7 +59,7 @@ type testListener struct {
 	test   *testing.T
 	host   string
 	port   uint16
-	addr   string
+	addr   net.Addr
 	onConn func(c net.Conn) bool
 	ln     net.Listener
 }
@@ -68,10 +69,7 @@ func newTestListener(o *testListenerOpts) *testListener {
 		panic("testing object is required")
 	}
 	if o.host == "" {
-		o.test.Fatal("host is required")
-	}
-	if o.port == 0 {
-		o.test.Fatal("port is required")
+		o.host = "127.0.0.1"
 	}
 	if o.onConn == nil {
 		o.onConn = func(c net.Conn) bool {
@@ -81,36 +79,45 @@ func newTestListener(o *testListenerOpts) *testListener {
 			return true // connection is done
 		}
 	}
-	tl := &testListener{
+	t := &testListener{
 		test:   o.test,
 		host:   o.host,
 		port:   o.port,
-		addr:   net.JoinHostPort(o.host, strconv.Itoa(int(o.port))),
 		onConn: o.onConn,
 	}
-	return tl
+	if t.port > 0 {
+		addrstr := net.JoinHostPort(t.host, strconv.Itoa(int(t.port)))
+		if addr, err := net.ResolveTCPAddr("tcp4", addrstr); err != nil {
+			t.test.Fatal(err)
+		} else {
+			t.addr = addr
+		}
+	}
+	return t
 }
 
 func (t *testListener) start() {
 	if t.test == nil {
 		panic("testing object is required")
 	}
-	if t.addr == "" {
-		panic("addr is required")
-	}
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
-	ln, err := net.Listen("tcp", t.addr)
+	addr := net.JoinHostPort(t.host, strconv.Itoa(int(t.port)))
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		t.test.Fatal(err)
 	} else {
 		t.ln = ln
+		t.addr = ln.Addr()
+		tcpaddr := t.addr.(*net.TCPAddr)
+		t.port = uint16(tcpaddr.Port)
 	}
 
 	go func() {
 		wg.Done()
+		logDebug("[testListener]", "(%v) started", t.addr)
 		for {
 			c, err := t.ln.Accept()
 			if err != nil {
@@ -137,6 +144,7 @@ func (t *testListener) stop() {
 	if err := t.ln.Close(); err != nil {
 		t.test.Error(err)
 	}
+	logDebug("[testListener]", "(%v) stopped", t.addr)
 }
 
 func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool) {
@@ -145,6 +153,7 @@ func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool
 		if err == io.EOF {
 			c.Close()
 		} else {
+			logErr("[testListener]", err)
 			t.Error(err)
 		}
 		success = false
@@ -153,7 +162,6 @@ func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool
 	data := buildRiakMessage(rpbCode_RpbPingResp, nil)
 	count, err := c.Write(data)
 	if err == nil {
-		// logDebug("[readWritePingResp]", "wrote message '%v', count '%d'", data, count)
 		success = true
 	} else {
 		t.Error(err)
@@ -175,7 +183,6 @@ func readClientMessage(c net.Conn) (err error) {
 	var count int = 0
 	if count, err = io.ReadFull(c, sizeBuf); err == nil && count == 4 {
 		messageLength := binary.BigEndian.Uint32(sizeBuf)
-		// logDebug("[readClientMessage]", "read size '%v', count '%d', messageLength '%d'", sizeBuf, count, messageLength)
 		data := make([]byte, messageLength)
 		count, err = io.ReadFull(c, data)
 		if err != nil {
@@ -183,10 +190,9 @@ func readClientMessage(c net.Conn) (err error) {
 		} else if uint32(count) != messageLength {
 			err = fmt.Errorf("[readClientMessage] message length: %d, only read: %d", messageLength, count)
 		}
-		// logDebug("[readClientMessage]", "read message '%v', count '%d'", data, count)
 	} else {
 		if err != io.EOF {
-			err = errors.New(fmt.Sprintf("[readClientMessage] error reading command size into sizeBuf: count %d, err %s", count, err))
+			err = errors.New(fmt.Sprintf("[readClientMessage] error reading command size into sizeBuf: count %d, err %s, errtype %v", count, err, reflect.TypeOf(err)))
 		}
 	}
 	return

@@ -29,7 +29,7 @@ type FetchValueCommand struct {
 
 // Name identifies this command
 func (cmd *FetchValueCommand) Name() string {
-	return "FetchValue"
+	return cmd.getName("FetchValue")
 }
 
 func (cmd *FetchValueCommand) constructPbRequest() (proto.Message, error) {
@@ -255,7 +255,7 @@ type StoreValueCommand struct {
 
 // Name identifies this command
 func (cmd *StoreValueCommand) Name() string {
-	return "StoreValue"
+	return cmd.getName("StoreValue")
 }
 
 func (cmd *StoreValueCommand) constructPbRequest() (msg proto.Message, err error) {
@@ -526,7 +526,7 @@ type DeleteValueCommand struct {
 
 // Name identifies this command
 func (cmd *DeleteValueCommand) Name() string {
-	return "DeleteValue"
+	return cmd.getName("DeleteValue")
 }
 
 func (cmd *DeleteValueCommand) constructPbRequest() (msg proto.Message, err error) {
@@ -687,7 +687,7 @@ type ListBucketsCommand struct {
 
 // Name identifies this command
 func (cmd *ListBucketsCommand) Name() string {
-	return "ListBuckets"
+	return cmd.getName("ListBuckets")
 }
 
 func (cmd *ListBucketsCommand) isDone() bool {
@@ -840,7 +840,7 @@ type ListKeysCommand struct {
 
 // Name identifies this command
 func (cmd *ListKeysCommand) Name() string {
-	return "ListKeys"
+	return cmd.getName("ListKeys")
 }
 
 func (cmd *ListKeysCommand) isDone() bool {
@@ -1000,7 +1000,7 @@ type FetchPreflistCommand struct {
 
 // Name identifies this command
 func (cmd *FetchPreflistCommand) Name() string {
-	return "FetchPreflist"
+	return cmd.getName("FetchPreflist")
 }
 
 func (cmd *FetchPreflistCommand) constructPbRequest() (proto.Message, error) {
@@ -1126,7 +1126,7 @@ func (cmd *SecondaryIndexQueryCommand) isDone() bool {
 
 // Name identifies this command
 func (cmd *SecondaryIndexQueryCommand) Name() string {
-	return "SecondaryIndexQuery"
+	return cmd.getName("SecondaryIndexQuery")
 }
 
 func (cmd *SecondaryIndexQueryCommand) constructPbRequest() (proto.Message, error) {
@@ -1383,7 +1383,7 @@ type MapReduceCommand struct {
 
 // Name identifies this command
 func (cmd *MapReduceCommand) Name() string {
-	return "MapReduce"
+	return cmd.getName("MapReduce")
 }
 
 func (cmd *MapReduceCommand) isDone() bool {

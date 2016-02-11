@@ -2,6 +2,7 @@ package riak
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -15,6 +16,57 @@ const (
 	cmShutdown
 	cmError
 )
+
+type connectionCounter struct {
+	value uint16
+	sync.RWMutex
+}
+
+func (counter *connectionCounter) count() uint16 {
+	counter.RLock()
+	defer counter.RUnlock()
+	return counter.value
+}
+
+func (counter *connectionCounter) isGreaterThanOrEqual(c uint16) bool {
+	counter.RLock()
+	defer counter.RUnlock()
+	return counter.value >= c
+}
+
+func (counter *connectionCounter) isGreaterThan(c uint16) bool {
+	counter.RLock()
+	defer counter.RUnlock()
+	return counter.value > c
+}
+
+func (counter *connectionCounter) isLessThan(c uint16) bool {
+	counter.RLock()
+	defer counter.RUnlock()
+	return counter.value < c
+}
+
+func (counter *connectionCounter) increment() uint16 {
+	counter.Lock()
+	defer counter.Unlock()
+	if counter.value < math.MaxUint16 {
+		counter.value++
+	} else {
+		logDebug("[connectionCounter]", "increment would have exceeded %v", math.MaxUint16)
+	}
+	return counter.value
+}
+
+func (counter *connectionCounter) decrement() uint16 {
+	counter.Lock()
+	defer counter.Unlock()
+	if counter.value > 0 {
+		counter.value--
+	} else {
+		logDebug("[connectionCounter]", "decrement would result in negative count")
+	}
+	return counter.value
+}
 
 type connectionManagerOptions struct {
 	addr                   *net.TCPAddr
@@ -39,7 +91,7 @@ type connectionManager struct {
 	stopChan               chan struct{}
 	q                      *queue
 	expireTicker           *time.Ticker
-	connectionCount        uint16
+	connectionCounter      connectionCounter
 	sync.RWMutex
 	stateData
 }
@@ -107,13 +159,15 @@ func (cm *connectionManager) start() error {
 	for i := uint16(0); i < cm.minConnections; i++ {
 		conn, err := cm.create()
 		if err == nil {
-			cm.put(conn)
+			if perr := cm.put(conn); perr != nil {
+				logErr("[connectionManager]", perr)
+			}
 		} else {
 			logErr("[connectionManager]", err)
 		}
 	}
 	cm.expireTicker = time.NewTicker(cm.idleExpirationInterval)
-	go cm.expireConnections()
+	go cm.manageConnections()
 	cm.setState(cmRunning)
 	return nil
 }
@@ -144,8 +198,8 @@ func (cm *connectionManager) stop() error {
 		if err := conn.close(); err != nil {
 			logErr("[connectionManager] error when closing connection in stop()", err)
 		}
-		cm.connectionCount--
-		if cm.connectionCount == 0 {
+
+		if cm.connectionCounter.decrement() == 0 {
 			return true, false
 		} else {
 			return false, false
@@ -164,9 +218,7 @@ func (cm *connectionManager) stop() error {
 }
 
 func (cm *connectionManager) count() uint16 {
-	cm.RLock()
-	defer cm.RUnlock()
-	return cm.connectionCount
+	return cm.connectionCounter.count()
 }
 
 func (cm *connectionManager) create() (*connection, error) {
@@ -177,7 +229,7 @@ func (cm *connectionManager) create() (*connection, error) {
 	cm.Lock()
 	defer cm.Unlock()
 
-	if cm.connectionCount >= cm.maxConnections {
+	if cm.connectionCounter.isGreaterThanOrEqual(cm.maxConnections) {
 		return nil, ErrConnMgrAllConnectionsInUse
 	}
 
@@ -186,7 +238,7 @@ func (cm *connectionManager) create() (*connection, error) {
 		return nil, err
 	}
 
-	cm.connectionCount++
+	cm.connectionCounter.increment()
 	return conn, nil
 }
 
@@ -217,8 +269,10 @@ func (cm *connectionManager) get() (*connection, error) {
 			// we found our connection, don't re-queue
 			return true, false
 		} else {
-			// keep going and re-queue conn
-			return false, true
+			// Remove connection, don't re-queue, keep going
+			cm.remove(conn)
+			conn = nil // GH-47
+			return false, false
 		}
 	}
 	err := cm.q.iterate(f)
@@ -240,9 +294,7 @@ func (cm *connectionManager) put(conn *connection) error {
 	} else {
 		// shutting down
 		logDebug("[connectionManager]", "(%v)|Connection returned during shutdown.", cm)
-		cm.Lock()
-		defer cm.Unlock()
-		cm.connectionCount--
+		cm.connectionCounter.decrement()
 		conn.close() // NB: discard error
 	}
 	return nil
@@ -250,29 +302,27 @@ func (cm *connectionManager) put(conn *connection) error {
 
 func (cm *connectionManager) remove(conn *connection) error {
 	if cm.isStateLessThan(cmShuttingDown) {
-		cm.Lock()
-		defer cm.Unlock()
-		cm.connectionCount--
+		cm.connectionCounter.decrement()
 		return conn.close()
 	}
 	return nil
 }
 
-func (cm *connectionManager) expireConnections() {
-	logDebug("[connectionManager]", "connection expiration routine is starting")
+func (cm *connectionManager) manageConnections() {
+	logDebug("[connectionManager]", "connection expiration/creation routine is starting")
 	for {
 		select {
 		case <-cm.stopChan:
-			logDebug("[connectionManager]", "connection expiration routine is quitting")
+			logDebug("[connectionManager]", "connection expiration/creation routine is quitting")
 			return
 		case t := <-cm.expireTicker.C:
 			if !cm.isStateLessThan(cmShuttingDown) {
-				logDebug("[connectionManager]", "(%v) connection expiration routine is quitting.", cm)
+				logDebug("[connectionManager]", "(%v) connection expiration/creation routine is quitting.", cm)
 			}
 
 			logDebug("[connectionManager]", "(%v) expiring connections at %v", cm, t)
 
-			expiredCount := uint16(0)
+			count := uint16(0)
 			now := time.Now()
 
 			var f = func(v interface{}) (bool, bool) {
@@ -286,14 +336,14 @@ func (cm *connectionManager) expireConnections() {
 				conn := v.(*connection)
 				cm.Lock()
 				defer cm.Unlock()
-				if cm.connectionCount > cm.minConnections {
+				if cm.connectionCounter.isGreaterThan(cm.minConnections) {
 					// expire connection if not available or if it has passed idle timeout
 					if !conn.available() || (now.Sub(conn.lastUsed) >= cm.idleTimeout) {
-						cm.connectionCount--
+						cm.connectionCounter.decrement()
 						if err := conn.close(); err != nil {
 							logErr("[connectionManager]", err)
 						}
-						expiredCount++
+						count++
 						return false, false // don't break, don't re-enqueue
 					} else {
 						return false, true // don't break, re-enqueue
@@ -306,7 +356,24 @@ func (cm *connectionManager) expireConnections() {
 				logErr("[connectionManager]", err)
 			}
 
-			logDebug("[connectionManager]", "(%v) expired %d connections.", cm, expiredCount)
+			logDebug("[connectionManager]", "(%v) expired %d connections.", cm, count)
+
+			if cm.connectionCounter.isLessThan(cm.minConnections) {
+				logDebug("[connectionManager]", "(%v) creating connections to reach mininum at %v", cm, t)
+				count = 0
+				for cm.connectionCounter.isLessThan(cm.minConnections) {
+					conn, err := cm.create()
+					if err == nil {
+						count++
+						if perr := cm.put(conn); perr != nil {
+							logErr("[connectionManager]", perr)
+						}
+					} else {
+						logErr("[connectionManager]", err)
+					}
+				}
+				logDebug("[connectionManager]", "(%v) created %d connections.", cm, count)
+			}
 
 			if !cm.isStateLessThan(cmShuttingDown) {
 				logDebug("[connectionManager]", "(%v) connection expiration routine is quitting.", cm)

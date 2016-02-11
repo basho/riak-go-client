@@ -81,3 +81,4 @@ Thank you to all of our contributors!
 * [Sergio C. Arteaga](https://github.com/tegioz)
 * [Andrew Zeneski](https://github.com/andrewzeneski)
 * [Кирилл Александрович Журавлев](https://github.com/kazhuravlev)
+* [Paul Guelpa](https://github.com/pguelpa)
