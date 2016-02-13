@@ -26,6 +26,7 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		RequestTimeout:      tenSeconds,
 		HealthCheckInterval: time.Millisecond * 500,
 		HealthCheckBuilder:  &PingCommandBuilder{},
+		TempNetErrorRetries: 128,
 	}
 	node, err := NewNode(opts)
 	if err != nil {
@@ -69,6 +70,9 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 		}
 		if expected, actual := conn.requestTimeout, opts.RequestTimeout; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)
+		}
+		if got, want := conn.tempNetErrorRetries, opts.TempNetErrorRetries; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 		return false, true
 	}
@@ -245,7 +249,7 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 		node.setStateFunc = origSetStateFunc
 		node.stop()
 		close(stateChan)
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Error("test timed out")
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"net"
 	"time"
 
+	backoff "github.com/basho/backoff"
 	proto "github.com/golang/protobuf/proto"
 )
 
@@ -26,10 +27,11 @@ type AuthOptions struct {
 }
 
 type connectionOptions struct {
-	remoteAddress  *net.TCPAddr
-	connectTimeout time.Duration
-	requestTimeout time.Duration
-	authOptions    *AuthOptions
+	remoteAddress       *net.TCPAddr
+	connectTimeout      time.Duration
+	requestTimeout      time.Duration
+	authOptions         *AuthOptions
+	tempNetErrorRetries uint16
 }
 
 const (
@@ -40,16 +42,17 @@ const (
 )
 
 type connection struct {
-	addr           *net.TCPAddr
-	conn           net.Conn
-	connectTimeout time.Duration
-	requestTimeout time.Duration
-	authOptions    *AuthOptions
-	sizeBuf        []byte
-	dataBuf        []byte
-	active         bool
-	inFlight       bool
-	lastUsed       time.Time
+	addr                *net.TCPAddr
+	conn                net.Conn
+	connectTimeout      time.Duration
+	requestTimeout      time.Duration
+	tempNetErrorRetries uint16
+	authOptions         *AuthOptions
+	sizeBuf             []byte
+	dataBuf             []byte
+	active              bool
+	inFlight            bool
+	lastUsed            time.Time
 	stateData
 }
 
@@ -66,15 +69,19 @@ func newConnection(options *connectionOptions) (*connection, error) {
 	if options.requestTimeout == 0 {
 		options.requestTimeout = defaultRequestTimeout
 	}
+	if options.tempNetErrorRetries == 0 {
+		options.tempNetErrorRetries = defaultTempNetErrorRetries
+	}
 	c := &connection{
-		addr:           options.remoteAddress,
-		connectTimeout: options.connectTimeout,
-		requestTimeout: options.requestTimeout,
-		authOptions:    options.authOptions,
-		sizeBuf:        make([]byte, 4),
-		dataBuf:        make([]byte, defaultInitBuffer),
-		inFlight:       false,
-		lastUsed:       time.Now(),
+		addr:                options.remoteAddress,
+		connectTimeout:      options.connectTimeout,
+		requestTimeout:      options.requestTimeout,
+		tempNetErrorRetries: options.tempNetErrorRetries,
+		authOptions:         options.authOptions,
+		sizeBuf:             make([]byte, 4),
+		dataBuf:             make([]byte, defaultInitBuffer),
+		inFlight:            false,
+		lastUsed:            time.Now(),
 	}
 	c.initStateData("connCreated", "connTlsStarting", "connActive", "connInactive")
 	c.setState(connCreated)
@@ -206,8 +213,8 @@ func (c *connection) execute(cmd Command) (err error) {
 
 // FUTURE: we should also take currently executing Command (Riak operation)
 // timeout into account
-func (c *connection) setReadDeadline() {
-	c.conn.SetReadDeadline(time.Now().Add(c.requestTimeout))
+func (c *connection) setReadDeadline(d time.Duration) {
+	c.conn.SetReadDeadline(time.Now().Add(d))
 }
 
 // NB: This will read one full pb message from Riak, or error in doing so
@@ -219,36 +226,48 @@ func (c *connection) read() ([]byte, error) {
 	var err error
 	var count int
 	var messageLength uint32
+	var d time.Duration = c.requestTimeout
+	b := &backoff.Backoff{
+		Min:    d,
+		Jitter: true,
+	}
+	t := uint16(0)
 
-	c.setReadDeadline()
-	if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
-		messageLength = binary.BigEndian.Uint32(c.sizeBuf)
-		if messageLength > uint32(cap(c.dataBuf)) {
-			logDebug("[Connection]", "allocating larger dataBuf of size %d", messageLength)
-			c.dataBuf = make([]byte, messageLength)
+	for {
+		c.setReadDeadline(d)
+		if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
+			messageLength = binary.BigEndian.Uint32(c.sizeBuf)
+			if messageLength > uint32(cap(c.dataBuf)) {
+				logDebug("[Connection]", "allocating larger dataBuf of size %d", messageLength)
+				c.dataBuf = make([]byte, messageLength)
+			} else {
+				c.dataBuf = c.dataBuf[0:messageLength]
+			}
+			// FUTURE: large object warning / error
+			c.setReadDeadline(d)
+			count, err = io.ReadFull(c.conn, c.dataBuf)
 		} else {
-			c.dataBuf = c.dataBuf[0:messageLength]
+			if err == nil && count != 4 {
+				err = newClientError(fmt.Sprintf("[Connection] expected to read 4 bytes, only read: %d", count), nil)
+			}
 		}
-		// FUTURE: large object warning / error
-		c.setReadDeadline()
-		count, err = io.ReadFull(c.conn, c.dataBuf)
-	} else {
-		if err == nil && count != 4 {
-			err = newClientError(fmt.Sprintf("[Connection] expected to read 4 bytes, only read: %d", count), nil)
+
+		if err == nil && count != int(messageLength) {
+			err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count), nil)
 		}
-	}
 
-	if err == nil && count != int(messageLength) {
-		err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count), nil)
-	}
+		if err == nil {
+			return c.dataBuf, nil
+		}
 
-	if err == nil {
-		return c.dataBuf, nil
-	} else {
-		if !isTemporaryNetError(err) {
+		if t < c.tempNetErrorRetries && isTemporaryNetError(err) {
+			d = b.Duration()
+			t++
+			logDebug("[Connection]", "temporary error, re-try %v, new read deadline: %v", t, d)
+		} else {
 			c.setState(connInactive)
+			return nil, err
 		}
-		return nil, err
 	}
 }
 
@@ -256,14 +275,11 @@ func (c *connection) write(data []byte) error {
 	if !c.available() {
 		return ErrCannotWrite
 	}
-	// FUTURE: we should also take currently executing Command (Riak operation) timeout into account
+	// TODO FUTURE: we should also take currently executing Command (Riak operation) timeout into account
 	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
 	count, err := c.conn.Write(data)
 	if err != nil {
-		logDebug("[Connection]", "error in write: '%v'", err)
-		if !isTemporaryNetError(err) {
-			c.setState(connInactive)
-		}
+		c.setState(connInactive)
 		return err
 	}
 	if count != len(data) {

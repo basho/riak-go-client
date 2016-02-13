@@ -385,7 +385,7 @@ func TestRecoverFromReadTimeout(t *testing.T) {
 	var onConn = func(c net.Conn) bool {
 		var j int32 = atomic.AddInt32(&connects, 1)
 		if j%nc == 0 {
-			time.Sleep(time.Millisecond * 150)
+			time.Sleep(time.Second * 1)
 		}
 		if readWritePingResp(t, c, false) {
 			return false // connection is not done
@@ -408,6 +408,7 @@ func TestRecoverFromReadTimeout(t *testing.T) {
 		nodeOpts := &NodeOptions{
 			MinConnections: 1,
 			MaxConnections: 2,
+			TempNetErrorRetries: 8,
 			RequestTimeout: time.Millisecond * 100,
 			RemoteAddress:  tl.addr.String(),
 		}
@@ -442,7 +443,7 @@ func TestRecoverFromReadTimeout(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 8; i++ {
 		command := &PingCommand{}
 		if err := cluster.Execute(command); err != nil {
 			t.Error(err.Error())

@@ -22,6 +22,7 @@ type NodeOptions struct {
 	RemoteAddress       string
 	MinConnections      uint16
 	MaxConnections      uint16
+	TempNetErrorRetries uint16
 	IdleTimeout         time.Duration
 	ConnectTimeout      time.Duration
 	RequestTimeout      time.Duration
@@ -43,12 +44,13 @@ type Node struct {
 }
 
 var defaultNodeOptions = &NodeOptions{
-	RemoteAddress:  defaultRemoteAddress,
-	MinConnections: defaultMinConnections,
-	MaxConnections: defaultMaxConnections,
-	IdleTimeout:    defaultIdleTimeout,
-	ConnectTimeout: defaultConnectTimeout,
-	RequestTimeout: defaultRequestTimeout,
+	RemoteAddress:       defaultRemoteAddress,
+	MinConnections:      defaultMinConnections,
+	MaxConnections:      defaultMaxConnections,
+	TempNetErrorRetries: defaultTempNetErrorRetries,
+	IdleTimeout:         defaultIdleTimeout,
+	ConnectTimeout:      defaultConnectTimeout,
+	RequestTimeout:      defaultRequestTimeout,
 }
 
 // NewNode is a factory function that takes a NodeOptions struct and returns a Node struct
@@ -76,12 +78,13 @@ func NewNode(options *NodeOptions) (*Node, error) {
 		}
 
 		connMgrOpts := &connectionManagerOptions{
-			addr:           resolvedAddress,
-			minConnections: options.MinConnections,
-			maxConnections: options.MaxConnections,
-			idleTimeout:    options.IdleTimeout,
-			connectTimeout: options.ConnectTimeout,
-			requestTimeout: options.RequestTimeout,
+			addr:                resolvedAddress,
+			minConnections:      options.MinConnections,
+			maxConnections:      options.MaxConnections,
+			tempNetErrorRetries: options.TempNetErrorRetries,
+			idleTimeout:         options.IdleTimeout,
+			connectTimeout:      options.ConnectTimeout,
+			requestTimeout:      options.RequestTimeout,
 		}
 
 		var cm *connectionManager
@@ -182,18 +185,13 @@ func (n *Node) execute(cmd Command) (bool, error) {
 				}
 				return true, err
 			default:
-				// NB: must be a non-Riak, non-Client error
-				if isTemporaryNetError(err) {
-					// Don't nuke the connection on a Temporary error
-					if cmErr := n.cm.put(conn); cmErr != nil {
-						logErr("[Node]", cmErr)
-					}
-				} else {
-					if cmErr := n.cm.remove(conn); cmErr != nil {
-						logErr("[Node]", cmErr)
-					}
+				// NB: must be a non-Riak, non-Client error, close the connection
+				if cmErr := n.cm.remove(conn); cmErr != nil {
+					logErr("[Node]", cmErr)
 				}
-				n.doHealthCheck()
+				if !isTemporaryNetError(err) {
+					n.doHealthCheck()
+				}
 				return true, err
 			}
 		}

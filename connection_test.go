@@ -11,9 +11,10 @@ func TestCreateConnection(t *testing.T) {
 		t.Error(err.Error())
 	}
 	opts := &connectionOptions{
-		remoteAddress:  addr,
-		connectTimeout: tenSeconds,
-		requestTimeout: tenSeconds,
+		remoteAddress:       addr,
+		connectTimeout:      tenSeconds,
+		requestTimeout:      tenSeconds,
+		tempNetErrorRetries: 10,
 	}
 	var conn *connection
 	if conn, err = newConnection(opts); err == nil {
@@ -34,6 +35,9 @@ func TestCreateConnection(t *testing.T) {
 		}
 		if expected, actual := false, conn.inFlight; expected != actual {
 			t.Errorf("expected %v, got: %v", expected, actual)
+		}
+		if got, want := conn.tempNetErrorRetries, opts.tempNetErrorRetries; got != want {
+			t.Errorf("got %v, want %v", got, want)
 		}
 	} else {
 		t.Error(err.Error())
