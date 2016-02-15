@@ -91,7 +91,7 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		if connects == 1 {
 			c.Close()
 		} else {
-			readWritePingResp(t, c, true)
+			readWriteResp(t, c, true)
 		}
 		return true
 	}
