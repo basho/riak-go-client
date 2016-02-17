@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-	"time"
 
 	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
 	proto "github.com/golang/protobuf/proto"
@@ -23,8 +22,7 @@ func integrationTestsBuildCluster() *Cluster {
 	var cluster *Cluster
 	var err error
 	nodeOpts := &NodeOptions{
-		RemoteAddress:  getRiakAddress(),
-		RequestTimeout: time.Second * 20,
+		RemoteAddress: getRiakAddress(),
 	}
 	var node *Node
 	node, err = NewNode(nodeOpts)

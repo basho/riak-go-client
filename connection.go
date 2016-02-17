@@ -162,14 +162,24 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
-	if err = c.write(message); err != nil {
+	// Use the *greater* of the connection's request timeout
+	// or the Command's timeout
+	t := c.requestTimeout
+	if tc, ok := cmd.(timeoutCommand); ok {
+		tc := tc.getTimeout()
+		if tc > t {
+			t = tc
+		}
+	}
+
+	if err = c.write(message, t); err != nil {
 		return
 	}
 
 	var response []byte
 	var decoded proto.Message
 	for {
-		response, err = c.read() // NB: response *will* have entire pb message
+		response, err = c.read(t) // NB: response *will* have entire pb message
 		if err != nil {
 			cmd.onError(err)
 			return
@@ -206,12 +216,12 @@ func (c *connection) execute(cmd Command) (err error) {
 
 // FUTURE: we should also take currently executing Command (Riak operation)
 // timeout into account
-func (c *connection) setReadDeadline() {
-	c.conn.SetReadDeadline(time.Now().Add(c.requestTimeout))
+func (c *connection) setReadDeadline(t time.Duration) {
+	c.conn.SetReadDeadline(time.Now().Add(t))
 }
 
 // NB: This will read one full pb message from Riak, or error in doing so
-func (c *connection) read() ([]byte, error) {
+func (c *connection) read(t time.Duration) ([]byte, error) {
 	if !c.available() {
 		return nil, ErrCannotRead
 	}
@@ -220,7 +230,7 @@ func (c *connection) read() ([]byte, error) {
 	var count int
 	var messageLength uint32
 
-	c.setReadDeadline()
+	c.setReadDeadline(t)
 	if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
 		messageLength = binary.BigEndian.Uint32(c.sizeBuf)
 		if messageLength > uint32(cap(c.dataBuf)) {
@@ -230,7 +240,7 @@ func (c *connection) read() ([]byte, error) {
 			c.dataBuf = c.dataBuf[0:messageLength]
 		}
 		// FUTURE: large object warning / error
-		c.setReadDeadline()
+		c.setReadDeadline(t)
 		count, err = io.ReadFull(c.conn, c.dataBuf)
 	} else {
 		if err == nil && count != 4 {
@@ -252,12 +262,12 @@ func (c *connection) read() ([]byte, error) {
 	}
 }
 
-func (c *connection) write(data []byte) error {
+func (c *connection) write(data []byte, t time.Duration) error {
 	if !c.available() {
 		return ErrCannotWrite
 	}
 	// FUTURE: we should also take currently executing Command (Riak operation) timeout into account
-	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
+	c.conn.SetWriteDeadline(time.Now().Add(t))
 	count, err := c.conn.Write(data)
 	if err != nil {
 		logDebug("[Connection]", "error in write: '%v'", err)

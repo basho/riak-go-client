@@ -22,6 +22,7 @@ type ConflictResolver interface {
 // FetchValueCommand is used to fetch / get a value from Riak KV
 type FetchValueCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *FetchValueResponse
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
@@ -114,6 +115,7 @@ type FetchValueResponse struct {
 //		WithKey("myKey").
 //		Build()
 type FetchValueCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
 }
@@ -214,9 +216,10 @@ func (builder *FetchValueCommandBuilder) WithReturnDeletedVClock(returnDeletedVC
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *FetchValueCommandBuilder) WithTimeout(timeout time.Duration) *FetchValueCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -237,7 +240,13 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &FetchValueCommand{protobuf: builder.protobuf, resolver: builder.resolver}, nil
+	return &FetchValueCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+		resolver: builder.resolver,
+	}, nil
 }
 
 // StoreValue
@@ -247,6 +256,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 // StoreValueCommand used to store a value from Riak KV.
 type StoreValueCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *StoreValueResponse
 	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
@@ -363,6 +373,7 @@ type StoreValueResponse struct {
 //		Build()
 type StoreValueCommandBuilder struct {
 	value    *Object
+	timeout  time.Duration
 	protobuf *rpbRiakKV.RpbPutReq
 	resolver ConflictResolver
 }
@@ -476,9 +487,10 @@ func (builder *StoreValueCommandBuilder) WithReturnHead(returnHead bool) *StoreV
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *StoreValueCommandBuilder) WithTimeout(timeout time.Duration) *StoreValueCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -508,7 +520,10 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 		return nil, err
 	}
 	return &StoreValueCommand{
-		value:    builder.value,
+		value: builder.value,
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
 		protobuf: builder.protobuf,
 		resolver: builder.resolver}, nil
 }
@@ -520,6 +535,7 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 // DeleteValueCommand is used to delete a value from Riak KV.
 type DeleteValueCommand struct {
 	commandImpl
+	timeoutImpl
 	Response bool
 	protobuf *rpbRiakKV.RpbDelReq
 }
@@ -561,6 +577,7 @@ func (cmd *DeleteValueCommand) getResponseProtobufMessage() proto.Message {
 //		WithVClock(vclock).
 //		Build()
 type DeleteValueCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakKV.RpbDelReq
 }
 
@@ -654,9 +671,10 @@ func (builder *DeleteValueCommandBuilder) WithRw(rw uint32) *DeleteValueCommandB
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *DeleteValueCommandBuilder) WithTimeout(timeout time.Duration) *DeleteValueCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -669,7 +687,12 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &DeleteValueCommand{protobuf: builder.protobuf}, nil
+	return &DeleteValueCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
 }
 
 // ListBuckets
@@ -831,6 +854,7 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 // ListKeysCommand is used to fetch a list of keys within a bucket from Riak KV
 type ListKeysCommand struct {
 	commandImpl
+	timeoutImpl
 	Response  *ListKeysResponse
 	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
@@ -923,6 +947,7 @@ type ListKeysResponse struct {
 //		WithCallback(cb).
 //		Build()
 type ListKeysCommandBuilder struct {
+	timeout   time.Duration
 	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
 	callback  func(buckets []string) error
@@ -962,9 +987,10 @@ func (builder *ListKeysCommandBuilder) WithCallback(callback func([]string) erro
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *ListKeysCommandBuilder) WithTimeout(timeout time.Duration) *ListKeysCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -981,6 +1007,9 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 		return nil, newClientError("ListKeysCommand requires a callback when streaming.", nil)
 	}
 	return &ListKeysCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
 		protobuf:  builder.protobuf,
 		streaming: builder.streaming,
 		callback:  builder.callback,
@@ -1110,6 +1139,7 @@ func (builder *FetchPreflistCommandBuilder) Build() (Command, error) {
 // SecondaryIndexQueryCommand is used to query for keys from Riak KV using secondary indexes
 type SecondaryIndexQueryCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *SecondaryIndexQueryResponse
 	protobuf *rpbRiakKV.RpbIndexReq
 	callback func([]*SecondaryIndexQueryResult) error
@@ -1237,6 +1267,7 @@ type SecondaryIndexQueryResponse struct {
 //		WithIntIndexKey(1234).
 //		Build()
 type SecondaryIndexQueryCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakKV.RpbIndexReq
 	callback func([]*SecondaryIndexQueryResult) error
 }
@@ -1339,9 +1370,10 @@ func (builder *SecondaryIndexQueryCommandBuilder) WithTermRegex(regex string) *S
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *SecondaryIndexQueryCommandBuilder) WithTimeout(timeout time.Duration) *SecondaryIndexQueryCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -1362,6 +1394,9 @@ func (builder *SecondaryIndexQueryCommandBuilder) Build() (Command, error) {
 		return nil, newClientError("SecondaryIndexQueryCommand requires a callback when streaming.", nil)
 	}
 	return &SecondaryIndexQueryCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
 		protobuf: builder.protobuf,
 		callback: builder.callback,
 	}, nil

@@ -3,6 +3,7 @@ package riak
 import (
 	"fmt"
 	"sync/atomic"
+	"time"
 )
 
 var c uint64 = 0
@@ -67,4 +68,12 @@ func (cmd *commandImpl) setLastNode(lastNode *Node) {
 
 func (cmd *commandImpl) getLastNode() *Node {
 	return cmd.lastNode
+}
+
+type timeoutImpl struct {
+	timeout time.Duration
+}
+
+func (cmd *timeoutImpl) getTimeout() time.Duration {
+	return cmd.timeout
 }
