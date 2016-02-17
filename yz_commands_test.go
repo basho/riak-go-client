@@ -23,6 +23,11 @@ func TestBuildRpbYokozunaIndexPutReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -58,6 +63,11 @@ func TestBuildRpbYokozunaIndexGetReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -121,6 +131,11 @@ func TestBuildRpbYokozunaIndexDeleteReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -148,6 +163,11 @@ func TestBuildRpbYokozunaSchemaPutReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -179,6 +199,11 @@ func TestBuildRpbYokozunaSchemaGetReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -243,6 +268,11 @@ func TestBuildRpbSearchQueryReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); ok {
+		t.Errorf("got %v, want cmd %s to NOT implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())

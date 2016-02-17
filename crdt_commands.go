@@ -18,6 +18,7 @@ import (
 type UpdateCounterCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *UpdateCounterResponse
 	protobuf proto.Message
 	isLegacy bool
@@ -242,6 +243,7 @@ func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 type FetchCounterCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *FetchCounterResponse
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -395,6 +397,7 @@ func (builder *FetchCounterCommandBuilder) Build() (Command, error) {
 type UpdateSetCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *UpdateSetResponse
 	protobuf *rpbRiakDT.DtUpdateReq
 }
@@ -584,6 +587,7 @@ func (builder *UpdateSetCommandBuilder) Build() (Command, error) {
 type FetchSetCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *FetchSetResponse
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -740,6 +744,7 @@ func (builder *FetchSetCommandBuilder) Build() (Command, error) {
 type UpdateMapCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *UpdateMapResponse
 	op       *MapOperation
 	protobuf *rpbRiakDT.DtUpdateReq
@@ -1292,6 +1297,7 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 type FetchMapCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *FetchMapResponse
 	protobuf *rpbRiakDT.DtFetchReq
 }

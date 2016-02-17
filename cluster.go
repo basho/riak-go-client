@@ -294,29 +294,39 @@ func (c *Cluster) execute(async *Async) {
 	var err error
 	executed := false
 	enqueued := false
-	command := async.Command
-	command.setRemainingTries(c.executionAttempts)
+	cmd := async.Command
+
+	tries := byte(1)
+	var lastExeNode *Node
+	if rc, ok := cmd.(retryableCommand); ok {
+		tries = c.executionAttempts
+		logDebug("[Cluster]", "cmd %s initial tries: %d", cmd.Name(), tries)
+		lastExeNode = rc.getLastNode()
+	} else {
+		logDebug("[Cluster]", "cmd %s NOT re-tryable", cmd.Name())
+	}
+
 	async.onExecute()
-	for command.hasRemainingTries() {
+	for tries > 0 {
 		if err = c.stateCheck(clusterRunning); err != nil {
 			break
 		}
-		executed, err = c.nodeManager.ExecuteOnNode(c.nodes, command, command.getLastNode())
-		// NB: do *not* call command.onError here as it will have been called in connection
+		executed, err = c.nodeManager.ExecuteOnNode(c.nodes, cmd, lastExeNode)
+		// NB: do *not* call cmd.onError here as it will have been called in connection
 		if executed {
 			// NB: "executed" means that a node sent the data to Riak and received a response
 			if err == nil {
 				// No need to re-try
-				logDebug("[Cluster]", "successfully executed command '%s'", command.Name())
+				logDebug("[Cluster]", "successfully executed cmd '%s'", cmd.Name())
 				break
 			} else {
 				// NB: retry since error occurred
-				logDebug("[Cluster]", "executed command '%s': re-try due to error '%v'", command.Name(), err)
+				logDebug("[Cluster]", "executed cmd '%s': re-try due to error '%v'", cmd.Name(), err)
 			}
 		} else {
 			// Command did NOT execute
 			if err == nil {
-				logDebug("[Cluster]", "did NOT execute command '%s', nil err", command.Name())
+				logDebug("[Cluster]", "did NOT execute cmd '%s', nil err", cmd.Name())
 				// Command did not execute but there was no error, so enqueue it
 				if c.queueCommands {
 					if err = c.enqueueCommand(async); err == nil {
@@ -326,13 +336,15 @@ func (c *Cluster) execute(async *Async) {
 				}
 			} else {
 				// NB: retry since error occurred
-				logDebug("[Cluster]", "did NOT execute command '%s': re-try due to error '%v'", command.Name(), err)
+				logDebug("[Cluster]", "did NOT execute cmd '%s': re-try due to error '%v'", cmd.Name(), err)
 			}
 		}
 
-		command.decrementRemainingTries()
+		tries--
+		logDebug("[Cluster]", "cmd %s tries: %d", cmd.Name(), tries)
 
-		if command.hasRemainingTries() {
+		if tries > 0 {
+			cmd.onRetry()
 			async.onRetry()
 		} else {
 			err = newClientError(ErrClusterNoNodesAvailable, err)

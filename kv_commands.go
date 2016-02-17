@@ -23,6 +23,7 @@ type ConflictResolver interface {
 type FetchValueCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *FetchValueResponse
 	protobuf *rpbRiakKV.RpbGetReq
 	resolver ConflictResolver
@@ -257,6 +258,7 @@ func (builder *FetchValueCommandBuilder) Build() (Command, error) {
 type StoreValueCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response *StoreValueResponse
 	value    *Object
 	protobuf *rpbRiakKV.RpbPutReq
@@ -536,6 +538,7 @@ func (builder *StoreValueCommandBuilder) Build() (Command, error) {
 type DeleteValueCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response bool
 	protobuf *rpbRiakKV.RpbDelReq
 }
@@ -1023,6 +1026,7 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 // FetchPreflistCommand is used to fetch the preference list for a key from Riak KV
 type FetchPreflistCommand struct {
 	commandImpl
+	retryableCommandImpl
 	Response *FetchPreflistResponse
 	protobuf *rpbRiakKV.RpbGetBucketKeyPreflistReq
 }

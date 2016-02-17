@@ -110,7 +110,9 @@ func (n *Node) start() error {
 	}
 
 	logDebug("[Node]", "(%v) starting", n)
-	n.cm.start()
+	if err := n.cm.start(); err != nil {
+		logErr("[Node]", err)
+	}
 	n.setState(nodeRunning)
 	logDebug("[Node]", "(%v) started", n)
 
@@ -149,8 +151,6 @@ func (n *Node) execute(cmd Command) (bool, error) {
 		return false, err
 	}
 
-	cmd.setLastNode(n)
-
 	if n.isCurrentState(nodeRunning) {
 		conn, err := n.cm.get()
 		if err != nil {
@@ -161,6 +161,10 @@ func (n *Node) execute(cmd Command) (bool, error) {
 
 		if conn == nil {
 			panic(fmt.Sprintf("[Node] (%v) expected non-nil connection", n))
+		}
+
+		if rc, ok := cmd.(retryableCommand); ok {
+			rc.setLastNode(n)
 		}
 
 		logDebug("[Node]", "(%v) - executing command '%v'", n, cmd.Name())

@@ -46,6 +46,10 @@ func TestBuildRpbGetReqCorrectlyViaBuilder(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -476,6 +480,11 @@ func TestBuildRpbPutReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -848,6 +857,11 @@ func TestBuildRpbDelReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -925,6 +939,11 @@ func TestBuildRpbListBucketsReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); ok {
+		t.Errorf("got %v, want cmd %s to NOT implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1059,6 +1078,11 @@ func TestBuildRpbListKeysReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); ok {
+		t.Errorf("got %v, want cmd %s to NOT implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1195,6 +1219,11 @@ func TestBuildRpbGetBucketKeyPreflistReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1275,6 +1304,11 @@ func TestBuildRpbIndexReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); ok {
+		t.Errorf("got %v, want cmd %s to NOT implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	var protobuf proto.Message
 	protobuf, err = cmd.constructPbRequest()
 	if err != nil {
@@ -1671,6 +1705,11 @@ func TestParseRpbMapRedRespCorrectlyWithStreaming(t *testing.T) {
 		WithCallback(cb).
 		WithStreaming(true).
 		Build(); err == nil {
+
+		if _, ok := cmd.(retryableCommand); ok {
+			t.Errorf("got %v, want cmd %s to NOT implement retryableCommand", ok, reflect.TypeOf(cmd))
+		}
+
 		for i := 1; i <= 10; i++ {
 			phase := uint32(i)
 			rpbMapRedResp := &rpbRiakKV.RpbMapRedResp{

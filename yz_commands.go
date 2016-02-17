@@ -31,6 +31,7 @@ type Schema struct {
 type StoreIndexCommand struct {
 	commandImpl
 	timeoutImpl
+	retryableCommandImpl
 	Response bool
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
@@ -131,6 +132,7 @@ func (builder *StoreIndexCommandBuilder) Build() (Command, error) {
 // FetchIndexCommand is used to fetch a search index from Riak
 type FetchIndexCommand struct {
 	commandImpl
+	retryableCommandImpl
 	Response []*SearchIndex
 	protobuf *rpbRiakYZ.RpbYokozunaIndexGetReq
 }
@@ -215,6 +217,7 @@ func (builder *FetchIndexCommandBuilder) Build() (Command, error) {
 // DeleteIndexCommand is used to delete a search index from Riak
 type DeleteIndexCommand struct {
 	commandImpl
+	retryableCommandImpl
 	Response bool
 	protobuf *rpbRiakYZ.RpbYokozunaIndexDeleteReq
 }
@@ -282,6 +285,7 @@ func (builder *DeleteIndexCommandBuilder) Build() (Command, error) {
 // StoreSchemaCommand is used to store / update a search schema in Riak
 type StoreSchemaCommand struct {
 	commandImpl
+	retryableCommandImpl
 	Response bool
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaPutReq
 }
@@ -359,6 +363,7 @@ func (builder *StoreSchemaCommandBuilder) Build() (Command, error) {
 // FetchSchemaCommand is used to GET a search schema from Riak
 type FetchSchemaCommand struct {
 	commandImpl
+	retryableCommandImpl
 	Response *Schema
 	protobuf *rpbRiakYZ.RpbYokozunaSchemaGetReq
 }
