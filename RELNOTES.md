@@ -4,6 +4,11 @@
 Release Notes
 =============
 
+* 1.6.0 - Following PRs included:
+ * [Security auth fixes](https://github.com/basho/riak-go-client/pull/60)
+ * [Use request or command timeout as applicable](https://github.com/basho/riak-go-client/pull/57)
+ * [Re-tryable vs non-re-tryable commands](https://github.com/basho/riak-go-client/pull/56)
+ * [Re-try reads on temporary network errors, bug fixes in error situations](https://github.com/basho/riak-go-client/pull/52)
 * 1.5.1 - Following PRs addressed:
  * [Improve connection error handling](https://github.com/basho/riak-go-client/pull/48)
 * 1.5.0 - Following PRs addressed:
