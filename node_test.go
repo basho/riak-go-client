@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"fmt"
 	"net"
 	"testing"
 )
@@ -60,6 +61,47 @@ func TestCreateNodeWithOptions(t *testing.T) {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 	if expected, actual := builder, node.healthCheckBuilder; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+}
+
+func TestEnsureNodeValuesWithZeroValOptions(t *testing.T) {
+	opts := &NodeOptions{
+		TempNetErrorRetries: 8,
+	}
+	node, err := NewNode(opts)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	exp := fmt.Sprintf("%s|0|0", defaultRemoteAddress)
+	if expected, actual := exp, node.String(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if expected, actual := nodeCreated, node.getState(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+	if node.addr.Port != int(defaultRemotePort) {
+		t.Errorf("expected port %v, got: %v", defaultRemotePort, node.addr.Port)
+	}
+	if expected, actual := node.cm.minConnections, defaultMinConnections; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := node.cm.maxConnections, defaultMaxConnections; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := node.cm.idleTimeout, defaultIdleTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := node.cm.connectTimeout, defaultConnectTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if expected, actual := node.cm.requestTimeout, defaultRequestTimeout; expected != actual {
+		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if got, want := node.cm.tempNetErrorRetries, opts.TempNetErrorRetries; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if expected, actual := node.healthCheckInterval, defaultHealthCheckInterval; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
 	}
 }

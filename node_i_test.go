@@ -111,8 +111,8 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 
 	go func() {
 		opts := &NodeOptions{
-			RemoteAddress:       tl.addr.String(),
-			MinConnections:      0,
+			RemoteAddress:  tl.addr.String(),
+			MinConnections: 0,
 		}
 		node, err := NewNode(opts)
 		if err != nil {
@@ -154,12 +154,12 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 
 		for {
 			select {
-				case <-doneChan:
-					logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
-					node.stop()
-					return
-				case <-time.After(time.Second * 1):
-					logDebug("[TestRecoverViaDefaultPingHealthCheck]", "still waiting to stop node...")
+			case <-doneChan:
+				logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
+				node.stop()
+				return
+			case <-time.After(time.Second * 1):
+				logDebug("[TestRecoverViaDefaultPingHealthCheck]", "still waiting to stop node...")
 			}
 		}
 	}()

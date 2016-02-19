@@ -60,6 +60,24 @@ func NewNode(options *NodeOptions) (*Node, error) {
 	if options.RemoteAddress == "" {
 		options.RemoteAddress = defaultRemoteAddress
 	}
+	if options.MinConnections == 0 {
+		options.MinConnections = defaultMinConnections
+	}
+	if options.MaxConnections == 0 {
+		options.MaxConnections = defaultMaxConnections
+	}
+	if options.TempNetErrorRetries == 0 {
+		options.TempNetErrorRetries = defaultTempNetErrorRetries
+	}
+	if options.IdleTimeout == 0 {
+		options.IdleTimeout = defaultIdleTimeout
+	}
+	if options.ConnectTimeout == 0 {
+		options.ConnectTimeout = defaultConnectTimeout
+	}
+	if options.RequestTimeout == 0 {
+		options.RequestTimeout = defaultRequestTimeout
+	}
 	if options.HealthCheckInterval == 0 {
 		options.HealthCheckInterval = defaultHealthCheckInterval
 	}
