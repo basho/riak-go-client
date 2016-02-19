@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-	"time"
 
 	rpb_riak "github.com/basho/riak-go-client/rpb/riak"
 	proto "github.com/golang/protobuf/proto"
@@ -23,8 +22,7 @@ func integrationTestsBuildCluster() *Cluster {
 	var cluster *Cluster
 	var err error
 	nodeOpts := &NodeOptions{
-		RemoteAddress:  getRiakAddress(),
-		RequestTimeout: time.Second * 20,
+		RemoteAddress: getRiakAddress(),
 	}
 	var node *Node
 	node, err = NewNode(nodeOpts)
@@ -141,10 +139,14 @@ func (t *testListener) start() {
 }
 
 func (t *testListener) stop() {
-	if err := t.ln.Close(); err != nil {
-		t.test.Error(err)
+	if t.ln == nil {
+		logDebugln("[testListener]", "never started!")
+	} else {
+		if err := t.ln.Close(); err != nil {
+			t.test.Error(err)
+		}
+		logDebug("[testListener]", "(%v) stopped", t.addr)
 	}
-	logDebug("[testListener]", "(%v) stopped", t.addr)
 }
 
 func readWriteResp(t *testing.T, c net.Conn, shouldClose bool) (success bool) {

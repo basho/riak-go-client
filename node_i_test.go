@@ -4,6 +4,7 @@ package riak
 
 import (
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
@@ -170,7 +171,6 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 	close(stateChan)
 }
 
-// TODO FUTURE NB: this has been a bit of a Heisen-test
 func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 	o := &testListenerOpts{
 		test: t,
@@ -183,46 +183,19 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 	stateChan := make(chan state)
 	recoveredChan := make(chan struct{})
 
-	var node *Node
-	opts := &NodeOptions{
-		ConnectTimeout: 500 * time.Millisecond,
-		RemoteAddress:  "127.0.0.1:13338", // NB: can't use tl.addr since it isn't set until start()
-	}
 	var err error
-	node, err = NewNode(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	origSetStateFunc := node.setStateFunc
-
-	go func() {
-		node.setStateFunc = func(sd *stateData, st state) {
-			origSetStateFunc(&node.stateData, st)
-			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "sending state '%v' down stateChan", st)
-			stateChan <- st
-		}
-		node.start()
-
-		pc := &PingCommand{}
-		node.execute(pc)
-		for {
-			select {
-			case <-recoveredChan:
-				break
-			case <-time.After(time.Second):
-				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "waiting for recovery...")
-				pc := &PingCommand{}
-				node.execute(pc)
-			}
-		}
-	}()
+	var node *Node
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 
 	go func() {
 		listenerStarted := false
 		nodeIsRunningCount := 0
+		wg.Done()
 		for {
+			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "waiting on stateChan...")
 			if nodeState, ok := <-stateChan; ok {
-				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "nodeState: '%v'", nodeState)
+				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "received nodeState: '%v'", nodeState)
 				if node.isCurrentState(nodeRunning) {
 					nodeIsRunningCount++
 				}
@@ -235,10 +208,46 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 				if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
 					logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "STARTING LISTENER")
 					tl.start()
+					listenerStarted = true
 				}
 			} else {
 				t.Error("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck] stateChan closed before recovering via healthcheck")
 				break
+			}
+		}
+	}()
+
+	opts := &NodeOptions{
+		ConnectTimeout: 500 * time.Millisecond,
+		RemoteAddress:  "127.0.0.1:13338", // NB: can't use tl.addr since it isn't set until tl.start()
+	}
+	node, err = NewNode(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	origSetStateFunc := node.setStateFunc
+
+	go func() {
+		node.setStateFunc = func(sd *stateData, st state) {
+			origSetStateFunc(&node.stateData, st)
+			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SENDING state '%v' down stateChan", st)
+			stateChan <- st
+			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SENT state '%v' down stateChan", st)
+		}
+		node.start()
+
+		wg.Wait()
+
+		pc := &PingCommand{}
+		node.execute(pc)
+		for {
+			select {
+			case <-recoveredChan:
+				break
+			case <-time.After(time.Second):
+				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "waiting for recovery...")
+				pc := &PingCommand{}
+				node.execute(pc)
 			}
 		}
 	}()

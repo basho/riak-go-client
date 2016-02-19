@@ -169,14 +169,24 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
-	if err = c.write(message); err != nil {
+	// Use the *greater* of the connection's request timeout
+	// or the Command's timeout
+	timeout := c.requestTimeout
+	if tc, ok := cmd.(timeoutCommand); ok {
+		tc := tc.getTimeout()
+		if tc > timeout {
+			timeout = tc
+		}
+	}
+
+	if err = c.write(message, timeout); err != nil {
 		return
 	}
 
 	var response []byte
 	var decoded proto.Message
 	for {
-		response, err = c.read() // NB: response *will* have entire pb message
+		response, err = c.read(timeout) // NB: response *will* have entire pb message
 		if err != nil {
 			cmd.onError(err)
 			return
@@ -211,14 +221,12 @@ func (c *connection) execute(cmd Command) (err error) {
 	}
 }
 
-// FUTURE: we should also take currently executing Command (Riak operation)
-// timeout into account
-func (c *connection) setReadDeadline(d time.Duration) {
-	c.conn.SetReadDeadline(time.Now().Add(d))
+func (c *connection) setReadDeadline(t time.Duration) {
+	c.conn.SetReadDeadline(time.Now().Add(t))
 }
 
 // NB: This will read one full pb message from Riak, or error in doing so
-func (c *connection) read() ([]byte, error) {
+func (c *connection) read(timeout time.Duration) ([]byte, error) {
 	if !c.available() {
 		return nil, ErrCannotRead
 	}
@@ -226,15 +234,15 @@ func (c *connection) read() ([]byte, error) {
 	var err error
 	var count int
 	var messageLength uint32
-	var d time.Duration = c.requestTimeout
+	var rt time.Duration = timeout // rt = 'read timeout'
 	b := &backoff.Backoff{
-		Min:    d,
+		Min:    rt,
 		Jitter: true,
 	}
-	t := uint16(0)
+	try := uint16(0)
 
 	for {
-		c.setReadDeadline(d)
+		c.setReadDeadline(rt)
 		if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
 			messageLength = binary.BigEndian.Uint32(c.sizeBuf)
 			if messageLength > uint32(cap(c.dataBuf)) {
@@ -244,7 +252,7 @@ func (c *connection) read() ([]byte, error) {
 				c.dataBuf = c.dataBuf[0:messageLength]
 			}
 			// FUTURE: large object warning / error
-			c.setReadDeadline(d)
+			c.setReadDeadline(rt)
 			count, err = io.ReadFull(c.conn, c.dataBuf)
 		} else {
 			if err == nil && count != 4 {
@@ -260,10 +268,10 @@ func (c *connection) read() ([]byte, error) {
 			return c.dataBuf, nil
 		}
 
-		if t < c.tempNetErrorRetries && isTemporaryNetError(err) {
-			d = b.Duration()
-			t++
-			logDebug("[Connection]", "temporary error, re-try %v, new read deadline: %v", t, d)
+		if try < c.tempNetErrorRetries && isTemporaryNetError(err) {
+			rt = b.Duration()
+			try++
+			logDebug("[Connection]", "temporary error, re-try %v, new read timeout: %v", try, rt)
 		} else {
 			c.setState(connInactive)
 			return nil, err
@@ -271,12 +279,11 @@ func (c *connection) read() ([]byte, error) {
 	}
 }
 
-func (c *connection) write(data []byte) error {
+func (c *connection) write(data []byte, timeout time.Duration) error {
 	if !c.available() {
 		return ErrCannotWrite
 	}
-	// TODO FUTURE: we should also take currently executing Command (Riak operation) timeout into account
-	c.conn.SetWriteDeadline(time.Now().Add(c.requestTimeout))
+	c.conn.SetWriteDeadline(time.Now().Add(timeout))
 	count, err := c.conn.Write(data)
 	if err != nil {
 		c.setState(connInactive)

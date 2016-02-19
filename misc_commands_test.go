@@ -260,6 +260,11 @@ func TestBuildRpbGetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -317,6 +322,11 @@ func TestBuildRpbGetBucketReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -411,6 +421,11 @@ func TestBuildRpbSetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -499,6 +514,11 @@ func TestBuildRpbSetBucketReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -557,6 +577,11 @@ func TestBuildRpbResetBucketReqCorrectlyViaBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())

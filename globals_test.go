@@ -19,9 +19,7 @@ var vclockBytes = vclock.Bytes()
 var crdtContext = bytes.NewBufferString("crdt_context")
 var crdtContextBytes = crdtContext.Bytes()
 
-// riak-admin bucket-type create leveldb_type '{"props":{"backend":"leveldb_backend"}}'
-// riak-admin bucket-type activate leveldb_type
-const testBucketType = "leveldb_type"
+const testBucketType = "plain"
 const testBucketName = "riak_index_tests"
 
 // riak_admin bucket-type create counters '{"props":{"datatype":"counter"}}'

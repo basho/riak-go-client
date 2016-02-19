@@ -20,6 +20,7 @@ func (builder *PingCommandBuilder) Build() (Command, error) {
 // PingCommand is used to verify Riak is online and reachable
 type PingCommand struct {
 	commandImpl
+	retryableCommandImpl
 }
 
 // Name identifies this command
@@ -262,6 +263,7 @@ func processRpbGetBucketResp(rsp *rpbRiak.RpbGetBucketResp) *FetchBucketPropsRes
 // FetchBucketTypePropsCommand is used to fetch the active / non-default properties for a bucket type
 type FetchBucketTypePropsCommand struct {
 	commandImpl
+	retryableCommandImpl
 	Response *FetchBucketPropsResponse
 	protobuf *rpbRiak.RpbGetBucketTypeReq
 }
@@ -335,6 +337,7 @@ func (builder *FetchBucketTypePropsCommandBuilder) Build() (Command, error) {
 // FetchBucketPropsCommand is used to fetch the active / non-default properties for a bucket
 type FetchBucketPropsCommand struct {
 	commandImpl
+	retryableCommandImpl
 	Response *FetchBucketPropsResponse
 	protobuf *rpbRiak.RpbGetBucketReq
 }
@@ -415,6 +418,7 @@ func (builder *FetchBucketPropsCommandBuilder) Build() (Command, error) {
 // StoreBucketTypePropsCommand is used to store changes to a bucket type's properties
 type StoreBucketTypePropsCommand struct {
 	commandImpl
+	retryableCommandImpl
 	protobuf *rpbRiak.RpbSetBucketTypeReq
 }
 
@@ -447,6 +451,7 @@ func (cmd *StoreBucketTypePropsCommand) getResponseProtobufMessage() proto.Messa
 // StoreBucketPropsCommand is used to store changes to a buckets properties
 type StoreBucketPropsCommand struct {
 	commandImpl
+	retryableCommandImpl
 	protobuf *rpbRiak.RpbSetBucketReq
 }
 
@@ -926,6 +931,7 @@ func (builder *ResetBucketCommandBuilder) Build() (Command, error) {
 // PingCommand is used to verify Riak is online and reachable
 type ResetBucketCommand struct {
 	commandImpl
+	retryableCommandImpl
 	protobuf *rpbRiak.RpbResetBucketReq
 }
 

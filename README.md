@@ -82,3 +82,4 @@ Thank you to all of our contributors!
 * [Andrew Zeneski](https://github.com/andrewzeneski)
 * [Кирилл Александрович Журавлев](https://github.com/kazhuravlev)
 * [Paul Guelpa](https://github.com/pguelpa)
+* [Xabier Larrakoetxea Gallego](https://github.com/slok)

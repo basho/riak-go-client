@@ -30,6 +30,11 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateCounterCommandBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -252,6 +257,11 @@ func TestBuildDtFetchReqCorrectlyViaFetchCounterCommandBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -406,6 +416,11 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateSetCommandBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -547,6 +562,11 @@ func TestBuildDtFetchReqCorrectlyViaFetchSetCommandBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -789,6 +809,11 @@ func TestBuildDtUpdateReqCorrectlyViaUpdateMapCommandBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1084,6 +1109,11 @@ func TestBuildDtFetchReqCorrectlyViaFetchMapCommandBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
 	protobuf, err := cmd.constructPbRequest()
 	if err != nil {
 		t.Fatal(err.Error())

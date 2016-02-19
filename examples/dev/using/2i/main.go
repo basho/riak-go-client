@@ -41,56 +41,56 @@ func main() {
 	}
 
 	defer func() {
-		if err := cluster.Stop(); err != nil {
+		if err = cluster.Stop(); err != nil {
 			fmt.Println(err.Error())
 		}
 	}()
 
-	if err := cluster.Start(); err != nil {
+	if err = cluster.Start(); err != nil {
 		fmt.Println(err.Error())
 	}
 
 	// ping
 	ping := &riak.PingCommand{}
-	if err := cluster.Execute(ping); err != nil {
+	if err = cluster.Execute(ping); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("ping passed")
 	}
 
-	if err := insertingObjects(cluster); err != nil {
+	if err = insertingObjects(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := queryingIndexes(cluster); err != nil {
+	if err = queryingIndexes(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := indexingObjects(cluster); err != nil {
+	if err = indexingObjects(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := invalidFieldNames(cluster); err != nil {
+	if err = invalidFieldNames(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := incorrectDataType(cluster); err != nil {
+	if err = incorrectDataType(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := queryingExactMatch(cluster); err != nil {
+	if err = queryingExactMatch(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := queryingRange(cluster); err != nil {
+	if err = queryingRange(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := queryingRangeWithTerms(cluster); err != nil {
+	if err = queryingRangeWithTerms(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := queryingPagination(cluster); err != nil {
+	if err = queryingPagination(cluster); err != nil {
 		ErrExit(err)
 	}
 }
@@ -138,7 +138,7 @@ func insertingObjects(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -156,7 +156,7 @@ func queryingIndexes(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -222,7 +222,7 @@ func indexingObjects(cluster *riak.Cluster) error {
 			Command: cmd,
 			Wait:    wg,
 		}
-		if err := cluster.ExecuteAsync(args); err != nil {
+		if err = cluster.ExecuteAsync(args); err != nil {
 			return err
 		}
 	}
@@ -243,7 +243,7 @@ func invalidFieldNames(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		fmt.Println("[DevUsing2i] field name error:", err)
 	} else {
 		return errors.New("[DevUsing2i] expected an error!")
@@ -271,7 +271,7 @@ func incorrectDataType(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		fmt.Println("[DevUsing2i] index data type error:", err)
 	} else {
 		return errors.New("[DevUsing2i] expected an error!")
@@ -377,7 +377,7 @@ func queryingRangeWithTerms(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -402,7 +402,7 @@ func doPaginatedQuery(cluster *riak.Cluster, continuation []byte) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 

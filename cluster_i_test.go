@@ -59,18 +59,14 @@ func TestExecuteCommandOnCluster(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	if expected, actual := true, command.hasRemainingTries(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
-	if expected, actual := byte(3), command.remainingTries; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
 	if expected, actual := true, command.Success(); expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
 
 func TestExecuteConcurrentCommandsOnCluster(t *testing.T) {
+	// NB: we're executing more commands than there are connections
+	// so this tests command retries
 	maxCount := uint16(8)
 	nodeOpts := &NodeOptions{
 		MinConnections: 1,
@@ -207,10 +203,6 @@ func TestExecuteCommandThreeTimesOnDifferentNodes(t *testing.T) {
 	if expected, actual := nodeCount, j; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
-	fetch := cmd.(*FetchValueCommand)
-	if expected, actual := byte(0), fetch.remainingTries; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
 }
 
 func TestAsyncExecuteCommandOnCluster(t *testing.T) {
@@ -261,12 +253,6 @@ func TestAsyncExecuteCommandOnCluster(t *testing.T) {
 	pingDone := done.(*PingCommand)
 
 	if expected, actual := true, command == pingDone; expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
-	if expected, actual := true, command.hasRemainingTries(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
-	}
-	if expected, actual := byte(3), command.remainingTries; expected != actual {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 	if expected, actual := true, command.Success(); expected != actual {

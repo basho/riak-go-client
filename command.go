@@ -4,18 +4,95 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sync/atomic"
+	"time"
 
 	proto "github.com/golang/protobuf/proto"
 )
+
+// Global private var used in debug mode to differentiate command names in debug output
+var c uint64 = 0
+
+// Interface implemented by Command types that can be re-tried
+type retryableCommand interface {
+	setLastNode(*Node)
+	getLastNode() *Node
+}
+
+// Implementation of retryableCommand
+type retryableCommandImpl struct {
+	lastNode *Node
+}
+
+func (cmd *retryableCommandImpl) setLastNode(lastNode *Node) {
+	if lastNode == nil {
+		panic("[retryableCommandImpl] nil last node")
+	}
+	cmd.lastNode = lastNode
+}
+
+func (cmd *retryableCommandImpl) getLastNode() *Node {
+	return cmd.lastNode
+}
+
+type commandImpl struct {
+	error   error
+	success bool
+	name    string
+}
+
+func (cmd *commandImpl) Success() bool {
+	return cmd.success == true
+}
+
+func (cmd *commandImpl) Error() error {
+	return cmd.error
+}
+
+func (cmd *commandImpl) onError(err error) {
+	cmd.success = false
+	cmd.error = err
+}
+
+func (cmd *commandImpl) onRetry() {
+	cmd.error = nil
+}
+
+func (cmd *commandImpl) getName(n string) string {
+	if n == "" {
+		panic("getName: n must not be empty")
+	}
+	if cmd.name == "" {
+		if EnableDebugLogging == true {
+			cmd.name = fmt.Sprintf("%s-%v", n, atomic.AddUint64(&c, 1))
+		} else {
+			cmd.name = n
+		}
+	}
+	return cmd.name
+}
+
+// Interface implemented by Command types that can be streamed
+type streamingCommand interface {
+	isDone() bool
+}
+
+type timeoutCommand interface {
+	getTimeout() time.Duration
+}
+
+type timeoutImpl struct {
+	timeout time.Duration
+}
+
+func (cmd *timeoutImpl) getTimeout() time.Duration {
+	return cmd.timeout
+}
 
 // CommandBuilder interface requires Build() method for generating the Command
 // to be executed
 type CommandBuilder interface {
 	Build() (Command, error)
-}
-
-type streamingCommand interface {
-	isDone() bool
 }
 
 // Command interface enforces proper structure of a Command object
@@ -25,16 +102,11 @@ type Command interface {
 	Error() error
 	getRequestCode() byte
 	constructPbRequest() (proto.Message, error)
+	onRetry()
 	onError(error)
 	onSuccess(proto.Message) error // NB: important for streaming commands to "do the right thing" here
 	getResponseCode() byte
 	getResponseProtobufMessage() proto.Message
-	// command re-try
-	setLastNode(*Node)
-	getLastNode() *Node
-	setRemainingTries(byte)
-	decrementRemainingTries()
-	hasRemainingTries() bool
 }
 
 func getRiakMessage(cmd Command) (msg []byte, err error) {
