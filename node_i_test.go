@@ -4,7 +4,8 @@ package riak
 
 import (
 	"net"
-	"sync"
+	"runtime"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -86,20 +87,19 @@ func TestCreateNodeWithOptionsAndStart(t *testing.T) {
 }
 
 func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
-	connects := 0
+	connects := uint32(0)
 	var onConn = func(c net.Conn) bool {
-		connects++
-		if connects == 1 {
+		if atomic.AddUint32(&connects, 1) == 1 {
+			logDebug("[TestRecoverViaDefaultPingHealthCheck]", "onConn, closing, connects: %v", connects)
 			c.Close()
 		} else {
+			logDebug("[TestRecoverViaDefaultPingHealthCheck]", "onConn, readWriteResp, connects: %v", connects)
 			readWriteResp(t, c, true)
 		}
 		return true
 	}
 	o := &testListenerOpts{
 		test:   t,
-		host:   "127.0.0.1",
-		port:   13337,
 		onConn: onConn,
 	}
 	tl := newTestListener(o)
@@ -113,7 +113,6 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		opts := &NodeOptions{
 			RemoteAddress:       tl.addr.String(),
 			MinConnections:      0,
-			HealthCheckInterval: 50 * time.Millisecond,
 		}
 		node, err := NewNode(opts)
 		if err != nil {
@@ -128,28 +127,62 @@ func TestRecoverViaDefaultPingHealthCheck(t *testing.T) {
 		}
 
 		node.start()
-		ping := &PingCommand{}
-		executed, err := node.execute(ping)
-		// TODO: is this correct? Executed == true?
-		if executed == false {
-			t.Fatal("expected ping to be executed")
+
+		pingFunc := func() {
+			ping := &PingCommand{}
+			executed, err := node.execute(ping)
+			if executed == false {
+				t.Error("expected ping to be executed")
+			}
+			if err != nil {
+				t.Logf("ping err: %v", err.Error())
+			}
 		}
-		if err == nil {
-			t.Fatal("expected non-nil error")
+
+		go func() {
+			pingFunc()
+			for {
+				select {
+				case <-doneChan:
+					logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping pings")
+					return
+				case <-time.After(time.Millisecond * 500):
+					pingFunc()
+				}
+			}
+		}()
+
+		for {
+			select {
+				case <-doneChan:
+					logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
+					node.stop()
+					return
+				case <-time.After(time.Second * 1):
+					logDebug("[TestRecoverViaDefaultPingHealthCheck]", "still waiting to stop node...")
+			}
 		}
-		logDebug("[TestRecoverViaDefaultPingHealthCheck]", "waiting to stop node")
-		<-doneChan
-		logDebug("[TestRecoverViaDefaultPingHealthCheck]", "stopping node")
-		node.stop()
 	}()
 
 	checkStatesFunc := func(states []state) {
-		for i := 0; i < len(states); i++ {
-			nodeState := <-stateChan
-			if expected, actual := states[i], nodeState; expected != actual {
-				t.Errorf("expected %v, got %v", expected, actual)
-			} else {
-				logDebug("[TestRecoverViaDefaultPingHealthCheck]", "saw state %d", nodeState)
+		idx := 0
+		for {
+			select {
+			case nodeState := <-stateChan:
+				if expected, actual := states[idx], nodeState; expected != actual {
+					t.Errorf("expected %v, got %v", expected, actual)
+				} else {
+					logDebug("[TestRecoverViaDefaultPingHealthCheck]", "saw state %d", nodeState)
+				}
+				idx++
+				if idx >= len(states) {
+					return
+				}
+			case <-time.After(time.Second * 5):
+				buf := make([]byte, 1<<16)
+				stackSize := runtime.Stack(buf, true)
+				t.Fatalf("[TestRecoverViaDefaultPingHealthCheck] timeout waiting for stateChan!\n%s", string(buf[0:stackSize]))
+				return
 			}
 		}
 	}
@@ -185,27 +218,25 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 
 	var err error
 	var node *Node
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	go func() {
 		listenerStarted := false
 		nodeIsRunningCount := 0
-		wg.Done()
 		for {
 			logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "waiting on stateChan...")
 			if nodeState, ok := <-stateChan; ok {
 				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "received nodeState: '%v'", nodeState)
-				if node.isCurrentState(nodeRunning) {
+				if nodeState == nodeRunning {
 					nodeIsRunningCount++
 				}
+				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "nodeIsRunningCount: '%v'", nodeIsRunningCount)
 				if nodeIsRunningCount == 2 {
 					// This is the second time node has entered nodeRunning state, so it must have recovered via the healthcheck
 					logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "SUCCESS node recovered via healthcheck")
 					close(recoveredChan)
 					break
 				}
-				if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
+				if !listenerStarted && nodeState == nodeHealthChecking {
 					logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "STARTING LISTENER")
 					tl.start()
 					listenerStarted = true
@@ -236,18 +267,21 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 		}
 		node.start()
 
-		wg.Wait()
+		pingFunc := func() {
+			ping := &PingCommand{}
+			if _, perr := node.execute(ping); perr != nil {
+				t.Logf("ping err: %v", perr)
+			}
+		}
 
-		pc := &PingCommand{}
-		node.execute(pc)
+		pingFunc()
 		for {
 			select {
 			case <-recoveredChan:
-				break
-			case <-time.After(time.Second):
-				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "waiting for recovery...")
-				pc := &PingCommand{}
-				node.execute(pc)
+				logDebug("[TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck]", "stopping pings")
+				return
+			case <-time.After(time.Millisecond * 500):
+				pingFunc()
 			}
 		}
 	}()

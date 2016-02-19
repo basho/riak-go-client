@@ -42,27 +42,22 @@ func (s *stateData) String() string {
 	}
 }
 
-func (s *stateData) isCurrentState(st state) (rv bool) {
-	rv = false
+func (s *stateData) isCurrentState(st state) bool {
 	s.RLock()
 	defer s.RUnlock()
-	rv = s.stateVal == st
-	return
+	return s.stateVal == st
 }
 
-func (s *stateData) isStateLessThan(st state) (rv bool) {
-	rv = false
+func (s *stateData) isStateLessThan(st state) bool {
 	s.RLock()
 	defer s.RUnlock()
-	rv = s.stateVal < st
-	return
+	return s.stateVal < st
 }
 
-func (s *stateData) getState() (st state) {
+func (s *stateData) getState() state {
 	s.RLock()
 	defer s.RUnlock()
-	st = s.stateVal
-	return
+	return s.stateVal
 }
 
 func (s *stateData) setState(st state) {
@@ -71,7 +66,7 @@ func (s *stateData) setState(st state) {
 	s.setStateFunc(s, st)
 }
 
-func (s *stateData) stateCheck(allowed ...state) (err error) {
+func (s *stateData) stateCheck(allowed ...state) error {
 	s.RLock()
 	defer s.RUnlock()
 	stateAllowed := false
@@ -82,7 +77,7 @@ func (s *stateData) stateCheck(allowed ...state) (err error) {
 		}
 	}
 	if !stateAllowed {
-		err = fmt.Errorf("Illegal State - required %v: current: %v", allowed, s.stateVal)
+		return fmt.Errorf("Illegal State - required %v: current: %v", allowed, s.stateVal)
 	}
-	return
+	return nil
 }
