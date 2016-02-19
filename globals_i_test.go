@@ -139,10 +139,14 @@ func (t *testListener) start() {
 }
 
 func (t *testListener) stop() {
-	if err := t.ln.Close(); err != nil {
-		t.test.Error(err)
+	if t.ln == nil {
+		logDebugln("[testListener]", "never started!")
+	} else {
+		if err := t.ln.Close(); err != nil {
+			t.test.Error(err)
+		}
+		logDebug("[testListener]", "(%v) stopped", t.addr)
 	}
-	logDebug("[testListener]", "(%v) stopped", t.addr)
 }
 
 func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool) {
