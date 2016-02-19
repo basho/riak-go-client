@@ -36,7 +36,6 @@ type Node struct {
 	addr                *net.TCPAddr
 	healthCheckInterval time.Duration
 	healthCheckBuilder  CommandBuilder
-	authOptions         *AuthOptions
 	stopChan            chan struct{}
 	cm                  *connectionManager
 	stateData
@@ -72,7 +71,6 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			addr:                resolvedAddress,
 			healthCheckInterval: options.HealthCheckInterval,
 			healthCheckBuilder:  options.HealthCheckBuilder,
-			authOptions:         options.AuthOptions,
 		}
 
 		connMgrOpts := &connectionManagerOptions{
