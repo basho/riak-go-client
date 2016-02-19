@@ -41,18 +41,18 @@ func main() {
 	}
 
 	defer func() {
-		if err := cluster.Stop(); err != nil {
+		if err = cluster.Stop(); err != nil {
 			fmt.Println(err.Error())
 		}
 	}()
 
-	if err := cluster.Start(); err != nil {
+	if err = cluster.Start(); err != nil {
 		fmt.Println(err.Error())
 	}
 
 	// ping
 	ping := &riak.PingCommand{}
-	if err := cluster.Execute(ping); err != nil {
+	if err = cluster.Execute(ping); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("ping passed")

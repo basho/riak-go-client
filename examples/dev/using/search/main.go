@@ -43,54 +43,54 @@ func main() {
 	}
 
 	defer func() {
-		if err := cluster.Stop(); err != nil {
+		if err = cluster.Stop(); err != nil {
 			fmt.Println(err.Error())
 		}
 	}()
 
-	if err := cluster.Start(); err != nil {
+	if err = cluster.Start(); err != nil {
 		fmt.Println(err.Error())
 	}
 
 	// ping
 	ping := &riak.PingCommand{}
-	if err := cluster.Execute(ping); err != nil {
+	if err = cluster.Execute(ping); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("ping passed")
 	}
 
-	if err := storeIndex(cluster); err != nil {
+	if err = storeIndex(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := storeBucketProperties(cluster); err != nil {
+	if err = storeBucketProperties(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := storeObjects(cluster); err != nil {
+	if err = storeObjects(cluster); err != nil {
 		ErrExit(err)
 	}
 
 	time.Sleep(time.Millisecond * 1250)
 
-	if err := doSearchRequest(cluster); err != nil {
+	if err = doSearchRequest(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := doAgeSearchRequest(cluster); err != nil {
+	if err = doAgeSearchRequest(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := doAndSearchRequest(cluster); err != nil {
+	if err = doAndSearchRequest(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := doPaginatedSearchRequest(cluster); err != nil {
+	if err = doPaginatedSearchRequest(cluster); err != nil {
 		ErrExit(err)
 	}
 
-	if err := deleteIndex(cluster); err != nil {
+	if err = deleteIndex(cluster); err != nil {
 		ErrExit(err)
 	}
 }
@@ -165,7 +165,7 @@ func storeObjects(cluster *riak.Cluster) error {
 			Command: cmd,
 			Wait:    wg,
 		}
-		if err := cluster.ExecuteAsync(args); err != nil {
+		if err = cluster.ExecuteAsync(args); err != nil {
 			return err
 		}
 	}
@@ -196,11 +196,11 @@ func doSearchRequest(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
-	if err := printDocs(cmd, "Search Request Documents:"); err != nil {
+	if err = printDocs(cmd, "Search Request Documents:"); err != nil {
 		return err
 	}
 
@@ -216,7 +216,7 @@ func doSearchRequest(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -239,7 +239,7 @@ func doAgeSearchRequest(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -255,7 +255,7 @@ func doAndSearchRequest(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -277,7 +277,7 @@ func doPaginatedSearchRequest(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -294,7 +294,7 @@ func deleteIndex(cluster *riak.Cluster) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 

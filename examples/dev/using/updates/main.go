@@ -40,18 +40,18 @@ func main() {
 	}
 
 	defer func() {
-		if err := cluster.Stop(); err != nil {
+		if err = cluster.Stop(); err != nil {
 			fmt.Println(err.Error())
 		}
 	}()
 
-	if err := cluster.Start(); err != nil {
+	if err = cluster.Start(); err != nil {
 		fmt.Println(err.Error())
 	}
 
 	// ping
 	ping := &riak.PingCommand{}
-	if err := cluster.Execute(ping); err != nil {
+	if err = cluster.Execute(ping); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("ping passed")
@@ -59,7 +59,7 @@ func main() {
 
 	storeCoach(cluster)
 
-	if err := updateCoach(cluster, "seahawks", "Bob Abooey"); err != nil {
+	if err = updateCoach(cluster, "seahawks", "Bob Abooey"); err != nil {
 		fmt.Println(err.Error())
 	}
 }
@@ -84,7 +84,7 @@ func storeCoach(cluster *riak.Cluster) {
 		return
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
@@ -106,7 +106,7 @@ func updateCoach(cluster *riak.Cluster, team, newCoach string) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
@@ -125,7 +125,7 @@ func updateCoach(cluster *riak.Cluster, team, newCoach string) error {
 		return err
 	}
 
-	if err := cluster.Execute(cmd); err != nil {
+	if err = cluster.Execute(cmd); err != nil {
 		return err
 	}
 
