@@ -74,7 +74,7 @@ func TestAddAndRemoveNodeFromCluster(t *testing.T) {
 
 	node := c.nodes[0]
 	// re-adding same node instance won't add it
-	if err := c.AddNode(node); err != nil {
+	if err = c.AddNode(node); err != nil {
 		t.Fatal(err)
 	}
 	if expected, actual := 1, len(c.nodes); expected != actual {
@@ -94,7 +94,7 @@ func TestAddAndRemoveNodeFromCluster(t *testing.T) {
 		if n, err = NewNode(opts); err != nil {
 			t.Fatal(err)
 		} else {
-			if err := c.AddNode(n); err != nil {
+			if err = c.AddNode(n); err != nil {
 				t.Fatal(err)
 			}
 			if port == portToRemove {
@@ -114,7 +114,7 @@ func TestAddAndRemoveNodeFromCluster(t *testing.T) {
 		}
 	}
 	// remove node with port 10027
-	if err := c.RemoveNode(nodeToRemove); err != nil {
+	if err = c.RemoveNode(nodeToRemove); err != nil {
 		t.Fatal(err)
 	}
 	if expected, actual := 4, len(c.nodes); expected != actual {

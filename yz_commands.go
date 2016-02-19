@@ -30,6 +30,7 @@ type Schema struct {
 // StoreIndexCommand is sused to store a new search index on Riak
 type StoreIndexCommand struct {
 	commandImpl
+	timeoutImpl
 	Response bool
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
@@ -68,6 +69,7 @@ func (cmd *StoreIndexCommand) getResponseProtobufMessage() proto.Message {
 //		WithSchemaName("mySchemaName").
 //		Build()
 type StoreIndexCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakYZ.RpbYokozunaIndexPutReq
 }
 
@@ -104,6 +106,7 @@ func (builder *StoreIndexCommandBuilder) WithNVal(nval uint32) *StoreIndexComman
 // WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *StoreIndexCommandBuilder) WithTimeout(timeout time.Duration) *StoreIndexCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -113,7 +116,12 @@ func (builder *StoreIndexCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
 	}
-	return &StoreIndexCommand{protobuf: builder.protobuf}, nil
+	return &StoreIndexCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
 }
 
 // FetchIndex

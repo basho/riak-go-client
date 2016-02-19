@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"time"
 
 	proto "github.com/golang/protobuf/proto"
 )
@@ -16,6 +17,10 @@ type CommandBuilder interface {
 
 type streamingCommand interface {
 	isDone() bool
+}
+
+type timeoutCommand interface {
+	getTimeout() time.Duration
 }
 
 // Command interface enforces proper structure of a Command object

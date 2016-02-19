@@ -17,6 +17,7 @@ import (
 // UpdateCounterCommand is used to increment or decrement a counter data type in Riak KV
 type UpdateCounterCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *UpdateCounterResponse
 	protobuf proto.Message
 	isLegacy bool
@@ -162,7 +163,7 @@ func (builder *UpdateCounterCommandBuilder) WithReturnBody(returnBody bool) *Upd
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *UpdateCounterCommandBuilder) WithTimeout(timeout time.Duration) *UpdateCounterCommandBuilder {
 	builder.timeout = timeout
 	return builder
@@ -171,6 +172,7 @@ func (builder *UpdateCounterCommandBuilder) WithTimeout(timeout time.Duration) *
 // Build validates the configuration options provided then builds the command
 func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 	var isLegacy = false
+	var timeout time.Duration
 	var protobuf proto.Message = nil
 	if builder.bucketType == defaultBucketType && builder.returnBody == true {
 		isLegacy = true
@@ -191,6 +193,7 @@ func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 		}
 		protobuf = rpbCounterUpdateReq
 	} else {
+		timeout = builder.timeout
 		timeoutMilliseconds := uint32(builder.timeout / time.Millisecond)
 		dtUpdateReq := &rpbRiakDT.DtUpdateReq{
 			W:          &builder.w,
@@ -223,6 +226,9 @@ func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 	}
 
 	return &UpdateCounterCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: timeout,
+		},
 		protobuf: protobuf,
 		isLegacy: isLegacy,
 	}, nil
@@ -235,6 +241,7 @@ func (builder *UpdateCounterCommandBuilder) Build() (Command, error) {
 // FetchCounterCommand fetches a counter CRDT from Riak
 type FetchCounterCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *FetchCounterResponse
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -293,6 +300,7 @@ type FetchCounterResponse struct {
 //		WithKey("myKey").
 //		Build()
 type FetchCounterCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
@@ -355,9 +363,10 @@ func (builder *FetchCounterCommandBuilder) WithBasicQuorum(basicQuorum bool) *Fe
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *FetchCounterCommandBuilder) WithTimeout(timeout time.Duration) *FetchCounterCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -370,7 +379,12 @@ func (builder *FetchCounterCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &FetchCounterCommand{protobuf: builder.protobuf}, nil
+	return &FetchCounterCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
 }
 
 // UpdateSet
@@ -380,6 +394,7 @@ func (builder *FetchCounterCommandBuilder) Build() (Command, error) {
 // UpdateSetCommand stores or updates a set CRDT in Riak
 type UpdateSetCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *UpdateSetResponse
 	protobuf *rpbRiakDT.DtUpdateReq
 }
@@ -446,6 +461,7 @@ type UpdateSetResponse struct {
 //		WithAdditions(adds).
 //		 Build()
 type UpdateSetCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakDT.DtUpdateReq
 }
 
@@ -536,9 +552,10 @@ func (builder *UpdateSetCommandBuilder) WithReturnBody(returnBody bool) *UpdateS
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *UpdateSetCommandBuilder) WithTimeout(timeout time.Duration) *UpdateSetCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -551,7 +568,12 @@ func (builder *UpdateSetCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &UpdateSetCommand{protobuf: builder.protobuf}, nil
+	return &UpdateSetCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
 }
 
 // FetchSet
@@ -561,6 +583,7 @@ func (builder *UpdateSetCommandBuilder) Build() (Command, error) {
 // FetchSetCommand fetches a set CRDT from Riak
 type FetchSetCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *FetchSetResponse
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -622,6 +645,7 @@ type FetchSetResponse struct {
 //		WithKey("myKey").
 //		Build()
 type FetchSetCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
@@ -684,9 +708,10 @@ func (builder *FetchSetCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchS
 	return builder
 }
 
-// WithTimeout sets a timeout in milliseconds to be used for this command operation
+// WithTimeout sets a timeout to be used for this command operation
 func (builder *FetchSetCommandBuilder) WithTimeout(timeout time.Duration) *FetchSetCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -699,7 +724,12 @@ func (builder *FetchSetCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &FetchSetCommand{protobuf: builder.protobuf}, nil
+	return &FetchSetCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
 }
 
 // UpdateMap
@@ -709,6 +739,7 @@ func (builder *FetchSetCommandBuilder) Build() (Command, error) {
 // UpdateMapCommand updates a map CRDT in Riak
 type UpdateMapCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *UpdateMapResponse
 	op       *MapOperation
 	protobuf *rpbRiakDT.DtUpdateReq
@@ -1147,6 +1178,7 @@ type UpdateMapResponse struct {
 //		Build()
 type UpdateMapCommandBuilder struct {
 	mapOperation *MapOperation
+	timeout      time.Duration
 	protobuf     *rpbRiakDT.DtUpdateReq
 }
 
@@ -1224,6 +1256,7 @@ func (builder *UpdateMapCommandBuilder) WithReturnBody(returnBody bool) *UpdateM
 // WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *UpdateMapCommandBuilder) WithTimeout(timeout time.Duration) *UpdateMapCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -1242,7 +1275,13 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 	if builder.mapOperation.hasRemoves(true) && builder.protobuf.GetContext() == nil {
 		return nil, newClientError("When doing any removes a context must be provided.", nil)
 	}
-	return &UpdateMapCommand{protobuf: builder.protobuf, op: builder.mapOperation}, nil
+	return &UpdateMapCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+		op:       builder.mapOperation,
+	}, nil
 }
 
 // FetchMap
@@ -1252,6 +1291,7 @@ func (builder *UpdateMapCommandBuilder) Build() (Command, error) {
 // FetchMapCommand fetches a map CRDT from Riak
 type FetchMapCommand struct {
 	commandImpl
+	timeoutImpl
 	Response *FetchMapResponse
 	protobuf *rpbRiakDT.DtFetchReq
 }
@@ -1318,6 +1358,7 @@ type FetchMapResponse struct {
 //		WithKey("myKey").
 //		Build()
 type FetchMapCommandBuilder struct {
+	timeout  time.Duration
 	protobuf *rpbRiakDT.DtFetchReq
 }
 
@@ -1383,6 +1424,7 @@ func (builder *FetchMapCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchM
 // WithTimeout sets a timeout in milliseconds to be used for this command operation
 func (builder *FetchMapCommandBuilder) WithTimeout(timeout time.Duration) *FetchMapCommandBuilder {
 	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
 	builder.protobuf.Timeout = &timeoutMilliseconds
 	return builder
 }
@@ -1395,5 +1437,10 @@ func (builder *FetchMapCommandBuilder) Build() (Command, error) {
 	if err := validateLocatable(builder.protobuf); err != nil {
 		return nil, err
 	}
-	return &FetchMapCommand{protobuf: builder.protobuf}, nil
+	return &FetchMapCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
 }

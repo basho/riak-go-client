@@ -245,7 +245,7 @@ func TestRecoverAfterConnectionComesUpViaDefaultPingHealthCheck(t *testing.T) {
 		node.setStateFunc = origSetStateFunc
 		node.stop()
 		close(stateChan)
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Error("test timed out")
 	}
 }

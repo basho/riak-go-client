@@ -146,7 +146,7 @@ func storeData(c *riak.Cluster, sc chan struct{}) {
 					Command: svc,
 					Done:    dc,
 				}
-				if err := c.ExecuteAsync(a); err != nil {
+				if err = c.ExecuteAsync(a); err != nil {
 					LogErr("[GH-47/StoreData]", err)
 				}
 				key++
@@ -192,7 +192,7 @@ func listKeys(c *riak.Cluster, sc chan struct{}) {
 				Command: svc,
 				Done:    dc,
 			}
-			if err := c.ExecuteAsync(a); err != nil {
+			if err = c.ExecuteAsync(a); err != nil {
 				LogErr("[GH-47/ListKeys]", err)
 			}
 		}
@@ -245,7 +245,7 @@ func main() {
 		ErrExit(err)
 	}
 
-	if err := c.Start(); err != nil {
+	if err = c.Start(); err != nil {
 		ErrExit(err)
 	}
 
@@ -256,7 +256,7 @@ func main() {
 	defer func() {
 		stopping = true
 		close(sc)
-		if err := c.Stop(); err != nil {
+		if err = c.Stop(); err != nil {
 			LogErr("[GH-47]", err)
 		}
 	}()
