@@ -82,6 +82,7 @@ func NewNode(options *NodeOptions) (*Node, error) {
 			idleTimeout:    options.IdleTimeout,
 			connectTimeout: options.ConnectTimeout,
 			requestTimeout: options.RequestTimeout,
+			authOptions:    options.AuthOptions,
 		}
 
 		var cm *connectionManager
