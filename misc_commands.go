@@ -49,6 +49,56 @@ func (cmd *PingCommand) getResponseProtobufMessage() proto.Message {
 	return nil
 }
 
+// GetServerInfoResponse contains the response data for Riak server information
+type GetServerInfoResponse struct {
+	Node          string
+	ServerVersion string
+}
+
+// GetServerInfoCommand is used to get Riak server information
+type GetServerInfoCommand struct {
+	commandImpl
+	Response *GetServerInfoResponse
+}
+
+// Name identifies this command
+func (cmd *GetServerInfoCommand) Name() string {
+	return cmd.getName("GetServerInfo")
+}
+
+func (cmd *GetServerInfoCommand) getRequestCode() byte {
+	return rpbCode_RpbGetServerInfoReq
+}
+
+func (cmd *GetServerInfoCommand) constructPbRequest() (msg proto.Message, err error) {
+	return nil, nil
+}
+
+func (cmd *GetServerInfoCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	if msg == nil {
+		cmd.success = false
+	} else {
+		if rpbResp, ok := msg.(*rpbRiak.RpbGetServerInfoResp); ok {
+			cmd.Response = &GetServerInfoResponse{
+				Node:          string(rpbResp.GetNode()),
+				ServerVersion: string(rpbResp.GetServerVersion()),
+			}
+		} else {
+			return fmt.Errorf("[GetServerInfoCommand] could not convert %v to RpbGetServerInfoResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *GetServerInfoCommand) getResponseCode() byte {
+	return rpbCode_RpbGetServerInfoResp
+}
+
+func (cmd *GetServerInfoCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiak.RpbGetServerInfoResp{}
+}
+
 type startTlsCommand struct {
 	commandImpl
 }

@@ -26,6 +26,18 @@ func TestEnsureCorrectRequestAndResponseCodes(t *testing.T) {
 	if cmd.getResponseProtobufMessage() != nil {
 		t.Error("want nil response protobuf message")
 	}
+	// GetServerInfo
+	cmd = &GetServerInfoCommand{}
+	if got, want := cmd.getRequestCode(), rpbCode_RpbGetServerInfoReq; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cmd.getResponseCode(), rpbCode_RpbGetServerInfoResp; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	msg = cmd.getResponseProtobufMessage()
+	if _, ok := msg.(*rpbRiak.RpbGetServerInfoResp); !ok {
+		t.Errorf("error casting %v to RpbGetServerInfoResp", reflect.TypeOf(msg))
+	}
 	// StartTls
 	cmd = &startTlsCommand{}
 	if got, want := cmd.getRequestCode(), rpbCode_RpbStartTls; got != want {

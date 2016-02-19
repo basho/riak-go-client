@@ -16,6 +16,7 @@ func TestCreateNodeWithOptions(t *testing.T) {
 		RequestTimeout:      tenSeconds,
 		HealthCheckInterval: tenSeconds,
 		HealthCheckBuilder:  builder,
+		TempNetErrorRetries: 16,
 	}
 	node, err := NewNode(opts)
 	if err != nil {
@@ -51,6 +52,9 @@ func TestCreateNodeWithOptions(t *testing.T) {
 	}
 	if expected, actual := node.cm.requestTimeout, opts.RequestTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if got, want := node.cm.tempNetErrorRetries, opts.TempNetErrorRetries; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if expected, actual := node.healthCheckInterval, opts.HealthCheckInterval; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
@@ -91,6 +95,9 @@ func TestEnsureDefaultNodeValues(t *testing.T) {
 	}
 	if expected, actual := defaultConnectTimeout, node.cm.connectTimeout; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)
+	}
+	if got, want := node.cm.tempNetErrorRetries, defaultTempNetErrorRetries; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 	if expected, actual := defaultHealthCheckInterval, node.healthCheckInterval; expected != actual {
 		t.Errorf("expected %v, got: %v", expected, actual)

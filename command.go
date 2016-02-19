@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"time"
 	"sync/atomic"
+	"time"
 
 	proto "github.com/golang/protobuf/proto"
 )

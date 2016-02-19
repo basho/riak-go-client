@@ -72,6 +72,7 @@ type connectionManagerOptions struct {
 	addr                   *net.TCPAddr
 	minConnections         uint16
 	maxConnections         uint16
+	tempNetErrorRetries    uint16
 	idleExpirationInterval time.Duration
 	idleTimeout            time.Duration
 	connectTimeout         time.Duration
@@ -83,6 +84,7 @@ type connectionManager struct {
 	addr                   *net.TCPAddr
 	minConnections         uint16
 	maxConnections         uint16
+	tempNetErrorRetries    uint16
 	idleExpirationInterval time.Duration
 	idleTimeout            time.Duration
 	connectTimeout         time.Duration
@@ -116,6 +118,9 @@ func newConnectionManager(options *connectionManagerOptions) (*connectionManager
 	if options.maxConnections == 0 {
 		options.maxConnections = defaultMaxConnections
 	}
+	if options.tempNetErrorRetries == 0 {
+		options.tempNetErrorRetries = defaultTempNetErrorRetries
+	}
 	if options.minConnections > options.maxConnections {
 		return nil, ErrConnectionManagerMaxMustBeGreaterThanMin
 	}
@@ -135,6 +140,7 @@ func newConnectionManager(options *connectionManagerOptions) (*connectionManager
 		addr:                   options.addr,
 		minConnections:         options.minConnections,
 		maxConnections:         options.maxConnections,
+		tempNetErrorRetries:    options.tempNetErrorRetries,
 		idleExpirationInterval: options.idleExpirationInterval,
 		idleTimeout:            options.idleTimeout,
 		connectTimeout:         options.connectTimeout,
@@ -244,10 +250,11 @@ func (cm *connectionManager) create() (*connection, error) {
 
 func (cm *connectionManager) createConnection() (*connection, error) {
 	opts := &connectionOptions{
-		remoteAddress:  cm.addr,
-		connectTimeout: cm.connectTimeout,
-		requestTimeout: cm.requestTimeout,
-		authOptions:    cm.authOptions,
+		remoteAddress:       cm.addr,
+		connectTimeout:      cm.connectTimeout,
+		requestTimeout:      cm.requestTimeout,
+		authOptions:         cm.authOptions,
+		tempNetErrorRetries: cm.tempNetErrorRetries,
 	}
 	conn, err := newConnection(opts)
 	if err != nil {

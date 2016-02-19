@@ -71,7 +71,7 @@ func newTestListener(o *testListenerOpts) *testListener {
 	}
 	if o.onConn == nil {
 		o.onConn = func(c net.Conn) bool {
-			if readWritePingResp(o.test, c, false) {
+			if readWriteResp(o.test, c, false) {
 				return false // connection is not done
 			}
 			return true // connection is done
@@ -149,9 +149,12 @@ func (t *testListener) stop() {
 	}
 }
 
-func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool) {
+func readWriteResp(t *testing.T, c net.Conn, shouldClose bool) (success bool) {
 	success = false
-	if err := readClientMessage(c); err != nil {
+	var err error
+	var msgCode byte
+
+	if msgCode, err = readClientMessage(c); err != nil {
 		if err == io.EOF {
 			c.Close()
 		} else {
@@ -161,7 +164,23 @@ func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool
 		success = false
 		return
 	}
-	data := buildRiakMessage(rpbCode_RpbPingResp, nil)
+
+	var data []byte
+	switch msgCode {
+	case rpbCode_RpbPingReq:
+		data = buildRiakMessage(rpbCode_RpbPingResp, nil)
+	case rpbCode_RpbGetServerInfoReq:
+		data, err = buildGetServerInfoResp()
+	default:
+		msg := fmt.Sprintf("unknown msg code: %v", msgCode)
+		data, err = buildRiakError(msg)
+	}
+
+	if err != nil {
+		t.Error(err)
+		success = false
+	}
+
 	count, err := c.Write(data)
 	if err == nil {
 		success = true
@@ -169,19 +188,22 @@ func readWritePingResp(t *testing.T, c net.Conn, shouldClose bool) (success bool
 		t.Error(err)
 		success = false
 	}
+
 	if count != len(data) {
 		t.Errorf("expected to write %v bytes, wrote %v bytes", len(data), count)
 		success = false
 	}
+
 	if shouldClose {
 		c.Close()
 	}
+
 	return
 }
 
-// TODO this code is copied from connection.go and should be shared instead
-func readClientMessage(c net.Conn) (err error) {
-	sizeBuf := make([]byte, 4)
+// TODO this is copied from connection.go and should be shared
+func readClientMessage(c net.Conn) (msgCode byte, err error) {
+	var sizeBuf []byte = make([]byte, 4)
 	var count int = 0
 	if count, err = io.ReadFull(c, sizeBuf); err == nil && count == 4 {
 		messageLength := binary.BigEndian.Uint32(sizeBuf)
@@ -192,6 +214,7 @@ func readClientMessage(c net.Conn) (err error) {
 		} else if uint32(count) != messageLength {
 			err = fmt.Errorf("[readClientMessage] message length: %d, only read: %d", messageLength, count)
 		}
+		msgCode = data[0]
 	} else {
 		if err != io.EOF {
 			err = errors.New(fmt.Sprintf("[readClientMessage] error reading command size into sizeBuf: count %d, err %s, errtype %v", count, err, reflect.TypeOf(err)))
@@ -208,21 +231,15 @@ func handleClientMessageWithRiakError(t *testing.T, c net.Conn, msgCount uint16,
 	}()
 
 	for i := 0; i < int(msgCount); i++ {
-		if err := readClientMessage(c); err != nil {
+		if _, err := readClientMessage(c); err != nil {
 			t.Error(err)
 		}
 
-		var errcode uint32 = 1
-		errmsg := bytes.NewBufferString("this is an error")
-		rpbErr := &rpb_riak.RpbErrorResp{
-			Errcode: &errcode,
-			Errmsg:  errmsg.Bytes(),
-		}
-		encoded, err := proto.Marshal(rpbErr)
+		data, err := buildRiakError("this is an error")
 		if err != nil {
 			t.Error(err)
 		}
-		data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
+
 		count, err := c.Write(data)
 		if err != nil {
 			t.Error(err)
@@ -233,5 +250,35 @@ func handleClientMessageWithRiakError(t *testing.T, c net.Conn, msgCount uint16,
 		if respChan != nil {
 			respChan <- true
 		}
+	}
+}
+
+func buildGetServerInfoResp() ([]byte, error) {
+	n := bytes.NewBufferString("golang-test")
+	v := bytes.NewBufferString("9.9.9")
+	rpb := &rpb_riak.RpbGetServerInfoResp{
+		Node:          n.Bytes(),
+		ServerVersion: v.Bytes(),
+	}
+	if encoded, err := proto.Marshal(rpb); err != nil {
+		return nil, err
+	} else {
+		data := buildRiakMessage(rpbCode_RpbGetServerInfoResp, encoded)
+		return data, nil
+	}
+}
+
+func buildRiakError(errmsg string) ([]byte, error) {
+	var errcode uint32 = 1
+	emsg := bytes.NewBufferString(errmsg)
+	rpbErr := &rpb_riak.RpbErrorResp{
+		Errcode: &errcode,
+		Errmsg:  emsg.Bytes(),
+	}
+	if encoded, err := proto.Marshal(rpbErr); err != nil {
+		return nil, err
+	} else {
+		data := buildRiakMessage(rpbCode_RpbErrorResp, encoded)
+		return data, nil
 	}
 }
