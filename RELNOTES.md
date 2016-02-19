@@ -5,6 +5,7 @@ Release Notes
 =============
 
 * 1.6.0 - Following PRs included:
+ * [Add `NodeOptions` test and concurrent commands test for `MaxConnections`](https://github.com/basho/riak-go-client/pull/61)
  * [Security auth fixes](https://github.com/basho/riak-go-client/pull/60)
  * [Use request or command timeout as applicable](https://github.com/basho/riak-go-client/pull/57)
  * [Re-tryable vs non-re-tryable commands](https://github.com/basho/riak-go-client/pull/56)
