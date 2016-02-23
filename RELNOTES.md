@@ -10,7 +10,7 @@ Release Notes
  * [Use request or command timeout as applicable](https://github.com/basho/riak-go-client/pull/57)
  * [Re-tryable vs non-re-tryable commands](https://github.com/basho/riak-go-client/pull/56)
  * [Re-try reads on temporary network errors, bug fixes in error situations](https://github.com/basho/riak-go-client/pull/52)
-* 1.5.1 - Following PRs addressed:
+* 1.5.1 (DEPRECATED RELEASE) - Following PRs addressed:
  * [Improve connection error handling](https://github.com/basho/riak-go-client/pull/48)
 * 1.5.0 - Following PRs addressed:
  * [Add `FetchBucketTypePropsCommand` and `StoreBucketTypePropsCommand`](https://github.com/basho/riak-go-client/pull/42)
