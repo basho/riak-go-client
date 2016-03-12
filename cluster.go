@@ -325,6 +325,7 @@ func (c *Cluster) execute(async *Async) {
 			if err == nil {
 				logDebug("[Cluster]", "did NOT execute cmd '%s', nil err", cmd.Name())
 				// Command did not execute but there was no error, so enqueue it
+				// TODO FUTURE should this only happen if retries exhausted?
 				if c.queueCommands {
 					if err = c.enqueueCommand(async); err == nil {
 						enqueued = true

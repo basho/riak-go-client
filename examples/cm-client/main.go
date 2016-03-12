@@ -2,10 +2,11 @@ package main
 
 import (
 	"bufio"
-	"crypto/rand"
+	crand "crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -15,21 +16,26 @@ import (
 )
 
 var stopping bool = false
-var nodeCount uint16 = 1
+var nodeCount uint16 = 5
 var minConnections uint16 = 10
 var maxConnections uint16 = 256
 
-var key uint64
+var key int = 1
 var data []byte
+
+var fetchDataInterval time.Duration = time.Millisecond * 100
+var storeDataInterval time.Duration = time.Millisecond * 100
 
 func init() {
 	c := 256
 	b := make([]byte, c)
-	_, err := rand.Read(b)
+	_, err := crand.Read(b)
 	if err != nil {
 		util.ErrExit(err)
 	}
 	data = []byte(hex.EncodeToString(b)) // NB: bytes of utf-8 encoding
+
+	rand.Seed(time.Now().Unix())
 }
 
 func main() {
@@ -80,15 +86,21 @@ func main() {
 		fmt.Println("ping passed")
 	}
 
+	sdc := make(chan riak.Command, minConnections)
+	fdc := make(chan riak.Command, minConnections)
+
 	defer func() {
 		stopping = true
 		close(sc)
 		if serr := c.Stop(); serr != nil {
 			util.ErrExit(serr)
 		}
+		close(sdc)
+		close(fdc)
 	}()
 
-	go storeData(c, sc)
+	go storeData(c, sc, sdc)
+	go fetchData(c, sc, fdc)
 
 	util.LogInfo("[cm-client]", "HIT ANY KEY TO STOP")
 	bio := bufio.NewReader(os.Stdin)
@@ -98,14 +110,52 @@ func main() {
 	}
 }
 
-func storeData(c *riak.Cluster, sc chan struct{}) {
-	// tck := time.NewTicker(time.Millisecond * 500)
-	tck := time.NewTicker(time.Second)
-	dc := make(chan riak.Command, minConnections)
-
+func fetchData(c *riak.Cluster, sc chan struct{}, dc chan riak.Command) {
+	tck := time.NewTicker(fetchDataInterval)
 	defer func() {
 		tck.Stop()
-		close(dc)
+	}()
+
+	util.LogDebug("[cm-client/FetchData]", "Starting worker process")
+	defer util.LogDebug("[cm-client/FetchData]", "Stopped worker process")
+
+	for !stopping {
+		select {
+		case <-sc:
+			util.LogDebug("[cm-client/FetchData]", "Stopping worker process")
+			stopping = true
+			break
+		case cmd := <-dc:
+			util.LogDebug("[cm-client/FetchData]", "%v completed", cmd.Name())
+		case <-tck.C:
+			for i := uint16(0); i < (minConnections * nodeCount); i++ {
+				if stopping {
+					break
+				}
+				rkey := rand.Intn(key)
+				svc, err := riak.NewFetchValueCommandBuilder().
+					WithBucket("chaos-monkey").
+					WithKey(strconv.Itoa(rkey)).
+					Build()
+				if err != nil {
+					util.ErrExit(err)
+				}
+				a := &riak.Async{
+					Command: svc,
+					Done:    dc,
+				}
+				if err = c.ExecuteAsync(a); err != nil {
+					util.LogErr("[cm-client/FetchData]", err)
+				}
+			}
+		}
+	}
+}
+
+func storeData(c *riak.Cluster, sc chan struct{}, dc chan riak.Command) {
+	tck := time.NewTicker(storeDataInterval)
+	defer func() {
+		tck.Stop()
 	}()
 
 	util.LogDebug("[cm-client/StoreData]", "Starting worker process")
@@ -127,13 +177,13 @@ func storeData(c *riak.Cluster, sc chan struct{}) {
 		case cmd := <-dc:
 			util.LogDebug("[cm-client/StoreData]", "%v completed", cmd.Name())
 		case <-tck.C:
-			for i := uint16(0); i < minConnections; i++ {
+			for i := uint16(0); i < (minConnections * nodeCount); i++ {
 				if stopping {
 					break
 				}
 				svc, err := riak.NewStoreValueCommandBuilder().
 					WithBucket("chaos-monkey").
-					WithKey(strconv.FormatUint(key, 10)).
+					WithKey(strconv.Itoa(key)).
 					WithContent(obj).
 					Build()
 				if err != nil {
