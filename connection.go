@@ -252,6 +252,8 @@ func (c *connection) read(timeout time.Duration) ([]byte, error) {
 				c.dataBuf = c.dataBuf[0:messageLength]
 			}
 			// FUTURE: large object warning / error
+			// TODO: FUTURE this deadline should subtract the duration taken by the first
+			// ReadFull call. Currently it's could wait up to 2X the read timout value
 			c.setReadDeadline(rt)
 			count, err = io.ReadFull(c.conn, c.dataBuf)
 		} else {
