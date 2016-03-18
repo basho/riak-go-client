@@ -48,15 +48,18 @@ func (a *Async) onEnqueued() {
 
 func (a *Async) done(err error) {
 	if err != nil {
-		logDebugln("[Async]", "done error:", err)
+		// TODO FUTURE evaluate debug logging
+		// logDebugln("[Async]", "done error:", err)
 		a.Error = err
 	}
 	if a.Done != nil {
-		logDebug("[Async]", "signaling a.Done channel with '%s'", a.Command.Name())
+		// TODO FUTURE evaluate debug logging
+		// logDebug("[Async]", "signaling a.Done channel with '%s'", a.Command.Name())
 		a.Done <- a.Command
 	}
 	if a.Wait != nil {
-		logDebug("[Async]", "signaling a.Wait WaitGroup for '%s'", a.Command.Name())
+		// TODO FUTURE evaluate debug logging
+		// logDebug("[Async]", "signaling a.Wait WaitGroup for '%s'", a.Command.Name())
 		a.Wait.Done()
 	}
 }

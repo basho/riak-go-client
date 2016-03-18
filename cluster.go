@@ -300,10 +300,7 @@ func (c *Cluster) execute(async *Async) {
 	var lastExeNode *Node
 	if rc, ok := cmd.(retryableCommand); ok {
 		tries = c.executionAttempts
-		logDebug("[Cluster]", "cmd %s initial tries: %d", cmd.Name(), tries)
 		lastExeNode = rc.getLastNode()
-	} else {
-		logDebug("[Cluster]", "cmd %s NOT re-tryable", cmd.Name())
 	}
 
 	async.onExecute()
@@ -328,6 +325,7 @@ func (c *Cluster) execute(async *Async) {
 			if err == nil {
 				logDebug("[Cluster]", "did NOT execute cmd '%s', nil err", cmd.Name())
 				// Command did not execute but there was no error, so enqueue it
+				// TODO FUTURE should this only happen if retries exhausted?
 				if c.queueCommands {
 					if err = c.enqueueCommand(async); err == nil {
 						enqueued = true
