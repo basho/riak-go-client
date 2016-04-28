@@ -33,10 +33,10 @@ do
 
     rpb_file="$rpb_path_tmp/$proto_file_basename.pb.go"
 
-    sed -i 's/^import proto.*/import proto "github.com\/golang\/protobuf\/proto"/g' "$rpb_file"
+    sed -i '' 's/^import proto.*/import proto "github.com\/golang\/protobuf\/proto"/g' "$rpb_file"
 
     if [[ $proto_file_basename == 'riak_search' || $proto_file_basename == 'riak_kv' ]]
     then
-        sed -i 's/^import riak.*/import riak "github.com\/basho\/riak-go-client\/rpb\/riak"/g' "$rpb_file"
+        sed -i '' 's/^import riak.*/import riak "github.com\/basho\/riak-go-client\/rpb\/riak"/g' "$rpb_file"
     fi
 done
