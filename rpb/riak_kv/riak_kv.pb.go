@@ -46,7 +46,7 @@ package riak_kv
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import riak "github.com/basho/riak-go-client/rpb/riak"
+import riak "."
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
