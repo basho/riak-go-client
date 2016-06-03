@@ -55,7 +55,7 @@ func TestBuildTsDelReqCorrectlyViaBuilder(t *testing.T) {
 	key[1] = NewSint64TsCell(1)
 	key[2] = NewDoubleTsCell(0.1)
 
-	builder := NewTsFetchRowCommandBuilder().
+	builder := NewTsDeleteRowCommandBuilder().
 		WithTable("table_name").
 		WithKey(key)
 
