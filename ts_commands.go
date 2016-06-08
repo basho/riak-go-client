@@ -514,7 +514,7 @@ func (cmd *TsQueryCommand) getResponseCode() byte {
 }
 
 func (cmd *TsQueryCommand) getResponseProtobufMessage() proto.Message {
-	return &riak_ts.TsDelResp{}
+	return &riak_ts.TsQueryResp{}
 }
 
 // TsQueryResponse contains the response data for a TsQueryCommand
@@ -628,12 +628,12 @@ func (cmd *TsListKeysCommand) onSuccess(msg proto.Message) error {
 			cmd.done = keysResp.GetDone()
 			response := cmd.Response
 
-			if keysResp.GetKeys() != nil {
+			if keysResp.GetKeys() != nil && len(keysResp.GetKeys()) > 0 {
 				keys := make([]string, 0)
 				rows := convertFromPbTsRows(keysResp.GetKeys(), 1)
 				for _, row := range rows {
-					for i, cell := range row {
-						keys[i] = cell.GetStringValue()
+					for _, cell := range row {
+						keys = append(keys, cell.GetStringValue())
 					}
 				}
 
@@ -755,19 +755,19 @@ func convertFromPbTsRows(tsRows []*riak_ts.TsRow, columnCount int) [][]TsCell {
 	var cell TsCell
 	rowCount := len(tsRows)
 
-	for i, tsRow := range tsRows {
+	for _, tsRow := range tsRows {
 		r := make([]TsCell, columnCount)
 
-		for k, tsCell := range tsRow.Cells {
+		for _, tsCell := range tsRow.Cells {
 			cell.setCell(tsCell)
-			r[k] = cell
+			r = append(r, cell)
 		}
 
 		if len(rows) < 1 {
 			rows = make([][]TsCell, rowCount)
 		}
 
-		rows[i] = r
+		rows = append(rows, r)
 	}
 
 	return rows
