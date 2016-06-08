@@ -121,7 +121,7 @@ func TestTsCreateTable(t *testing.T) {
 		t.FailNow()
 	}
 }
-
+ss
 // TsStoreRows
 func TestTsStoreRow(t *testing.T) {
 	var err error
@@ -331,7 +331,7 @@ func TestTsDeleteRow(t *testing.T) {
 	if err = cluster.Execute(cmd); err != nil {
 		t.Fatal(err.Error())
 	}
-	if cmd, ok := cmd.(*TsFetchRowCommand); ok {
+	if cmd, ok := cmd.(*TsDeleteRowCommand); ok {
 		rsp := cmd.Response
 		if rsp == nil {
 			t.Errorf("expected non-nil Response")

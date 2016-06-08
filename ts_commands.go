@@ -228,15 +228,20 @@ func (cmd *TsFetchRowCommand) onSuccess(msg proto.Message) error {
 				cmd.Response = &TsFetchRowResponse{
 					IsNotFound: false,
 					Columns:    make([]TsColumnDescription, columnCount),
-					Rows:       make([][]TsCell, len(tsRows)),
+					Row:        make([]TsCell, columnCount),
 				}
 
-				for i, tsCol := range tsCols {
+				for _, tsCol := range tsCols {
 					col.setColumn(tsCol)
-					cmd.Response.Columns[i] = col
+					cmd.Response.Columns = append(cmd.Response.Columns, col)
 				}
 
-				cmd.Response.Rows = convertFromPbTsRows(tsRows, columnCount)
+				// grab only the first row if any
+				rows := convertFromPbTsRows(tsRows, columnCount)
+				if len(rows) > 0 {
+					cmd.Response.Row = rows[0]
+				} else {
+				}
 			}
 		} else {
 			return fmt.Errorf("[TsFetchRowCommand] could not convert %v to TsGetResp", reflect.TypeOf(msg))
@@ -261,7 +266,7 @@ func (cmd *TsFetchRowCommand) getResponseProtobufMessage() proto.Message {
 type TsFetchRowResponse struct {
 	IsNotFound bool
 	Columns    []TsColumnDescription
-	Rows       [][]TsCell
+	Row        []TsCell
 }
 
 // TsFetchRowCommandBuilder type is required for creating new instances of TsFetchRowCommand
