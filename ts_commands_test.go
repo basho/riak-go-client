@@ -3,6 +3,7 @@ package riak
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/basho/riak-go-client/rpb/riak_ts"
 )
@@ -96,7 +97,7 @@ func TestBuildTsPutReqCorrectlyViaBuilder(t *testing.T) {
 	row[1] = NewSint64TsCell(1)
 	row[2] = NewDoubleTsCell(0.1)
 	row[3] = NewBooleanTsCell(true)
-	row[4] = NewTimestampTsCell(1234567890)
+	row[4] = NewTimestampTsCellFromInt64(1234567890)
 
 	rows := make([][]TsCell, 1)
 	rows[0] = row
@@ -246,30 +247,52 @@ func TestBuildTsListKeysReqCorrectlyViaBuilder(t *testing.T) {
 }
 
 func TestNewTsCells(t *testing.T) {
+	s := int64(1234567890)
+	ms := time.Duration(103) * time.Millisecond
+	tval := time.Unix(s, ms.Nanoseconds())
+
 	cells := make([]TsCell, 5)
 	cells[0] = NewStringTsCell("Test Key Value")
 	cells[1] = NewSint64TsCell(1)
 	cells[2] = NewDoubleTsCell(0.1)
 	cells[3] = NewBooleanTsCell(true)
-	cells[4] = NewTimestampTsCell(1234567890)
+	cells[4] = NewTimestampTsCell(tval)
 
-	if expected, actual := "VARCHAR", cells[0].GetDataType(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cells[0].GetDataType(), "VARCHAR"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cells[0].GetStringValue(), "Test Key Value"; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 
-	if expected, actual := "SINT64", cells[1].GetDataType(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cells[1].GetDataType(), "SINT64"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cells[1].GetSint64Value(), int64(1); got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 
-	if expected, actual := "DOUBLE", cells[2].GetDataType(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cells[2].GetDataType(), "DOUBLE"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cells[2].GetDoubleValue(), 0.1; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 
-	if expected, actual := "BOOLEAN", cells[3].GetDataType(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cells[3].GetDataType(), "BOOLEAN"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cells[3].GetBooleanValue(), true; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 
-	if expected, actual := "TIMESTAMP", cells[4].GetDataType(); expected != actual {
-		t.Errorf("expected %v, got %v", expected, actual)
+	if got, want := cells[4].GetDataType(), "TIMESTAMP"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cells[4].GetTimeValue(), tval; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cells[4].GetTimestampValue(), int64(1234567890103); got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 }
