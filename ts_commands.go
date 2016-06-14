@@ -19,15 +19,15 @@ type TsCell struct {
 func (c *TsCell) GetDataType() string {
 	var dType string
 	switch {
-	case c.cell.VarcharValue == nil:
+	case c.cell.VarcharValue != nil:
 		dType = riak_ts.TsColumnType_VARCHAR.String()
-	case c.cell.Sint64Value == nil:
+	case c.cell.Sint64Value != nil:
 		dType = riak_ts.TsColumnType_SINT64.String()
-	case c.cell.TimestampValue == nil:
+	case c.cell.TimestampValue != nil:
 		dType = riak_ts.TsColumnType_TIMESTAMP.String()
-	case c.cell.BooleanValue == nil:
+	case c.cell.BooleanValue != nil:
 		dType = riak_ts.TsColumnType_BOOLEAN.String()
-	case c.cell.DoubleValue == nil:
+	case c.cell.DoubleValue != nil:
 		dType = riak_ts.TsColumnType_DOUBLE.String()
 	}
 
@@ -153,7 +153,7 @@ func (cmd *TsStoreRowsCommand) getResponseProtobufMessage() proto.Message {
 
 // TsStoreRowsCommandBuilder type is required for creating new instances of StoreIndexCommand
 //
-//	command := NewTsStoreRowsCommandBuilder().
+//	cmd, err := NewTsStoreRowsCommandBuilder().
 //		WithTable("myTableName").
 //		WithRows(rows).
 //		Build()
@@ -223,12 +223,11 @@ func (cmd *TsFetchRowCommand) onSuccess(msg proto.Message) error {
 		if tsTsFetchRowResp, ok := msg.(*riak_ts.TsGetResp); ok {
 			tsCols := tsTsFetchRowResp.GetColumns()
 			tsRows := tsTsFetchRowResp.GetRows()
-			columnCount := len(tsCols)
 			if tsCols != nil && tsRows != nil {
 				cmd.Response = &TsFetchRowResponse{
 					IsNotFound: false,
-					Columns:    make([]TsColumnDescription, columnCount),
-					Row:        make([]TsCell, columnCount),
+					Columns:    make([]TsColumnDescription, 0),
+					Row:        make([]TsCell, 0),
 				}
 
 				for _, tsCol := range tsCols {
@@ -237,10 +236,11 @@ func (cmd *TsFetchRowCommand) onSuccess(msg proto.Message) error {
 				}
 
 				// grab only the first row if any
-				rows := convertFromPbTsRows(tsRows, columnCount)
+				rows := convertFromPbTsRows(tsRows)
 				if len(rows) > 0 {
 					cmd.Response.Row = rows[0]
 				} else {
+					return fmt.Errorf("[TsFetchRowCommand] could not retrieve row from %v to TsGetResp", reflect.TypeOf(msg))
 				}
 			}
 		} else {
@@ -271,7 +271,12 @@ type TsFetchRowResponse struct {
 
 // TsFetchRowCommandBuilder type is required for creating new instances of TsFetchRowCommand
 //
-//	command := NewTsFetchRowCommandBuilder().
+//	key := make([]riak.TsCell, 3)
+//	key[0] = NewStringTsCell("South Atlantic")
+//	key[1] = NewStringTsCell("South Carolina")
+//	key[2] = NewTimestampTsCell(1420113600)
+//
+//	cmd, err := NewTsFetchRowCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithTable("myTable").
 //		WithKey(key).
@@ -374,7 +379,7 @@ func (cmd *TsDeleteRowCommand) getResponseProtobufMessage() proto.Message {
 
 // TsDeleteRowCommandBuilder type is required for creating new instances of TsDeleteRowCommand
 //
-//	command := NewTsDeleteRowCommandBuilder().
+//	cmd, err := NewTsDeleteRowCommandBuilder().
 //		WithTable("myTable").
 //		WithKey(key).
 //		Build()
@@ -474,19 +479,18 @@ func (cmd *TsQueryCommand) onSuccess(msg proto.Message) error {
 
 			tsCols := queryResp.GetColumns()
 			tsRows := queryResp.GetRows()
-			columnCount := len(tsCols)
 			if tsCols != nil && tsRows != nil {
 				cmd.Response = &TsQueryResponse{
-					Columns: make([]TsColumnDescription, columnCount),
-					Rows:    make([][]TsCell, len(tsRows)),
+					Columns: make([]TsColumnDescription, 0),
+					Rows:    make([][]TsCell, 0),
 				}
 
-				for i, tsCol := range tsCols {
+				for _, tsCol := range tsCols {
 					col.setColumn(tsCol)
-					cmd.Response.Columns[i] = col
+					cmd.Response.Columns = append(cmd.Response.Columns, col)
 				}
 
-				rows := convertFromPbTsRows(tsRows, columnCount)
+				rows := convertFromPbTsRows(tsRows)
 
 				if cmd.protobuf.GetStream() {
 					if cmd.callback == nil {
@@ -530,7 +534,7 @@ type TsQueryResponse struct {
 
 // TsQueryCommandBuilder type is required for creating new instances of TsQueryCommand
 //
-//	command := NewTsQueryCommandBuilder().
+//	cmd, err := NewTsQueryCommandBuilder().
 //		WithQuery("select * from GeoCheckin where time > 1234560 and time < 1234569 and region = 'South Atlantic'").
 //		WithStreaming(true).
 //		WithCallback(cb).
@@ -635,7 +639,7 @@ func (cmd *TsListKeysCommand) onSuccess(msg proto.Message) error {
 
 			if keysResp.GetKeys() != nil && len(keysResp.GetKeys()) > 0 {
 				keys := make([]string, 0)
-				rows := convertFromPbTsRows(keysResp.GetKeys(), 1)
+				rows := convertFromPbTsRows(keysResp.GetKeys())
 				for _, row := range rows {
 					for _, cell := range row {
 						keys = append(keys, cell.GetStringValue())
@@ -682,7 +686,7 @@ type TsListKeysResponse struct {
 
 // TsListKeysCommandBuilder type is required for creating new instances of TsListKeysCommand
 //
-//	command := NewTsListKeysCommandBuilder().
+//	cmd, err := NewTsListKeysCommandBuilder().
 //		WithTable("myTable").
 //		WithStreaming(true).
 //		WithCallback(cb).
@@ -755,24 +759,24 @@ func (builder *TsListKeysCommandBuilder) Build() (Command, error) {
 }
 
 // Converts a slice of riak_ts.TsRow to a slice of .TsRows
-func convertFromPbTsRows(tsRows []*riak_ts.TsRow, columnCount int) [][]TsCell {
+func convertFromPbTsRows(tsRows []*riak_ts.TsRow) [][]TsCell {
 	var rows [][]TsCell
+	var row []TsCell
 	var cell TsCell
-	rowCount := len(tsRows)
 
 	for _, tsRow := range tsRows {
-		r := make([]TsCell, columnCount)
+		row = make([]TsCell, 0)
 
 		for _, tsCell := range tsRow.Cells {
 			cell.setCell(tsCell)
-			r = append(r, cell)
+			row = append(row, cell)
 		}
 
 		if len(rows) < 1 {
-			rows = make([][]TsCell, rowCount)
+			rows = make([][]TsCell, 0)
 		}
 
-		rows = append(rows, r)
+		rows = append(rows, row)
 	}
 
 	return rows
@@ -781,21 +785,19 @@ func convertFromPbTsRows(tsRows []*riak_ts.TsRow, columnCount int) [][]TsCell {
 // Converts a slice of .TsRows to a slice of riak_ts.TsRow
 func convertFromTsRows(tsRows [][]TsCell) []*riak_ts.TsRow {
 	var rows []*riak_ts.TsRow
-	rowCount := len(tsRows)
-	cellCount := len(tsRows[0])
+	var cells []*riak_ts.TsCell
+	for _, tsRow := range tsRows {
+		cells = make([]*riak_ts.TsCell, 0)
 
-	for i, tsRow := range tsRows {
-		cells := make([]*riak_ts.TsCell, cellCount)
-
-		for k, tsCell := range tsRow {
-			cells[k] = tsCell.cell
+		for _, tsCell := range tsRow {
+			cells = append(cells, tsCell.cell)
 		}
 
 		if len(rows) < 1 {
-			rows = make([]*riak_ts.TsRow, rowCount)
+			rows = make([]*riak_ts.TsRow, 0)
 		}
 
-		rows[i] = &riak_ts.TsRow{Cells: cells}
+		rows = append(rows, &riak_ts.TsRow{Cells: cells})
 	}
 
 	return rows

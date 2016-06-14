@@ -8,7 +8,9 @@ import (
 	"time"
 )
 
-const tsTable = "WeatherByRegion"
+const tsTimestamp = 1443806900
+const tsQuery = `select * from %v where region = 'South Atlantic' and state = 'South Carolina' and (time > %v and time < %v)`
+const tsTable = `WeatherByRegion`
 const tsTableDefinition = `
 	CREATE TABLE %s (
 		region varchar not null,
@@ -20,8 +22,6 @@ const tsTableDefinition = `
 		observed boolean not null,
 		PRIMARY KEY((region, state, quantum(time, 15, 'm')), region, state, time)
 	)`
-const tsTimestamp = 1443806900
-const tsQuery = `"select * from %v where region = 'South Atlantic' and state = 'South Carolina' and (time > %v and time < %v)"`
 
 // TsFetchRow
 func TestTsFetchRowNotFound(t *testing.T) {
@@ -48,13 +48,17 @@ func TestTsFetchRowNotFound(t *testing.T) {
 	if err = cluster.Execute(cmd); err != nil {
 		t.Fatal(err.Error())
 	}
-	if cmd, ok := cmd.(*TsFetchRowCommand); ok {
-		rsp := cmd.Response
+	if scmd, ok := cmd.(*TsFetchRowCommand); ok {
+		rsp := scmd.Response
 		if rsp == nil {
 			t.Errorf("expected non-nil Response")
 		}
 
-		if expected, actual := true, cmd.Response.IsNotFound; expected != actual {
+		if expected, actual := true, scmd.success; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := true, scmd.Response.IsNotFound; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -83,8 +87,12 @@ func TestTsDescribeTable(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if cmd, ok := cmd.(*TsQueryCommand); ok {
-		if expected, actual := 5, len(cmd.Response.Columns); expected != actual {
+	if scmd, ok := cmd.(*TsQueryCommand); ok {
+		if expected, actual := true, scmd.success; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := 5, len(scmd.Response.Columns); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -105,23 +113,30 @@ func TestTsCreateTable(t *testing.T) {
 		}
 	}()
 
-	cmd, err = sbuilder.WithQuery(fmt.Sprintf(tsTableDefinition, tsTable+string(time.Now().Unix()))).Build()
+	query := fmt.Sprintf(tsTableDefinition, fmt.Sprintf("%v%v", tsTable, time.Now().Unix()))
+	cmd, err = sbuilder.WithQuery(query).Build()
 	if err != nil {
+		t.Log(query)
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
+		t.Log(query)
 		t.Fatal(err.Error())
 	}
 
-	if cmd, ok := cmd.(*TsQueryCommand); ok {
-		if expected, actual := 5, len(cmd.Response.Columns); expected != actual {
+	if scmd, ok := cmd.(*TsQueryCommand); ok {
+		if expected, actual := true, scmd.success; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := 0, len(scmd.Response.Columns); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
 		t.FailNow()
 	}
 }
-ss
+
 // TsStoreRows
 func TestTsStoreRow(t *testing.T) {
 	var err error
@@ -152,6 +167,10 @@ func TestTsStoreRow(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsStoreRowsCommand); ok {
+		if expected, actual := true, scmd.success; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
 		if expected, actual := true, scmd.Response; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
@@ -197,6 +216,10 @@ func TestTsStoreRows(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsStoreRowsCommand); ok {
+		if expected, actual := true, scmd.success; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
 		if expected, actual := true, scmd.Response; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
@@ -230,14 +253,51 @@ func TestTsFetchRow(t *testing.T) {
 	if err = cluster.Execute(cmd); err != nil {
 		t.Fatal(err.Error())
 	}
-	if cmd, ok := cmd.(*TsFetchRowCommand); ok {
-		rsp := cmd.Response
+	if scmd, ok := cmd.(*TsFetchRowCommand); ok {
+		rsp := scmd.Response
 		if rsp == nil {
 			t.Errorf("expected non-nil Response")
 		}
 
-		if expected, actual := false, cmd.Response.IsNotFound; expected != actual {
+		if expected, actual := true, scmd.success; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := false, rsp.IsNotFound; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := 7, len(rsp.Columns); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := 7, len(rsp.Row); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		} else {
+			t.Log(rsp.Row[0].cell, rsp.Row[4].cell)
+			if expected, actual := "TIMESTAMP", rsp.Row[2].GetDataType(); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			} else {
+				if expected, actual := tsTimestamp, rsp.Row[2].GetTimestampValue(); expected != actual {
+					t.Errorf("expected %v, got %v", expected, actual)
+				}
+			}
+
+			if expected, actual := "VARCHAR", rsp.Row[3].GetDataType(); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+
+			if expected, actual := "DOUBLE", rsp.Row[4].GetDataType(); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+
+			if expected, actual := "SINT64", rsp.Row[5].GetDataType(); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+
+			if expected, actual := "BOOLEAN", rsp.Row[6].GetDataType(); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
 		}
 	} else {
 		t.FailNow()
@@ -265,10 +325,14 @@ func TestTsQuery(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		t.Fatal(err.Error())
+		t.Fatal("The errors: " + err.Error())
 	}
-	if cmd, ok := cmd.(*TsQueryCommand); ok {
-		if expected, actual := 7, len(cmd.Response.Columns); expected != actual {
+	if scmd, ok := cmd.(*TsQueryCommand); ok {
+		if expected, actual := true, scmd.success; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := 7, len(scmd.Response.Columns); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -297,10 +361,16 @@ func TestTsListKeys(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if cmd, ok := cmd.(*TsListKeysCommand); ok {
-		if expected, actual := true, len(cmd.Response.Keys) > 0; expected != actual {
+	if scmd, ok := cmd.(*TsListKeysCommand); ok {
+		if expected, actual := true, scmd.success; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
+
+		if expected, actual := true, len(scmd.Response.Keys) > 0; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		t.Log(scmd.Response.Keys)
 	} else {
 		t.FailNow()
 	}
@@ -331,13 +401,12 @@ func TestTsDeleteRow(t *testing.T) {
 	if err = cluster.Execute(cmd); err != nil {
 		t.Fatal(err.Error())
 	}
-	if cmd, ok := cmd.(*TsDeleteRowCommand); ok {
-		rsp := cmd.Response
-		if rsp == nil {
-			t.Errorf("expected non-nil Response")
+	if scmd, ok := cmd.(*TsDeleteRowCommand); ok {
+		if expected, actual := true, scmd.success; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
 
-		if expected, actual := true, cmd.Response.IsNotFound; expected != actual {
+		if expected, actual := true, scmd.Response; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {

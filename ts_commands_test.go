@@ -244,3 +244,32 @@ func TestBuildTsListKeysReqCorrectlyViaBuilder(t *testing.T) {
 		t.Errorf("ok: %v - could not convert %v to *riak_ts.TsListKeysReq", ok, reflect.TypeOf(protobuf))
 	}
 }
+
+func TestNewTsCells(t *testing.T) {
+	cells := make([]TsCell, 5)
+	cells[0] = NewStringTsCell("Test Key Value")
+	cells[1] = NewSint64TsCell(1)
+	cells[2] = NewDoubleTsCell(0.1)
+	cells[3] = NewBooleanTsCell(true)
+	cells[4] = NewTimestampTsCell(1234567890)
+
+	if expected, actual := "VARCHAR", cells[0].GetDataType(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+
+	if expected, actual := "SINT64", cells[1].GetDataType(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+
+	if expected, actual := "DOUBLE", cells[2].GetDataType(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+
+	if expected, actual := "BOOLEAN", cells[3].GetDataType(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+
+	if expected, actual := "TIMESTAMP", cells[4].GetDataType(); expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
