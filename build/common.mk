@@ -16,7 +16,7 @@ unit-test: lint
 integration-test: lint
 	go test -v -tags=integration github.com/basho/riak-go-client/...
 
-timeseries-test:
+timeseries-test: lint
 	go test -v -tags=timeseries github.com/basho/riak-go-client/...
 
 test: integration-test
