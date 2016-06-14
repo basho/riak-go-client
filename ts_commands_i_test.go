@@ -274,11 +274,10 @@ func TestTsFetchRow(t *testing.T) {
 		if expected, actual := 7, len(rsp.Row); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		} else {
-			t.Log(rsp.Row[0].cell, rsp.Row[4].cell)
 			if expected, actual := "TIMESTAMP", rsp.Row[2].GetDataType(); expected != actual {
 				t.Errorf("expected %v, got %v", expected, actual)
 			} else {
-				if expected, actual := tsTimestamp, rsp.Row[2].GetTimestampValue(); expected != actual {
+				if expected, actual := int64(tsTimestamp), rsp.Row[2].GetTimestampValue(); expected != actual {
 					t.Errorf("expected %v, got %v", expected, actual)
 				}
 			}
@@ -370,7 +369,21 @@ func TestTsListKeys(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 
-		t.Log(scmd.Response.Keys)
+		if expected, actual := 3, len(scmd.Response.Keys[0]); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := "VARCHAR", scmd.Response.Keys[0][0].GetDataType(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := "VARCHAR", scmd.Response.Keys[0][1].GetDataType(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		if expected, actual := "TIMESTAMP", scmd.Response.Keys[0][2].GetDataType(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
 	} else {
 		t.FailNow()
 	}

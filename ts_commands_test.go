@@ -216,7 +216,7 @@ func TestBuildTsListKeysReqCorrectlyViaBuilder(t *testing.T) {
 		t.Fatal("Expected an error, you cannot build the command with streaming true and callback = nil")
 	}
 
-	cb := func(keys []string) error {
+	cb := func(keys [][]TsCell) error {
 		// do stuff
 		return nil
 	}

@@ -603,7 +603,7 @@ type TsListKeysCommand struct {
 	Response  *TsListKeysResponse
 	protobuf  *riak_ts.TsListKeysReq
 	streaming bool
-	callback  func(keys []string) error
+	callback  func(keys [][]TsCell) error
 	done      bool
 }
 
@@ -638,25 +638,19 @@ func (cmd *TsListKeysCommand) onSuccess(msg proto.Message) error {
 			response := cmd.Response
 
 			if keysResp.GetKeys() != nil && len(keysResp.GetKeys()) > 0 {
-				keys := make([]string, 0)
 				rows := convertFromPbTsRows(keysResp.GetKeys())
-				for _, row := range rows {
-					for _, cell := range row {
-						keys = append(keys, cell.GetStringValue())
-					}
-				}
-
 				if cmd.streaming {
 					if cmd.callback == nil {
 						panic("[TsListKeysCommand] requires a callback when streaming.")
 					} else {
-						if err := cmd.callback(keys); err != nil {
+						if err := cmd.callback(rows); err != nil {
 							cmd.Response = nil
 							return err
 						}
 					}
 				} else {
-					response.Keys = append(response.Keys, keys...)
+					// append slice to slice
+					response.Keys = append(response.Keys, rows...)
 				}
 			}
 		} else {
@@ -681,7 +675,7 @@ func (cmd *TsListKeysCommand) getResponseProtobufMessage() proto.Message {
 
 // TsListKeysResponse contains the response data for a TsListKeysCommand
 type TsListKeysResponse struct {
-	Keys []string
+	Keys [][]TsCell
 }
 
 // TsListKeysCommandBuilder type is required for creating new instances of TsListKeysCommand
@@ -695,7 +689,7 @@ type TsListKeysCommandBuilder struct {
 	timeout   time.Duration
 	protobuf  *riak_ts.TsListKeysReq
 	streaming bool
-	callback  func(keys []string) error
+	callback  func(keys [][]TsCell) error
 }
 
 // NewTsListKeysCommandBuilder is a factory function for generating the command builder struct
@@ -721,7 +715,7 @@ func (builder *TsListKeysCommandBuilder) WithStreaming(streaming bool) *TsListKe
 // WithCallback sets the callback to be used when handling a streaming response
 //
 // Requires WithStreaming(true)
-func (builder *TsListKeysCommandBuilder) WithCallback(callback func([]string) error) *TsListKeysCommandBuilder {
+func (builder *TsListKeysCommandBuilder) WithCallback(callback func([][]TsCell) error) *TsListKeysCommandBuilder {
 	builder.callback = callback
 	return builder
 }
