@@ -54,6 +54,14 @@ func (c *TsCell) GetSint64Value() int64 {
 	return c.cell.GetSint64Value()
 }
 
+// GetTimeValue returns the timestamp value stored within the cell as a time.Time
+func (c *TsCell) GetTimeValue() time.Time {
+	ts := c.cell.GetTimestampValue()
+	s := ts / int64(1000)
+	ms := time.Duration(ts%int64(1000)) * time.Millisecond
+	return time.Unix(s, ms.Nanoseconds())
+}
+
 // GetTimestampValue returns the timestamp value stored within the cell
 func (c *TsCell) GetTimestampValue() int64 {
 	return c.cell.GetTimestampValue()
@@ -87,10 +95,23 @@ func NewSint64TsCell(v int64) TsCell {
 	return TsCell{cell: &tsCell}
 }
 
-// NewTimestampTsCell creates a TsCell from a timestamp in int64 form
-func NewTimestampTsCell(v int64) TsCell {
+// NewTimestampTsCell creates a TsCell from a time.Time struct
+func NewTimestampTsCell(t time.Time) TsCell {
+	v := ToUnixMillis(t)
 	tsCell := riak_ts.TsCell{TimestampValue: &v}
 	return TsCell{cell: &tsCell}
+}
+
+// NewTimestampTsCellFromInt64 creates a TsCell from an int64 value
+// that represents *milliseconds* since UTC epoch
+func NewTimestampTsCellFromInt64(v int64) TsCell {
+	tsCell := riak_ts.TsCell{TimestampValue: &v}
+	return TsCell{cell: &tsCell}
+}
+
+// ToUnixMillis converts a time.Time to Unix milliseconds since UTC epoch
+func ToUnixMillis(t time.Time) int64 {
+	return t.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
 
 // TsColumnDescription describes a Time Series column

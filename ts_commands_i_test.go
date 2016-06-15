@@ -8,7 +8,10 @@ import (
 	"time"
 )
 
-const tsTimestamp = 1443806900
+// NB: the following is 1443806900 seconds, 103ms after the epoch
+var tsMillis = 103 * time.Millisecond
+var tsTimestamp = time.Unix(1443806900, tsMillis.Nanoseconds())
+
 const tsQuery = `select * from %v where region = 'South Atlantic' and state = 'South Carolina' and (time > %v and time < %v)`
 const tsTable = `WeatherByRegion`
 const tsTableDefinition = `
@@ -32,7 +35,7 @@ func TestTsFetchRowNotFound(t *testing.T) {
 
 	key[0] = NewStringTsCell("South Atlantic")
 	key[1] = NewStringTsCell("South Carolina")
-	key[2] = NewTimestampTsCell(time.Now().Unix())
+	key[2] = NewTimestampTsCell(time.Now())
 
 	cluster := integrationTestsBuildCluster()
 	defer func() {
@@ -188,14 +191,14 @@ func TestTsStoreRows(t *testing.T) {
 
 	row[0] = NewStringTsCell("South Atlantic")
 	row[1] = NewStringTsCell("South Carolina")
-	row[2] = NewTimestampTsCell(tsTimestamp - 3600)
+	row[2] = NewTimestampTsCell(tsTimestamp.Add(-1 * time.Hour))
 	row[3] = NewStringTsCell("windy")
 	row[4] = NewDoubleTsCell(19.8)
 	row[5] = NewSint64TsCell(10)
 	row[6] = NewBooleanTsCell(true)
 
 	row2 := row
-	row[2] = NewTimestampTsCell(tsTimestamp - 7200)
+	row[2] = NewTimestampTsCell(tsTimestamp.Add(-2 * time.Hour))
 	row[3] = NewStringTsCell("cloudy")
 	row[4] = NewDoubleTsCell(19.1)
 	row[5] = NewSint64TsCell(15)
@@ -277,7 +280,7 @@ func TestTsFetchRow(t *testing.T) {
 			if expected, actual := "TIMESTAMP", rsp.Row[2].GetDataType(); expected != actual {
 				t.Errorf("expected %v, got %v", expected, actual)
 			} else {
-				if expected, actual := int64(tsTimestamp), rsp.Row[2].GetTimestampValue(); expected != actual {
+				if expected, actual := tsTimestamp, rsp.Row[2].GetTimeValue(); expected != actual {
 					t.Errorf("expected %v, got %v", expected, actual)
 				}
 			}
@@ -308,9 +311,9 @@ func TestTsQuery(t *testing.T) {
 	var err error
 	var cmd Command
 	sbuilder := NewTsQueryCommandBuilder()
-	upperBound := time.Unix(tsTimestamp, 0).Add(time.Second)
-	lowerBound := time.Unix(tsTimestamp, 0).Add(-time.Second * 3601)
-	query := fmt.Sprintf(tsQuery, tsTable, lowerBound.Unix(), upperBound.Unix())
+	upperBoundMs := ToUnixMillis(tsTimestamp.Add(time.Second))
+	lowerBoundMs := ToUnixMillis(tsTimestamp.Add(-3601 * time.Second))
+	query := fmt.Sprintf(tsQuery, tsTable, lowerBoundMs, upperBoundMs)
 
 	cluster := integrationTestsBuildCluster()
 	defer func() {

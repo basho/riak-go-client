@@ -50,7 +50,7 @@ func main() {
 		nodeOpts := &riak.NodeOptions{
 			MinConnections: minConnections,
 			MaxConnections: maxConnections,
-			RemoteAddress: addr,
+			RemoteAddress:  addr,
 		}
 		if node, nerr := riak.NewNode(nodeOpts); nerr != nil {
 			util.ErrExit(nerr)
@@ -65,7 +65,7 @@ func main() {
 	}
 
 	opts := &riak.ClusterOptions{
-		Nodes: nodes,
+		Nodes:             nodes,
 		ExecutionAttempts: 3,
 	}
 
