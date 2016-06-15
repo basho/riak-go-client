@@ -3,7 +3,8 @@
 
 Release Notes
 =============
-
+* 1.7.0 - Following PRs included:
+ * [TimeSeries support](https://github.com/basho/riak-go-client/pull/68)
 * 1.6.0 - Following PRs included:
  * [Add `NodeOptions` test and concurrent commands test for `MaxConnections`](https://github.com/basho/riak-go-client/pull/61)
  * [Security auth fixes](https://github.com/basho/riak-go-client/pull/60)
