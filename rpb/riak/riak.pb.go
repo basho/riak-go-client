@@ -26,11 +26,19 @@ It has these top-level messages:
 package riak
 
 import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
 import math "math"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
+var _ = fmt.Errorf
 var _ = math.Inf
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // Used by riak_repl bucket fixup
 type RpbBucketProps_RpbReplMode int32
@@ -71,6 +79,9 @@ func (x *RpbBucketProps_RpbReplMode) UnmarshalJSON(data []byte) error {
 	*x = RpbBucketProps_RpbReplMode(value)
 	return nil
 }
+func (RpbBucketProps_RpbReplMode) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{11, 0}
+}
 
 // Error response - may be generated for any Req
 type RpbErrorResp struct {
@@ -79,9 +90,10 @@ type RpbErrorResp struct {
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *RpbErrorResp) Reset()         { *m = RpbErrorResp{} }
-func (m *RpbErrorResp) String() string { return proto.CompactTextString(m) }
-func (*RpbErrorResp) ProtoMessage()    {}
+func (m *RpbErrorResp) Reset()                    { *m = RpbErrorResp{} }
+func (m *RpbErrorResp) String() string            { return proto.CompactTextString(m) }
+func (*RpbErrorResp) ProtoMessage()               {}
+func (*RpbErrorResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
 func (m *RpbErrorResp) GetErrmsg() []byte {
 	if m != nil {
@@ -104,9 +116,10 @@ type RpbGetServerInfoResp struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbGetServerInfoResp) Reset()         { *m = RpbGetServerInfoResp{} }
-func (m *RpbGetServerInfoResp) String() string { return proto.CompactTextString(m) }
-func (*RpbGetServerInfoResp) ProtoMessage()    {}
+func (m *RpbGetServerInfoResp) Reset()                    { *m = RpbGetServerInfoResp{} }
+func (m *RpbGetServerInfoResp) String() string            { return proto.CompactTextString(m) }
+func (*RpbGetServerInfoResp) ProtoMessage()               {}
+func (*RpbGetServerInfoResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 func (m *RpbGetServerInfoResp) GetNode() []byte {
 	if m != nil {
@@ -129,9 +142,10 @@ type RpbPair struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbPair) Reset()         { *m = RpbPair{} }
-func (m *RpbPair) String() string { return proto.CompactTextString(m) }
-func (*RpbPair) ProtoMessage()    {}
+func (m *RpbPair) Reset()                    { *m = RpbPair{} }
+func (m *RpbPair) String() string            { return proto.CompactTextString(m) }
+func (*RpbPair) ProtoMessage()               {}
+func (*RpbPair) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 func (m *RpbPair) GetKey() []byte {
 	if m != nil {
@@ -154,9 +168,10 @@ type RpbGetBucketReq struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbGetBucketReq) Reset()         { *m = RpbGetBucketReq{} }
-func (m *RpbGetBucketReq) String() string { return proto.CompactTextString(m) }
-func (*RpbGetBucketReq) ProtoMessage()    {}
+func (m *RpbGetBucketReq) Reset()                    { *m = RpbGetBucketReq{} }
+func (m *RpbGetBucketReq) String() string            { return proto.CompactTextString(m) }
+func (*RpbGetBucketReq) ProtoMessage()               {}
+func (*RpbGetBucketReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 func (m *RpbGetBucketReq) GetBucket() []byte {
 	if m != nil {
@@ -178,9 +193,10 @@ type RpbGetBucketResp struct {
 	XXX_unrecognized []byte          `json:"-"`
 }
 
-func (m *RpbGetBucketResp) Reset()         { *m = RpbGetBucketResp{} }
-func (m *RpbGetBucketResp) String() string { return proto.CompactTextString(m) }
-func (*RpbGetBucketResp) ProtoMessage()    {}
+func (m *RpbGetBucketResp) Reset()                    { *m = RpbGetBucketResp{} }
+func (m *RpbGetBucketResp) String() string            { return proto.CompactTextString(m) }
+func (*RpbGetBucketResp) ProtoMessage()               {}
+func (*RpbGetBucketResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 func (m *RpbGetBucketResp) GetProps() *RpbBucketProps {
 	if m != nil {
@@ -197,9 +213,10 @@ type RpbSetBucketReq struct {
 	XXX_unrecognized []byte          `json:"-"`
 }
 
-func (m *RpbSetBucketReq) Reset()         { *m = RpbSetBucketReq{} }
-func (m *RpbSetBucketReq) String() string { return proto.CompactTextString(m) }
-func (*RpbSetBucketReq) ProtoMessage()    {}
+func (m *RpbSetBucketReq) Reset()                    { *m = RpbSetBucketReq{} }
+func (m *RpbSetBucketReq) String() string            { return proto.CompactTextString(m) }
+func (*RpbSetBucketReq) ProtoMessage()               {}
+func (*RpbSetBucketReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func (m *RpbSetBucketReq) GetBucket() []byte {
 	if m != nil {
@@ -229,9 +246,10 @@ type RpbResetBucketReq struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbResetBucketReq) Reset()         { *m = RpbResetBucketReq{} }
-func (m *RpbResetBucketReq) String() string { return proto.CompactTextString(m) }
-func (*RpbResetBucketReq) ProtoMessage()    {}
+func (m *RpbResetBucketReq) Reset()                    { *m = RpbResetBucketReq{} }
+func (m *RpbResetBucketReq) String() string            { return proto.CompactTextString(m) }
+func (*RpbResetBucketReq) ProtoMessage()               {}
+func (*RpbResetBucketReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 func (m *RpbResetBucketReq) GetBucket() []byte {
 	if m != nil {
@@ -253,9 +271,10 @@ type RpbGetBucketTypeReq struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbGetBucketTypeReq) Reset()         { *m = RpbGetBucketTypeReq{} }
-func (m *RpbGetBucketTypeReq) String() string { return proto.CompactTextString(m) }
-func (*RpbGetBucketTypeReq) ProtoMessage()    {}
+func (m *RpbGetBucketTypeReq) Reset()                    { *m = RpbGetBucketTypeReq{} }
+func (m *RpbGetBucketTypeReq) String() string            { return proto.CompactTextString(m) }
+func (*RpbGetBucketTypeReq) ProtoMessage()               {}
+func (*RpbGetBucketTypeReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 func (m *RpbGetBucketTypeReq) GetType() []byte {
 	if m != nil {
@@ -271,9 +290,10 @@ type RpbSetBucketTypeReq struct {
 	XXX_unrecognized []byte          `json:"-"`
 }
 
-func (m *RpbSetBucketTypeReq) Reset()         { *m = RpbSetBucketTypeReq{} }
-func (m *RpbSetBucketTypeReq) String() string { return proto.CompactTextString(m) }
-func (*RpbSetBucketTypeReq) ProtoMessage()    {}
+func (m *RpbSetBucketTypeReq) Reset()                    { *m = RpbSetBucketTypeReq{} }
+func (m *RpbSetBucketTypeReq) String() string            { return proto.CompactTextString(m) }
+func (*RpbSetBucketTypeReq) ProtoMessage()               {}
+func (*RpbSetBucketTypeReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 func (m *RpbSetBucketTypeReq) GetType() []byte {
 	if m != nil {
@@ -297,9 +317,10 @@ type RpbModFun struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbModFun) Reset()         { *m = RpbModFun{} }
-func (m *RpbModFun) String() string { return proto.CompactTextString(m) }
-func (*RpbModFun) ProtoMessage()    {}
+func (m *RpbModFun) Reset()                    { *m = RpbModFun{} }
+func (m *RpbModFun) String() string            { return proto.CompactTextString(m) }
+func (*RpbModFun) ProtoMessage()               {}
+func (*RpbModFun) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 func (m *RpbModFun) GetModule() []byte {
 	if m != nil {
@@ -323,9 +344,10 @@ type RpbCommitHook struct {
 	XXX_unrecognized []byte     `json:"-"`
 }
 
-func (m *RpbCommitHook) Reset()         { *m = RpbCommitHook{} }
-func (m *RpbCommitHook) String() string { return proto.CompactTextString(m) }
-func (*RpbCommitHook) ProtoMessage()    {}
+func (m *RpbCommitHook) Reset()                    { *m = RpbCommitHook{} }
+func (m *RpbCommitHook) String() string            { return proto.CompactTextString(m) }
+func (*RpbCommitHook) ProtoMessage()               {}
+func (*RpbCommitHook) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
 func (m *RpbCommitHook) GetModfun() *RpbModFun {
 	if m != nil {
@@ -382,9 +404,10 @@ type RpbBucketProps struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbBucketProps) Reset()         { *m = RpbBucketProps{} }
-func (m *RpbBucketProps) String() string { return proto.CompactTextString(m) }
-func (*RpbBucketProps) ProtoMessage()    {}
+func (m *RpbBucketProps) Reset()                    { *m = RpbBucketProps{} }
+func (m *RpbBucketProps) String() string            { return proto.CompactTextString(m) }
+func (*RpbBucketProps) ProtoMessage()               {}
+func (*RpbBucketProps) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
 
 const Default_RpbBucketProps_HasPrecommit bool = false
 const Default_RpbBucketProps_HasPostcommit bool = false
@@ -592,9 +615,10 @@ type RpbAuthReq struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RpbAuthReq) Reset()         { *m = RpbAuthReq{} }
-func (m *RpbAuthReq) String() string { return proto.CompactTextString(m) }
-func (*RpbAuthReq) ProtoMessage()    {}
+func (m *RpbAuthReq) Reset()                    { *m = RpbAuthReq{} }
+func (m *RpbAuthReq) String() string            { return proto.CompactTextString(m) }
+func (*RpbAuthReq) ProtoMessage()               {}
+func (*RpbAuthReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
 
 func (m *RpbAuthReq) GetUser() []byte {
 	if m != nil {
@@ -611,5 +635,68 @@ func (m *RpbAuthReq) GetPassword() []byte {
 }
 
 func init() {
+	proto.RegisterType((*RpbErrorResp)(nil), "RpbErrorResp")
+	proto.RegisterType((*RpbGetServerInfoResp)(nil), "RpbGetServerInfoResp")
+	proto.RegisterType((*RpbPair)(nil), "RpbPair")
+	proto.RegisterType((*RpbGetBucketReq)(nil), "RpbGetBucketReq")
+	proto.RegisterType((*RpbGetBucketResp)(nil), "RpbGetBucketResp")
+	proto.RegisterType((*RpbSetBucketReq)(nil), "RpbSetBucketReq")
+	proto.RegisterType((*RpbResetBucketReq)(nil), "RpbResetBucketReq")
+	proto.RegisterType((*RpbGetBucketTypeReq)(nil), "RpbGetBucketTypeReq")
+	proto.RegisterType((*RpbSetBucketTypeReq)(nil), "RpbSetBucketTypeReq")
+	proto.RegisterType((*RpbModFun)(nil), "RpbModFun")
+	proto.RegisterType((*RpbCommitHook)(nil), "RpbCommitHook")
+	proto.RegisterType((*RpbBucketProps)(nil), "RpbBucketProps")
+	proto.RegisterType((*RpbAuthReq)(nil), "RpbAuthReq")
 	proto.RegisterEnum("RpbBucketProps_RpbReplMode", RpbBucketProps_RpbReplMode_name, RpbBucketProps_RpbReplMode_value)
+}
+
+var fileDescriptor0 = []byte{
+	// 722 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x8c, 0x54, 0x5d, 0x6f, 0xd3, 0x30,
+	0x14, 0xa5, 0x5f, 0x6b, 0x7b, 0xfb, 0xb9, 0x6c, 0x6c, 0x66, 0x1b, 0xa8, 0x0b, 0x42, 0x02, 0x09,
+	0x3a, 0xd1, 0x37, 0x10, 0x42, 0x5a, 0xa7, 0x0e, 0x26, 0x75, 0x30, 0xb5, 0xdb, 0x03, 0x4f, 0x51,
+	0x9a, 0xb8, 0x6b, 0x94, 0xc4, 0xce, 0x6c, 0x67, 0x61, 0xff, 0x8a, 0x9f, 0xc8, 0x8d, 0xdb, 0xb4,
+	0xfb, 0xd2, 0xe0, 0x21, 0x92, 0x7d, 0xee, 0x39, 0xf7, 0x1e, 0x5f, 0x5f, 0x07, 0x40, 0x78, 0xb6,
+	0xdf, 0x8d, 0x04, 0x57, 0xdc, 0x3c, 0x80, 0xfa, 0x28, 0x9a, 0x0c, 0x84, 0xe0, 0x62, 0x44, 0x65,
+	0x64, 0x34, 0x61, 0x8d, 0x0a, 0x11, 0xca, 0x4b, 0x92, 0xeb, 0xe4, 0xdf, 0xd6, 0x8d, 0x16, 0x94,
+	0x71, 0xef, 0x70, 0x97, 0x92, 0x3c, 0x02, 0x0d, 0xf3, 0x0b, 0x6c, 0xa2, 0xe0, 0x1b, 0x55, 0x63,
+	0x2a, 0xae, 0xa9, 0x38, 0x61, 0x53, 0xae, 0x85, 0x75, 0x28, 0xb2, 0x94, 0x95, 0xeb, 0xe4, 0x50,
+	0xb6, 0x05, 0x4d, 0xa9, 0xe3, 0x16, 0x7e, 0xd2, 0xe3, 0x0c, 0xd5, 0x88, 0x9b, 0x6f, 0xa0, 0x8c,
+	0xea, 0x33, 0xdb, 0x13, 0x46, 0x0d, 0x0a, 0x3e, 0xbd, 0x59, 0x94, 0x69, 0x40, 0xe9, 0xda, 0x0e,
+	0x62, 0xba, 0xa0, 0x1d, 0x40, 0x6b, 0x5e, 0xa4, 0x1f, 0x3b, 0x3e, 0x55, 0x23, 0x7a, 0x95, 0x1a,
+	0x9b, 0xe8, 0xcd, 0x42, 0x81, 0xf5, 0xd4, 0x4d, 0x94, 0x09, 0x7a, 0xd0, 0xbe, 0x2b, 0x40, 0x47,
+	0xaf, 0xa0, 0x84, 0x67, 0x8c, 0xa4, 0x16, 0xd4, 0x7a, 0xad, 0x2e, 0x32, 0xe6, 0xe1, 0xb3, 0x14,
+	0x36, 0x7f, 0xea, 0x22, 0xe3, 0xa7, 0x8a, 0x2c, 0x53, 0xe4, 0x1f, 0x4d, 0xb1, 0x34, 0x51, 0xd0,
+	0x26, 0x3e, 0xc2, 0x3a, 0xc6, 0xb1, 0xf6, 0xff, 0xfb, 0x7e, 0x0d, 0x1b, 0xb7, 0x7d, 0x9f, 0x63,
+	0x24, 0x15, 0x65, 0x24, 0x2d, 0x31, 0x8f, 0x34, 0x69, 0xfc, 0x24, 0xe9, 0x5f, 0x56, 0xcd, 0x0f,
+	0x50, 0x45, 0xe4, 0x94, 0xbb, 0xc7, 0x31, 0x4b, 0x4d, 0x85, 0xdc, 0x8d, 0x83, 0x4c, 0xdc, 0x86,
+	0xca, 0x34, 0x66, 0x8e, 0x9a, 0x5f, 0x54, 0x5a, 0xf3, 0x13, 0x34, 0x90, 0x7e, 0xc4, 0xc3, 0xd0,
+	0x53, 0xdf, 0x39, 0xf7, 0x8d, 0x1d, 0x2d, 0x41, 0x96, 0xbe, 0xe1, 0x5a, 0x0f, 0xba, 0xab, 0x74,
+	0xe9, 0xdd, 0xdb, 0x61, 0x76, 0xa6, 0x3f, 0x25, 0x68, 0xde, 0xeb, 0x13, 0x5e, 0x2f, 0xb3, 0xf0,
+	0x82, 0xb5, 0xb6, 0x61, 0x18, 0x00, 0x76, 0x10, 0xf0, 0xc4, 0x0a, 0xe3, 0x40, 0x69, 0x55, 0xc5,
+	0xd8, 0x86, 0x56, 0x60, 0x4b, 0x65, 0x25, 0xc2, 0x53, 0xd4, 0x4a, 0x3c, 0x26, 0x75, 0x57, 0x2b,
+	0xc6, 0x3e, 0x54, 0x23, 0x41, 0x1d, 0xed, 0x84, 0x14, 0x3b, 0x05, 0xac, 0xdd, 0xec, 0xde, 0xf5,
+	0xb6, 0x07, 0x8d, 0x99, 0x2d, 0xad, 0x15, 0xad, 0x94, 0x2a, 0x3f, 0x97, 0xa6, 0x76, 0x20, 0xa9,
+	0x61, 0x02, 0x44, 0x5c, 0xaa, 0x45, 0x68, 0xed, 0xd1, 0x0c, 0x2f, 0xa1, 0xa9, 0x33, 0xac, 0x78,
+	0xe5, 0xdb, 0x29, 0x3a, 0x50, 0x77, 0x30, 0x3e, 0xb3, 0x70, 0x62, 0xd3, 0x16, 0x54, 0x1e, 0xb4,
+	0x60, 0x17, 0xca, 0x81, 0xc7, 0xfc, 0x34, 0x58, 0x7d, 0x10, 0xc4, 0xf3, 0xf2, 0xc0, 0xb5, 0xae,
+	0x9d, 0x80, 0x3b, 0x3e, 0x01, 0xdd, 0x83, 0x4d, 0xa8, 0xdf, 0xf0, 0x98, 0x5d, 0x66, 0x68, 0x2d,
+	0xeb, 0xcc, 0xc4, 0x5b, 0x62, 0xf5, 0x8c, 0x29, 0x43, 0xec, 0x57, 0x86, 0x36, 0x34, 0x0a, 0x90,
+	0x8f, 0x04, 0x69, 0xea, 0x75, 0x15, 0x72, 0x82, 0xb4, 0xb2, 0x65, 0x42, 0xda, 0x4b, 0x46, 0x42,
+	0xd6, 0xb3, 0xb5, 0x9b, 0x10, 0x23, 0x5b, 0x8b, 0x84, 0x6c, 0x64, 0xb9, 0x27, 0xb6, 0xf4, 0x1c,
+	0xeb, 0x2a, 0xe6, 0x22, 0x0e, 0xc9, 0xa6, 0x6e, 0xf9, 0x06, 0xd4, 0x18, 0x57, 0x53, 0xb4, 0xe7,
+	0x5a, 0xdc, 0x27, 0xcf, 0x35, 0x88, 0x7f, 0x82, 0x89, 0x8d, 0x57, 0xca, 0x5c, 0xb2, 0xa5, 0xdf,
+	0x38, 0x0e, 0x91, 0xa4, 0xb6, 0x70, 0x66, 0x64, 0x5b, 0x13, 0xde, 0x41, 0x51, 0xd0, 0x28, 0x20,
+	0x04, 0x77, 0xcd, 0xde, 0xee, 0xbd, 0x01, 0xec, 0xea, 0xa7, 0x11, 0x05, 0xd8, 0x12, 0xaa, 0x8f,
+	0xa4, 0xa5, 0x96, 0xc7, 0x5c, 0xfa, 0x9b, 0xbc, 0xd0, 0x09, 0x71, 0x0a, 0x5d, 0x5b, 0xd9, 0x7a,
+	0xa8, 0x77, 0x34, 0x82, 0x5e, 0x1d, 0xce, 0xa4, 0x27, 0x15, 0x65, 0x8a, 0xec, 0xea, 0x32, 0x88,
+	0xcd, 0x67, 0x84, 0x33, 0x87, 0x92, 0xbd, 0x14, 0x33, 0xbf, 0x42, 0xed, 0x76, 0xfa, 0x2a, 0x94,
+	0x8e, 0x0f, 0x87, 0xe3, 0x41, 0xfb, 0x19, 0x8e, 0x66, 0x65, 0x34, 0x38, 0x1c, 0x9e, 0x9f, 0x9c,
+	0x0e, 0xda, 0xb9, 0x74, 0x77, 0x7c, 0x31, 0x1c, 0x8e, 0x7f, 0xfd, 0x38, 0x6a, 0xe7, 0x8d, 0x0a,
+	0x14, 0xcf, 0x47, 0x17, 0x83, 0x76, 0xc1, 0x7c, 0x0f, 0x80, 0xfa, 0xc3, 0x58, 0xcd, 0x16, 0x0f,
+	0x2b, 0xc6, 0xbf, 0xd7, 0xea, 0x6d, 0x44, 0xb6, 0x94, 0x09, 0x17, 0xee, 0xfc, 0x6d, 0xf4, 0xf7,
+	0x61, 0x1b, 0x87, 0xa4, 0x8b, 0x8d, 0x9b, 0xf1, 0xee, 0xea, 0x5f, 0x3a, 0x89, 0xa7, 0xfd, 0xb5,
+	0x11, 0x6e, 0xcf, 0xfa, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0x53, 0xc5, 0x96, 0x81, 0x63, 0x05,
+	0x00, 0x00,
 }

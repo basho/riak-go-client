@@ -46,6 +46,8 @@ var (
 	ErrNilOptions           = newClientError("[Command] options must be non-nil", nil)
 	ErrOptionsRequired      = newClientError("Options are required", nil)
 	ErrZeroLength           = newClientError("[Command] 0 byte data response", nil)
+	ErrTableRequired        = newClientError("Table is required", nil)
+	ErrQueryRequired        = newClientError("Query is required", nil)
 )
 
 type ClientError struct {

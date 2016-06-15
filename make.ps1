@@ -11,6 +11,7 @@
         * Test            - Run 'go vet' and all tests (default target)
         * UnitTest        - Run unit tests
         * IntegrationTest - Run live integration tests
+        * TimeseriesTest  - Run live timeseries tests
 .PARAMETER Verbose
     Use to increase verbosity.
 .EXAMPLE
@@ -23,7 +24,9 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$False, Position=0)]
-    [ValidateSet('ProtoGen', 'Format', 'Test', 'UnitTest', 'IntegrationTest', IgnoreCase = $True)]
+    [ValidateSet('ProtoGen', 'Format',
+        'Test', 'UnitTest', 'IntegrationTest', 'TimeseriesTest',
+        IgnoreCase = $True)]
     [string]$Target = 'Test'
 )
 
@@ -144,6 +147,16 @@ function Do-IntegrationTest {
     Execute $cmd $argz
 }
 
+function Do-TimeseriesTest {
+    $v = ''
+    if ($IsVerbose) {
+        $v = '-v'
+    }
+    $cmd = 'go.exe'
+    $argz = 'test', $v, '-tags=timeseries', "$package/..."
+    Execute $cmd $argz
+}
+
 Write-Debug "Target: $Target"
 
 switch ($Target)
@@ -153,6 +166,7 @@ switch ($Target)
     'Test' { Do-Vet; Do-IntegrationTest }
     'UnitTest' { Do-Vet; Do-UnitTest }
     'IntegrationTest' { Do-Vet; Do-IntegrationTest }
+    'TimeseriesTest' { Do-Vet; Do-TimeseriesTest }
      default { throw "Unknown target: $Target" }
 }
 
