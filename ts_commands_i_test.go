@@ -94,9 +94,8 @@ func TestTsDescribeTable(t *testing.T) {
 		if expected, actual := true, scmd.success; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-
-		if expected, actual := 5, len(scmd.Response.Columns); expected != actual {
-			t.Errorf("expected %v, got %v", expected, actual)
+		if got, want := len(scmd.Response.Columns), 5; !(got >= want) {
+			t.Errorf("expected %v to be greater than or equal to %v", got, want)
 		}
 	} else {
 		t.FailNow()
