@@ -6,7 +6,7 @@ The **Riak Go Client** is a client which makes it easy to communicate with
 focuses on high availability, horizontal scalability, and *predictable* latency.
 Both Riak and this code is maintained by [Basho](http://www.basho.com/).
 
-The latest version [(1.7.0)](https://github.com/basho/riak-go-client/releases/latest) supports both Riak KV 2.0+, and Riak TS 1.0+. 
+The [latest version](https://github.com/basho/riak-go-client/releases/latest) of the client supports both Riak KV 2.0+, and Riak TS 1.0+. 
 
 1. [Installation](#installation)
 2. [Documentation](#documentation)
