@@ -1245,3 +1245,287 @@ func TestValidationOfFetchMapViaBuilder(t *testing.T) {
 		t.Errorf("expected %v, actual %v", expected, actual)
 	}
 }
+
+// UpdateHll
+// DtUpdateReq
+// DtUpdateResp
+
+func TestBuildDtUpdateReqCorrectlyViaUpdateHllCommandBuilder(t *testing.T) {
+	builder := NewUpdateHllCommandBuilder().
+		WithBucketType("hlls").
+		WithBucket("bucket").
+		WithKey("key").
+		WithAdditions([]byte("a1"), []byte("a2")).
+		WithAdditions([]byte("a3"), []byte("a4")).
+		WithW(1).
+		WithDw(2).
+		WithPw(3).
+		WithReturnBody(true).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+	if req, ok := protobuf.(*rpbRiakDT.DtUpdateReq); ok {
+		if expected, actual := "hlls", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(1), req.GetW(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(2), req.GetDw(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(3), req.GetPw(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		validateTimeout(t, time.Second*20, req.GetTimeout())
+
+		op := req.Op.HllOp
+
+		for i := 1; i <= 4; i++ {
+			aitem := fmt.Sprintf("a%d", i)
+			if expected, actual := true, sliceIncludes(op.Adds, []byte(aitem)); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakDT.DtUpdateReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestUpdateHllParsesDtUpdateRespCorrectly(t *testing.T) {
+	hllValue := uint64(4)
+	generatedKey := "generated_key"
+	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
+		HllValue: &hllValue,
+		Key:      []byte(generatedKey),
+	}
+
+	builder := NewUpdateHllCommandBuilder().
+		WithBucketType("hlls").
+		WithBucket("bucket").
+		WithKey("key")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+
+	err = cmd.onSuccess(dtUpdateResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if uc, ok := cmd.(*UpdateHllCommand); ok {
+		rsp := uc.Response
+		if expected, actual := uint64(4), rsp.Cardinality; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "generated_key", rsp.GeneratedKey; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *UpdateHllCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestValidationOfUpdateHllViaBuilder(t *testing.T) {
+	// validate that Bucket is required
+	builder := NewUpdateHllCommandBuilder()
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is NOT required
+	builder = NewUpdateHllCommandBuilder()
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err != nil {
+		t.Fatal("expected nil err")
+	}
+}
+
+// FetchHll
+// DtFetchReq
+// DtFetchResp
+
+func TestBuildDtFetchReqCorrectlyViaFetchHllCommandBuilder(t *testing.T) {
+	builder := NewFetchHllCommandBuilder().
+		WithBucketType("hlls").
+		WithBucket("bucket").
+		WithKey("key").
+		WithR(1).
+		WithPr(2).
+		WithNotFoundOk(true).
+		WithBasicQuorum(true).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+	if req, ok := protobuf.(*rpbRiakDT.DtFetchReq); ok {
+		if expected, actual := "hlls", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(1), req.GetR(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(2), req.GetPr(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetNotfoundOk(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, req.GetBasicQuorum(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		validateTimeout(t, time.Second*20, req.GetTimeout())
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakDT.DtFetchReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestFetchHllParsesDtFetchRespCorrectly(t *testing.T) {
+	hllValue := uint64(4)
+	dtValue := &rpbRiakDT.DtValue{
+		HllValue: &hllValue,
+	}
+
+	dtFetchResp := &rpbRiakDT.DtFetchResp{
+		Type:    rpbRiakDT.DtFetchResp_HLL.Enum(),
+		Value:   dtValue,
+		Context: crdtContextBytes,
+	}
+	builder := NewFetchHllCommandBuilder().
+		WithBucketType("hlls").
+		WithBucket("bucket").
+		WithKey("key")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if fc, ok := cmd.(*FetchHllCommand); ok {
+		rsp := fc.Response
+		if expected, actual := uint64(4), rsp.Cardinality; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchHllCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestFetchHllParsesDtFetchRespWithoutValueCorrectly(t *testing.T) {
+	builder := NewFetchHllCommandBuilder().
+		WithBucketType("counters").
+		WithBucket("myBucket").
+		WithKey("counter_1")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+
+	dtFetchResp := &rpbRiakDT.DtFetchResp{}
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if uc, ok := cmd.(*FetchHllCommand); ok {
+		if expected, actual := true, uc.Response.IsNotFound; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchHllCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestValidationOfFetchHllViaBuilder(t *testing.T) {
+	// validate that Bucket is required
+	builder := NewFetchHllCommandBuilder()
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is required
+	builder = NewFetchHllCommandBuilder()
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrKeyRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+}

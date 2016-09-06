@@ -34,6 +34,11 @@ const testSetBucketType = "sets"
 // riak-admin bucket-type activate maps
 const testMapBucketType = "maps"
 
+// riak_admin bucket-type create hlls '{"props":{"datatype":"hll"}}'
+// riak-admin bucket-type activate hlls
+const testHllBucketType = "hlls"
+
+
 func getRiakPort() uint16 {
 	riakPort := uint16(10017)
 	if portEnvVar := os.Getenv("RIAK_PORT"); portEnvVar != "" {
