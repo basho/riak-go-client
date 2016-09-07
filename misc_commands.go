@@ -215,6 +215,7 @@ type FetchBucketPropsResponse struct {
 	PostCommit    []*CommitHook
 	ChashKeyFun   *ModFun
 	LinkFun       *ModFun
+	HllPrecision  uint32
 }
 
 func processRpbGetBucketResp(rsp *rpbRiak.RpbGetBucketResp) *FetchBucketPropsResponse {
@@ -256,6 +257,9 @@ func processRpbGetBucketResp(rsp *rpbRiak.RpbGetBucketResp) *FetchBucketPropsRes
 	}
 	if rpbBucketProps.Linkfun != nil {
 		response.LinkFun = getFunFrom(rpbBucketProps.Linkfun)
+	}
+	if rpbBucketProps.HllPrecision != nil {
+		response.HllPrecision = rpbBucketProps.GetHllPrecision()
 	}
 	return response
 }
@@ -673,6 +677,15 @@ func (builder *StoreBucketTypePropsCommandBuilder) WithChashKeyFun(val *ModFun) 
 	return builder
 }
 
+// WithHllPrecision sets the number of bits to use in the Hyperloglog data type precision.
+// Valid values are [4 - 16] inclusive, default is 14 on new buckets.
+// NOTE: When changing precision, it may only be reduced from
+// it's current value, and never increased.
+func (builder *StoreBucketTypePropsCommandBuilder) WithHllPrecision(precision uint32) *StoreBucketTypePropsCommandBuilder {
+	builder.props.HllPrecision = &precision
+	return builder
+}
+
 // Build validates the configuration options provided then builds the command
 func (builder *StoreBucketTypePropsCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
@@ -880,6 +893,15 @@ func (builder *StoreBucketPropsCommandBuilder) WithChashKeyFun(val *ModFun) *Sto
 		Module:   []byte(val.Module),
 		Function: []byte(val.Function),
 	}
+	return builder
+}
+
+// WithHllPrecision sets the number of bits to use in the Hyperloglog data type precision.
+// Valid values are [4 - 16] inclusive, default is 14 on new buckets.
+// NOTE: When changing precision, it may only be reduced from
+// it's current value, and never increased.
+func (builder *StoreBucketPropsCommandBuilder) WithHllPrecision(precision uint32) *StoreBucketPropsCommandBuilder {
+	builder.props.HllPrecision = &precision
 	return builder
 }
 
