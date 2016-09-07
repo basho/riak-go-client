@@ -1,0 +1,156 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	riak "github.com/basho/riak-go-client"
+	"errors"
+)
+
+/*
+   Code samples from:
+   http://docs.basho.com/riak/kv/latest/developing/data-types/hyperloglogs/
+
+   make sure these bucket-types are created:
+
+   riak_admin bucket-type create hlls '{"props":{"datatype":"hll"}}'
+*/
+
+
+func main() {
+	//riak.EnableDebugLogging = true
+
+	nodeOpts := &riak.NodeOptions{
+		RemoteAddress:  "riak-test:10017",
+		RequestTimeout: time.Second * 60,
+	}
+
+	var node *riak.Node
+	var err error
+	if node, err = riak.NewNode(nodeOpts); err != nil {
+		fmt.Println(err.Error())
+	}
+
+	nodes := []*riak.Node{node}
+	opts := &riak.ClusterOptions{
+		Nodes: nodes,
+	}
+
+	cluster, err := riak.NewCluster(opts)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	defer func() {
+		if err = cluster.Stop(); err != nil {
+			fmt.Println(err.Error())
+		}
+	}()
+
+	if err = cluster.Start(); err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// ping
+	ping := &riak.PingCommand{}
+	if err = cluster.Execute(ping); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("ping passed")
+	}
+
+	if err = assertHyperloglogStartsEmpty(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err = updateHyperloglog(cluster); err != nil {
+		ErrExit(err)
+	}
+
+	if err = fetchHyperloglog(cluster); err != nil {
+		ErrExit(err)
+	}
+}
+
+func ErrExit(err error) {
+	os.Stderr.WriteString(err.Error())
+	os.Exit(1)
+}
+
+func assertHyperloglogStartsEmpty(cluster *riak.Cluster) error {
+	var resp *riak.FetchHllResponse
+
+	builder := riak.NewFetchHllCommandBuilder()
+	cmd, err := builder.WithBucketType("hlls").
+		WithBucket("hello").
+		WithKey("darkness").
+		Build()
+	if err != nil {
+		return err
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		return err
+	}
+	if fc, ok := cmd.(*riak.FetchHllCommand); ok {
+		if fc.Response == nil {
+			return errors.New("expected non-nil Response")
+		}
+		resp = fc.Response
+	}
+
+	fmt.Println("Hyperloglog cardinality: ", resp.Cardinality)
+	return nil
+}
+
+func updateHyperloglog(cluster *riak.Cluster) error {
+	adds := [][]byte{
+		[]byte("Jokes"),
+		[]byte("Are"),
+		[]byte("Better"),
+		[]byte("Explained"),
+		[]byte("Jokes"),
+	}
+
+	builder := riak.NewUpdateHllCommandBuilder()
+	cmd, err := builder.WithBucketType("hlls").
+		WithBucket("hello").
+		WithKey("darkness").
+		WithAdditions(adds...).
+		Build()
+	if err != nil {
+		return err
+	}
+
+	return cluster.Execute(cmd)
+}
+
+func fetchHyperloglog(cluster *riak.Cluster) error {
+	var resp *riak.FetchHllResponse
+
+	builder := riak.NewFetchHllCommandBuilder()
+	cmd, err := builder.WithBucketType("hlls").
+		WithBucket("hello").
+		WithKey("darkness").
+		Build()
+	if err != nil {
+		return err
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		return err
+	}
+	if fc, ok := cmd.(*riak.FetchHllCommand); ok {
+		if fc.Response == nil {
+			return errors.New("expected non-nil Response")
+		}
+		resp = fc.Response
+	}
+
+	// We added "Jokes" twice, but, remember, the algorithm only counts the
+	// unique elements we've added to the data structure.
+	fmt.Println("Hyperloglog cardinality: ", resp.Cardinality)
+	return nil
+}
+
+
