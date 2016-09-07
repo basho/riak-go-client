@@ -1450,3 +1450,333 @@ func (builder *FetchMapCommandBuilder) Build() (Command, error) {
 		protobuf: builder.protobuf,
 	}, nil
 }
+
+
+// UpdateHll
+// DtUpdateReq
+// DtUpdateResp
+
+// UpdateHllCommand stores or updates a set CRDT in Riak
+type UpdateHllCommand struct {
+	commandImpl
+	timeoutImpl
+	retryableCommandImpl
+	Response *UpdateHllResponse
+	protobuf *rpbRiakDT.DtUpdateReq
+}
+
+// Name identifies this command
+func (cmd *UpdateHllCommand) Name() string {
+	return cmd.getName("UpdateHll")
+}
+
+func (cmd *UpdateHllCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *UpdateHllCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	if msg != nil {
+		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
+			response := &UpdateHllResponse{
+				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
+				Cardinality:     rpbDtUpdateResp.GetHllValue(),
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[UpdateHllCommand] could not convert %v to DtUpdateResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *UpdateHllCommand) getRequestCode() byte {
+	return rpbCode_DtUpdateReq
+}
+
+func (cmd *UpdateHllCommand) getResponseCode() byte {
+	return rpbCode_DtUpdateResp
+}
+
+func (cmd *UpdateHllCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakDT.DtUpdateResp{}
+}
+
+// UpdateHllResponse contains the response data for a UpdateHllCommand
+type UpdateHllResponse struct {
+	GeneratedKey string
+	Cardinality  uint64
+}
+
+
+// UpdateHllCommandBuilder type is required for creating new instances of UpdateHllCommand
+//
+//	adds := [][]byte{
+//		[]byte("a1"),
+//		[]byte("a2"),
+//		[]byte("a3"),
+//		[]byte("a4"),
+//	}
+//
+//	command := NewUpdateHllCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithAdditions(adds).
+//		 Build()
+type UpdateHllCommandBuilder struct {
+	timeout  time.Duration
+	protobuf *rpbRiakDT.DtUpdateReq
+}
+
+// NewUpdateHllCommandBuilder is a factory function for generating the command builder struct
+func NewUpdateHllCommandBuilder() *UpdateHllCommandBuilder {
+	return &UpdateHllCommandBuilder{
+		protobuf: &rpbRiakDT.DtUpdateReq{
+			Op: &rpbRiakDT.DtOp{
+				HllOp: &rpbRiakDT.HllOp{},
+			},
+		},
+	}
+}
+
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
+func (builder *UpdateHllCommandBuilder) WithBucketType(bucketType string) *UpdateHllCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+// WithBucket sets the bucket to be used by the command
+func (builder *UpdateHllCommandBuilder) WithBucket(bucket string) *UpdateHllCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+// WithKey sets the key to be used by the command to read / write values
+func (builder *UpdateHllCommandBuilder) WithKey(key string) *UpdateHllCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+// WithAdditions sets the Hll elements to be added to the Hll Data Type via this update operation
+func (builder *UpdateHllCommandBuilder) WithAdditions(adds ...[]byte) *UpdateHllCommandBuilder {
+	opAdds := builder.protobuf.Op.HllOp.Adds
+	opAdds = append(opAdds, adds...)
+	builder.protobuf.Op.HllOp.Adds = opAdds
+	return builder
+}
+
+// WithW sets the number of nodes that must report back a successful write in order for then
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *UpdateHllCommandBuilder) WithW(w uint32) *UpdateHllCommandBuilder {
+	builder.protobuf.W = &w
+	return builder
+}
+
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.  If ommitted, the bucket default is
+// used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *UpdateHllCommandBuilder) WithPw(pw uint32) *UpdateHllCommandBuilder {
+	builder.protobuf.Pw = &pw
+	return builder
+}
+
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *UpdateHllCommandBuilder) WithDw(dw uint32) *UpdateHllCommandBuilder {
+	builder.protobuf.Dw = &dw
+	return builder
+}
+
+// WithReturnBody sets Riak to return the value within its response after completing the write
+// operation
+func (builder *UpdateHllCommandBuilder) WithReturnBody(returnBody bool) *UpdateHllCommandBuilder {
+	builder.protobuf.ReturnBody = &returnBody
+	return builder
+}
+
+// WithTimeout sets a timeout to be used for this command operation
+func (builder *UpdateHllCommandBuilder) WithTimeout(timeout time.Duration) *UpdateHllCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+// Build validates the configuration options provided then builds the command
+func (builder *UpdateHllCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &UpdateHllCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
+}
+
+// FetchHll
+// DtFetchReq
+// DtFetchResp
+
+// FetchHllCommand fetches an Hll Data Type from Riak
+type FetchHllCommand struct {
+	commandImpl
+	timeoutImpl
+	retryableCommandImpl
+	Response *FetchHllResponse
+	protobuf *rpbRiakDT.DtFetchReq
+}
+
+// Name identifies this command
+func (cmd *FetchHllCommand) Name() string {
+	return cmd.getName("FetchHll")
+}
+
+func (cmd *FetchHllCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *FetchHllCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	if msg != nil {
+		if rpbDtFetchResp, ok := msg.(*rpbRiakDT.DtFetchResp); ok {
+			response := &FetchHllResponse{}
+			rpbValue := rpbDtFetchResp.GetValue()
+			if rpbValue == nil {
+				response.IsNotFound = true
+			} else {
+				response.Cardinality = rpbValue.GetHllValue()
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[FetchHllCommand] could not convert %v to DtFetchResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *FetchHllCommand) getRequestCode() byte {
+	return rpbCode_DtFetchReq
+}
+
+func (cmd *FetchHllCommand) getResponseCode() byte {
+	return rpbCode_DtFetchResp
+}
+
+func (cmd *FetchHllCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakDT.DtFetchResp{}
+}
+
+// FetchHllResponse contains the response data for a FetchHllCommand
+type FetchHllResponse struct {
+	IsNotFound  bool
+	Cardinality uint64
+}
+
+// FetchHllCommandBuilder type is required for creating new instances of FetchHllCommand
+//
+//	command := NewFetchHllCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		Build()
+type FetchHllCommandBuilder struct {
+	timeout  time.Duration
+	protobuf *rpbRiakDT.DtFetchReq
+}
+
+// NewFetchHllCommandBuilder is a factory function for generating the command builder struct
+func NewFetchHllCommandBuilder() *FetchHllCommandBuilder {
+	return &FetchHllCommandBuilder{protobuf: &rpbRiakDT.DtFetchReq{}}
+}
+
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
+func (builder *FetchHllCommandBuilder) WithBucketType(bucketType string) *FetchHllCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+// WithBucket sets the bucket to be used by the command
+func (builder *FetchHllCommandBuilder) WithBucket(bucket string) *FetchHllCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+// WithKey sets the key to be used by the command to read / write values
+func (builder *FetchHllCommandBuilder) WithKey(key string) *FetchHllCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+// WithR sets the number of nodes that must report back a successful read in order for the
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *FetchHllCommandBuilder) WithR(r uint32) *FetchHllCommandBuilder {
+	builder.protobuf.R = &r
+	return builder
+}
+
+// WithPr sets the number of primary nodes (N) that must be read from in order for the command
+// operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *FetchHllCommandBuilder) WithPr(pr uint32) *FetchHllCommandBuilder {
+	builder.protobuf.Pr = &pr
+	return builder
+}
+
+// WithNotFoundOk sets notfound_ok, whether to treat notfounds as successful reads for the purposes
+// of R
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
+func (builder *FetchHllCommandBuilder) WithNotFoundOk(notFoundOk bool) *FetchHllCommandBuilder {
+	builder.protobuf.NotfoundOk = &notFoundOk
+	return builder
+}
+
+// WithBasicQuorum sets basic_quorum, whether to return early in some failure cases (eg. when r=1
+// and you get 2 errors and a success basic_quorum=true would return an error)
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-3/
+func (builder *FetchHllCommandBuilder) WithBasicQuorum(basicQuorum bool) *FetchHllCommandBuilder {
+	builder.protobuf.BasicQuorum = &basicQuorum
+	return builder
+}
+
+// WithTimeout sets a timeout to be used for this command operation
+func (builder *FetchHllCommandBuilder) WithTimeout(timeout time.Duration) *FetchHllCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+// Build validates the configuration options provided then builds the command
+func (builder *FetchHllCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &FetchHllCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
+}
+

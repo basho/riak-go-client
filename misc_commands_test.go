@@ -46,6 +46,7 @@ func buildRpbGetBucketResp() *rpbRiak.RpbGetBucketResp {
 		Backend:       []byte("backend"),
 		SearchIndex:   []byte("index"),
 		Datatype:      []byte("datatype"),
+		HllPrecision:  &uint32val,
 	}
 
 	rpbBucketProps.Precommit = []*rpbRiak.RpbCommitHook{rpbCommitHook}
@@ -139,6 +140,9 @@ func validateRpbBucketPropsForSetCommand(t *testing.T, rpb *rpbRiak.RpbBucketPro
 		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := string(rpb.Postcommit[0].Modfun.Function), "function_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := rpb.GetHllPrecision(), uint32val; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
@@ -247,6 +251,9 @@ func validateFetchBucketPropsResponse(t *testing.T, r *FetchBucketPropsResponse)
 		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := r.LinkFun.Function, "function_name"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := r.HllPrecision, uint32val; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
@@ -415,7 +422,8 @@ func TestBuildRpbSetBucketTypeReqCorrectlyViaBuilder(t *testing.T) {
 		WithSearchIndex("index").
 		AddPreCommit(hook).
 		AddPostCommit(hook).
-		WithChashKeyFun(modFun)
+		WithChashKeyFun(modFun).
+		WithHllPrecision(uint32val)
 
 	cmd, err := builder.Build()
 	if err != nil {
@@ -508,7 +516,8 @@ func TestBuildRpbSetBucketReqCorrectlyViaBuilder(t *testing.T) {
 		WithSearchIndex("index").
 		AddPreCommit(hook).
 		AddPostCommit(hook).
-		WithChashKeyFun(modFun)
+		WithChashKeyFun(modFun).
+		WithHllPrecision(uint32val)
 
 	cmd, err := builder.Build()
 	if err != nil {

@@ -5,13 +5,14 @@
     This script ensures that your build environment is sane and will run 'go' correctly depending on parameters passed to this script.
 .PARAMETER Target
     Target to build. Can be one of the following:
-        * ProtoGen        - generate *.pb.go files from *.proto files.
-                            Requires Go protoc utility (https://github.com/golang/protobuf)
-        * Format          - run *.go files through 'go fmt'
-        * Test            - Run 'go vet' and all tests (default target)
-        * UnitTest        - Run unit tests
-        * IntegrationTest - Run live integration tests
-        * TimeseriesTest  - Run live timeseries tests
+        * ProtoGen           - generate *.pb.go files from *.proto files.
+                               Requires Go protoc utility (https://github.com/golang/protobuf)
+        * Format             - run *.go files through 'go fmt'
+        * Test               - Run 'go vet' and all tests (default target)
+        * UnitTest           - Run unit tests
+        * IntegrationTest    - Run live integration tests
+        * IntegrationTestHll - Run Hyperloglog integration tests
+        * TimeseriesTest     - Run live timeseries tests
 .PARAMETER Verbose
     Use to increase verbosity.
 .EXAMPLE
@@ -25,7 +26,7 @@
 Param(
     [Parameter(Mandatory=$False, Position=0)]
     [ValidateSet('ProtoGen', 'Format',
-        'Test', 'UnitTest', 'IntegrationTest', 'TimeseriesTest',
+        'Test', 'UnitTest', 'IntegrationTest', 'IntegrationTestHll', 'TimeseriesTest',
         IgnoreCase = $True)]
     [string]$Target = 'Test'
 )
@@ -147,6 +148,16 @@ function Do-IntegrationTest {
     Execute $cmd $argz
 }
 
+function Do-IntegrationTestHll {
+    $v = ''
+    if ($IsVerbose) {
+        $v = '-v'
+    }
+    $cmd = 'go.exe'
+    $argz = 'test', $v, '-tags=integration_hll', "$package/..."
+    Execute $cmd $argz
+}
+
 function Do-TimeseriesTest {
     $v = ''
     if ($IsVerbose) {
@@ -166,6 +177,7 @@ switch ($Target)
     'Test' { Do-Vet; Do-IntegrationTest }
     'UnitTest' { Do-Vet; Do-UnitTest }
     'IntegrationTest' { Do-Vet; Do-IntegrationTest }
+    'IntegrationTestHll' { Do-Vet; Do-IntegrationTestHll }
     'TimeseriesTest' { Do-Vet; Do-TimeseriesTest }
      default { throw "Unknown target: $Target" }
 }
