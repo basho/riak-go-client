@@ -101,6 +101,7 @@ func assertHyperloglogStartsEmpty(cluster *riak.Cluster) error {
 	}
 
 	fmt.Println("Hyperloglog cardinality: ", resp.Cardinality)
+	fmt.Println("Hyperloglog isNotFound: ", resp.IsNotFound)
 	return nil
 }
 
