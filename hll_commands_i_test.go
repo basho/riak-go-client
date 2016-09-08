@@ -79,3 +79,38 @@ func TestUpdateAndFetchHll(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestFetchNotFoundHll(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	b2 := NewFetchHllCommandBuilder()
+	cmd, err := b2.WithBucketType(testHllBucketType).
+		WithBucket(testBucketName).
+		WithKey("hll_not_found").
+		Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if err = cluster.Execute(cmd); err != nil {
+		t.Fatal(err.Error())
+	}
+	if fc, ok := cmd.(*FetchHllCommand); ok {
+		if fc.Response == nil {
+			t.Fatal("expected non-nil Response")
+		}
+		rsp := fc.Response
+		if expected, actual := uint64(0), rsp.Cardinality; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := true, rsp.IsNotFound; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.FailNow()
+	}
+}
