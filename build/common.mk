@@ -10,17 +10,17 @@ lint: install-deps
 	go vet github.com/basho/riak-go-client/...
 
 unit-test: lint
-	go test -v github.com/basho/riak-go-client/...
+	go test -v
 
 # runs unit tests as well
 integration-test: lint
-	go test -v -tags=integration github.com/basho/riak-go-client/...
+	go test -v -tags=integration
 
 integration-test-hll: lint
-	go test -v -tags=integration_hll github.com/basho/riak-go-client/...
+	go test -v -tags=integration_hll
 
 timeseries-test: lint
-	go test -v -tags=timeseries github.com/basho/riak-go-client/...
+	go test -v -tags=timeseries
 
 test: integration-test
 
