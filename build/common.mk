@@ -3,29 +3,29 @@
 all: install-deps lint test
 
 install-deps:
-	go get -t github.com/basho/riak-go-client/...
+	cd $(PROJDIR) && go get -t github.com/basho/riak-go-client/...
 
 lint: install-deps
-	go tool vet -shadow=true -shadowstrict=true $(PROJDIR)
-	go vet github.com/basho/riak-go-client/...
+	cd $(PROJDIR) && go tool vet -shadow=true -shadowstrict=true $(PROJDIR)
+	cd $(PROJDIR) && go vet github.com/basho/riak-go-client/...
 
 unit-test: lint
-	go test -v
+	cd $(PROJDIR) && go test -v
 
 # runs unit tests as well
 integration-test: lint
-	go test -v -tags=integration
+	cd $(PROJDIR) && go test -v -tags=integration
 
 integration-test-hll: lint
-	go test -v -tags=integration_hll
+	cd $(PROJDIR) && go test -v -tags=integration_hll
 
 timeseries-test: lint
-	go test -v -tags=timeseries
+	cd $(PROJDIR) && go test -v -tags=timeseries
 
 test: integration-test
 
 fmt:
-	gofmt -s -w .
+	cd $(PROJDIR) && gofmt -s -w .
 
 protogen:
 	$(PROJDIR)/build/protogen $(PROJDIR)
