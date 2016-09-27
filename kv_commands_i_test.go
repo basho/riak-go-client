@@ -335,6 +335,17 @@ func TestFetchPreflistForAValue(t *testing.T) {
 		}
 	}()
 
+	infoCmd := &GetServerInfoCommand{}
+	if err := cluster.Execute(infoCmd); err != nil {
+		t.Fatalf("error getting server info: %s", err.Error())
+	}
+
+	ver := infoCmd.Response.ServerVersion
+	if ver < "2.1" {
+		t.Skipf("FetchPreflist not supported on version: %s", ver)
+		return
+	}
+
 	key := fmt.Sprintf("FetchPreflist_%d", time.Now().Unix())
 	obj := getBasicObject()
 	store, err := NewStoreValueCommandBuilder().
