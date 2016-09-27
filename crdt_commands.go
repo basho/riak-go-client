@@ -1451,7 +1451,6 @@ func (builder *FetchMapCommandBuilder) Build() (Command, error) {
 	}, nil
 }
 
-
 // UpdateHll
 // DtUpdateReq
 // DtUpdateResp
@@ -1480,7 +1479,7 @@ func (cmd *UpdateHllCommand) onSuccess(msg proto.Message) error {
 		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
 			response := &UpdateHllResponse{
 				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
-				Cardinality:     rpbDtUpdateResp.GetHllValue(),
+				Cardinality:  rpbDtUpdateResp.GetHllValue(),
 			}
 			cmd.Response = response
 		} else {
@@ -1507,7 +1506,6 @@ type UpdateHllResponse struct {
 	GeneratedKey string
 	Cardinality  uint64
 }
-
 
 // UpdateHllCommandBuilder type is required for creating new instances of UpdateHllCommand
 //
@@ -1779,4 +1777,3 @@ func (builder *FetchHllCommandBuilder) Build() (Command, error) {
 		protobuf: builder.protobuf,
 	}, nil
 }
-

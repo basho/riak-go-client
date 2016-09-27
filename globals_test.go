@@ -38,7 +38,6 @@ const testMapBucketType = "maps"
 // riak-admin bucket-type activate hlls
 const testHllBucketType = "hlls"
 
-
 func getRiakPort() uint16 {
 	riakPort := uint16(10017)
 	if portEnvVar := os.Getenv("RIAK_PORT"); portEnvVar != "" {

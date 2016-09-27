@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	riak "github.com/basho/riak-go-client"
 	"errors"
+	riak "github.com/basho/riak-go-client"
 )
 
 /*
@@ -17,7 +17,6 @@ import (
 
    riak_admin bucket-type create hlls '{"props":{"datatype":"hll"}}'
 */
-
 
 func main() {
 	//riak.EnableDebugLogging = true
@@ -153,5 +152,3 @@ func fetchHyperloglog(cluster *riak.Cluster) error {
 	fmt.Println("Hyperloglog cardinality: ", resp.Cardinality)
 	return nil
 }
-
-
