@@ -39,7 +39,7 @@ const testMapBucketType = "maps"
 const testHllBucketType = "hlls"
 
 func getRiakPort() uint16 {
-	riakPort := uint16(10017)
+	riakPort := uint16(8087)
 	if portEnvVar := os.Getenv("RIAK_PORT"); portEnvVar != "" {
 		if portNum, err := strconv.Atoi(portEnvVar); err == nil {
 			riakPort = uint16(portNum)
@@ -49,7 +49,7 @@ func getRiakPort() uint16 {
 }
 
 func getRiakHost() string {
-	riakHost := "riak-test"
+	riakHost := "localhost"
 	if hostEnvVar := os.Getenv("RIAK_HOST"); hostEnvVar != "" {
 		riakHost = hostEnvVar
 	}

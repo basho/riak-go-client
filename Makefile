@@ -21,12 +21,6 @@ unit-test: lint
 integration-test: lint
 	cd $(PROJDIR) && go test -v -tags=integration
 
-integration-test-hll: lint
-	cd $(PROJDIR) && go test -v -tags=integration_hll
-
-timeseries-test: lint
-	cd $(PROJDIR) && go test -v -tags=timeseries
-
 test: integration-test
 
 fmt:
@@ -45,7 +39,5 @@ help:
 	@echo ' test                 - Run unit & integration tests      '
 	@echo ' unit-test            - Run unit tests                    '
 	@echo ' integration-test     - Run integration tests             '
-	@echo ' integration-test-hll - Run Hyperloglog integration tests '
-	@echo ' timeseries-test      - Run timeseries integration tests  '
 	@echo '----------------------------------------------------------'
 	@echo ''

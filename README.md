@@ -1,35 +1,24 @@
-Riak Go Client
-==================
+# Riak Go Client
 
-The **Riak Go Client** is a client which makes it easy to communicate with
-[Riak](http://basho.com/riak/), an open source, distributed database that
-focuses on high availability, horizontal scalability, and *predictable* latency.
-Both Riak and this code is maintained by [Basho](http://www.basho.com/).
+The **Riak Go Client** is a client which makes it easy to communicate with [Riak](http://basho.com/riak/), an open source, distributed database that focuses on high availability, horizontal scalability, and *predictable* latency. Both Riak and this code is maintained by [Basho](http://www.basho.com/).
 
 The [latest version](https://github.com/basho/riak-go-client/releases/latest) of the client supports both Riak KV 2.0+, and Riak TS 1.0+. 
-
-1. [Installation](#installation)
-2. [Documentation](#documentation)
-3. [Contributing](#contributing)
-	* [An honest disclaimer](#an-honest-disclaimer)
-4. [Roadmap](#roadmap)
-5. [License and Authors](#license-and-authors)
 
 ## Build Status
 
 [![Build Status](https://travis-ci.org/basho/riak-go-client.svg?branch=master)](https://travis-ci.org/basho/riak-go-client)
 
-## Installation
+# Installation
 
 `go get github.com/basho/riak-go-client`
 
-## Documentation
+# Documentation
 
 * [API documentation on Godoc](https://godoc.org/github.com/basho/riak-go-client)
 * [Wiki](https://github.com/basho/riak-go-client/wiki)
 * [Release Notes](https://github.com/basho/riak-go-client/blob/master/RELNOTES.md). 
 
-## Contributing
+# Contributing
 
 *Note:* Please clone this repository in such a manner that submodules are also cloned:
 
@@ -42,6 +31,54 @@ OR:
 ```
 git clone https://github.com/basho/riak-go-client
 git submodule init --update
+```
+
+# Testing
+
+## Unit Tests
+
+```sh
+make unit-test
+```
+
+## Integration Tests
+
+You have two options to run Riak locally - either build from source, or use a pre-installed Riak package.
+
+### Source
+
+To setup the default test configuration, build a Riak node from a clone of `github.com/basho/riak`:
+
+```sh
+# check out latest release tag
+git checkout riak-2.1.4
+make locked-deps
+make rel
+```
+
+[Source build documentation](http://docs.basho.com/riak/kv/latest/setup/installing/source/).
+
+When building from source, the protocol buffers port will be `8087` and HTTP will be `8098`.
+
+### Package
+
+Install using your platform's package manager ([docs](http://docs.basho.com/riak/kv/latest/setup/installing/))
+
+When installing from a package, the protocol buffers port will be `8087` and HTTP will be `8098`.
+
+### Running Integration Tests
+
+* Ensure you've initialized this repo's submodules:
+
+```sh
+git submodule update --init
+```
+
+* Run the following:
+
+```sh
+./tools/setup-riak
+make integration-test
 ```
 
 This repository's maintainers are engineers at Basho and we welcome your contribution to the project! Review the details in [CONTRIBUTING.md](CONTRIBUTING.md) in order to give back to this project.

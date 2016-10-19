@@ -1,4 +1,4 @@
-// +build integration_hll
+// +build integration
 
 package riak
 
@@ -36,7 +36,7 @@ func TestUpdateAndFetchHll(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		t.Fatal(err.Error())
+		t.Skip(err.Error())
 	}
 	key := "unknown"
 	if uc, ok := cmd.(*UpdateHllCommand); ok {
@@ -97,7 +97,7 @@ func TestFetchNotFoundHll(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		t.Fatal(err.Error())
+		t.Skip(err.Error())
 	}
 	if fc, ok := cmd.(*FetchHllCommand); ok {
 		if fc.Response == nil {
