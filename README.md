@@ -18,7 +18,9 @@ The [latest version](https://github.com/basho/riak-go-client/releases/latest) of
 * [Wiki](https://github.com/basho/riak-go-client/wiki)
 * [Release Notes](https://github.com/basho/riak-go-client/blob/master/RELNOTES.md). 
 
-# Contributing
+# Testing / Contributing
+
+This repository's maintainers are engineers at Basho and we welcome your contribution to the project! Review the details in [CONTRIBUTING.md](CONTRIBUTING.md) in order to give back to this project.
 
 *Note:* Please clone this repository in such a manner that submodules are also cloned:
 
@@ -32,8 +34,6 @@ OR:
 git clone https://github.com/basho/riak-go-client
 git submodule init --update
 ```
-
-# Testing
 
 ## Unit Tests
 
