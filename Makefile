@@ -1,4 +1,5 @@
-.PHONY: all install-deps lint unit-test integration-test test fmt help
+.PHONY: all install-deps lint
+.PHONY: unit-test integration-test security-test test fmt help
 
 PROJDIR = $(realpath $(CURDIR))
 
@@ -17,9 +18,11 @@ lint: install-deps
 unit-test: lint
 	cd $(PROJDIR) && go test -v
 
-# runs unit tests as well
 integration-test: lint
 	cd $(PROJDIR) && go test -v -tags=integration
+
+security-test: lint
+	cd $(PROJDIR) && go test -v -tags=security
 
 test: integration-test
 
@@ -39,5 +42,6 @@ help:
 	@echo ' test                 - Run unit & integration tests      '
 	@echo ' unit-test            - Run unit tests                    '
 	@echo ' integration-test     - Run integration tests             '
+	@echo ' security-test        - Run security tests                '
 	@echo '----------------------------------------------------------'
 	@echo ''
