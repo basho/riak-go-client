@@ -496,7 +496,6 @@ func (cmd *TsQueryCommand) onSuccess(msg proto.Message) error {
 			}
 
 			cmd.done = queryResp.GetDone()
-			response := cmd.Response
 
 			tsCols := queryResp.GetColumns()
 			tsRows := queryResp.GetRows()
@@ -523,7 +522,7 @@ func (cmd *TsQueryCommand) onSuccess(msg proto.Message) error {
 						}
 					}
 				} else {
-					response.Rows = append(response.Rows, rows...)
+					cmd.Response.Rows = append(cmd.Response.Rows, rows...)
 				}
 
 			}
