@@ -99,6 +99,9 @@ func TestTsDescribeTable(t *testing.T) {
 		if got, want := len(scmd.Response.Columns), 5; !(got >= want) {
 			t.Errorf("expected %v to be greater than or equal to %v", got, want)
 		}
+		if got, want := len(scmd.Response.Rows), 5; !(got >= want) {
+			t.Errorf("expected %v to be greater than or equal to %v", got, want)
+		}
 	} else {
 		t.FailNow()
 	}
@@ -133,8 +136,10 @@ func TestTsCreateTable(t *testing.T) {
 		if expected, actual := true, scmd.success; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-
 		if expected, actual := 0, len(scmd.Response.Columns); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := 0, len(scmd.Response.Rows); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {
@@ -339,8 +344,10 @@ func TestTsQuery(t *testing.T) {
 		if expected, actual := true, scmd.success; expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
-
 		if expected, actual := 7, len(scmd.Response.Columns); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := 1, len(scmd.Response.Rows); expected != actual {
 			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	} else {

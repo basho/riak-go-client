@@ -494,21 +494,23 @@ func (cmd *TsQueryCommand) onSuccess(msg proto.Message) error {
 			if cmd.Response == nil {
 				cmd.Response = &TsQueryResponse{}
 			}
+			response := cmd.Response
 
 			cmd.done = queryResp.GetDone()
-			response := cmd.Response
 
 			tsCols := queryResp.GetColumns()
 			tsRows := queryResp.GetRows()
 			if tsCols != nil && tsRows != nil {
-				cmd.Response = &TsQueryResponse{
-					Columns: make([]TsColumnDescription, 0),
-					Rows:    make([][]TsCell, 0),
+				if tsCols != nil && response.Columns == nil {
+					response.Columns = make([]TsColumnDescription, 0)
+				}
+				if tsRows != nil && response.Rows == nil {
+					response.Rows = make([][]TsCell, 0)
 				}
 
 				for _, tsCol := range tsCols {
 					col.setColumn(tsCol)
-					cmd.Response.Columns = append(cmd.Response.Columns, col)
+					response.Columns = append(response.Columns, col)
 				}
 
 				rows := convertFromPbTsRows(tsRows)
@@ -525,7 +527,6 @@ func (cmd *TsQueryCommand) onSuccess(msg proto.Message) error {
 				} else {
 					response.Rows = append(response.Rows, rows...)
 				}
-
 			}
 		} else {
 			cmd.done = true

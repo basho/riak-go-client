@@ -122,3 +122,4 @@ Thank you to all of our contributors!
 * [Кирилл Александрович Журавлев](https://github.com/kazhuravlev)
 * [Paul Guelpa](https://github.com/pguelpa)
 * [Xabier Larrakoetxea Gallego](https://github.com/slok)
+* [Paul Maseberg](https://github.com/pmaseberg)
