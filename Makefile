@@ -1,5 +1,6 @@
-.PHONY: all install-deps lint
+.PHONY: all install-deps
 .PHONY: unit-test integration-test security-test test fmt help
+.PHONY: fmt lint protogen release
 
 PROJDIR = $(realpath $(CURDIR))
 
@@ -31,6 +32,18 @@ fmt:
 
 protogen:
 	$(PROJDIR)/build/protogen $(PROJDIR)
+
+release:
+ifeq ($(VERSION),)
+	$(error VERSION must be set to deploy this code)
+endif
+ifeq ($(RELEASE_GPG_KEYNAME),)
+	$(error RELEASE_GPG_KEYNAME must be set to deploy this code)
+endif
+	@$(PROJDIR)/tools/build/publish $(VERSION) master validate
+	@git tag --sign -a "$(VERSION)" -m "riak-go-client $(VERSION)" --local-user "$(RELEASE_GPG_KEYNAME)"
+	@git push --tags
+	@$(PROJDIR)/tools/build/publish $(VERSION) master 'Riak Go Client' 'riak-go-client'
 
 help:
 	@echo ''
