@@ -950,7 +950,7 @@ func (builder *ResetBucketCommandBuilder) Build() (Command, error) {
 	return &ResetBucketCommand{protobuf: builder.protobuf}, nil
 }
 
-// PingCommand is used to verify Riak is online and reachable
+// ResetBucketCommand is used to reset the properties of a given bucket or bucket type
 type ResetBucketCommand struct {
 	commandImpl
 	retryableCommandImpl
