@@ -3,6 +3,7 @@
 .PHONY: fmt lint protogen release
 
 PROJDIR = $(realpath $(CURDIR))
+PROTOC_VERSION := $(shell protoc --version)
 
 export RIAK_HOST = localhost
 export RIAK_PORT = 8087
@@ -31,6 +32,12 @@ fmt:
 	cd $(PROJDIR) && gofmt -s -w .
 
 protogen:
+ifeq ($(PROTOC_VERSION),)
+	$(error The protoc command is required to parse proto files)
+endif
+ifneq ($(PROTOC_VERSION),libprotoc 2.6.1)
+	$(error protoc must be version 2.6.1)
+endif
 	$(PROJDIR)/build/protogen $(PROJDIR)
 
 release:
