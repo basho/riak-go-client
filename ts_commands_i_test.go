@@ -23,6 +23,7 @@ const tsTableDefinition = `
 		temperature double,
 		uv_index sint64,
 		observed boolean not null,
+		binary blob not null,
 		PRIMARY KEY((region, state, quantum(time, 15, 'm')), region, state, time)
 	)`
 
@@ -49,7 +50,7 @@ func TestTsFetchRowNotFound(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 	if scmd, ok := cmd.(*TsFetchRowCommand); ok {
@@ -88,7 +89,7 @@ func TestTsDescribeTable(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 
@@ -128,7 +129,7 @@ func TestTsCreateTable(t *testing.T) {
 	}
 	if err = cluster.Execute(cmd); err != nil {
 		t.Log(query)
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 
@@ -174,7 +175,7 @@ func TestTsStoreRow(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 	if scmd, ok := cmd.(*TsStoreRowsCommand); ok {
@@ -224,7 +225,7 @@ func TestTsStoreRows(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 	if scmd, ok := cmd.(*TsStoreRowsCommand); ok {
@@ -263,7 +264,7 @@ func TestTsFetchRow(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 	if scmd, ok := cmd.(*TsFetchRowCommand); ok {
@@ -337,7 +338,7 @@ func TestTsQuery(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 	if scmd, ok := cmd.(*TsQueryCommand); ok {
@@ -373,7 +374,7 @@ func TestTsListKeys(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 
@@ -429,7 +430,7 @@ func TestTsDeleteRow(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
+		// TODO FUTURE: remove Skip when TS is merged into KV
 		t.Skip(err.Error())
 	}
 	if scmd, ok := cmd.(*TsDeleteRowCommand); ok {

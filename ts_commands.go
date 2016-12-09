@@ -39,6 +39,11 @@ func (c *TsCell) GetStringValue() string {
 	return string(c.cell.GetVarcharValue())
 }
 
+// GetBlobValue returns the blob value stored within the cell
+func (c *TsCell) GetBlobValue() []byte {
+	return c.cell.GetVarcharValue()
+}
+
 // GetBooleanValue returns the boolean value stored within the cell
 func (c *TsCell) GetBooleanValue() bool {
 	return c.cell.GetBooleanValue()
@@ -74,6 +79,12 @@ func (c *TsCell) setCell(tsCell *riak_ts.TsCell) {
 // NewStringTsCell creates a TsCell from a string
 func NewStringTsCell(v string) TsCell {
 	tsCell := riak_ts.TsCell{VarcharValue: []byte(v)}
+	return TsCell{cell: &tsCell}
+}
+
+// NewBlobTsCell creates a TsCell from a []byte
+func NewBlobTsCell(v []byte) TsCell {
+	tsCell := riak_ts.TsCell{VarcharValue: v}
 	return TsCell{cell: &tsCell}
 }
 
