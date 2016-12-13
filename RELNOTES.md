@@ -3,6 +3,7 @@
 
 Release Notes
 =============
+* `1.9.0` - [Milestone](https://github.com/basho/riak-go-client/issues?q=milestone%3Ariak-go-client-1.9.0)
 * `1.8.0` - [Milestone](https://github.com/basho/riak-go-client/issues?q=milestone%3Ariak-go-client-1.8.0)
 * `1.7.0` - Following PRs included:
  * [TimeSeries support](https://github.com/basho/riak-go-client/pull/68)
