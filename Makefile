@@ -21,7 +21,10 @@ unit-test: lint
 	cd $(PROJDIR) && go test -v
 
 integration-test: lint
-	cd $(PROJDIR) && go test -v -tags=integration
+	cd $(PROJDIR) && go test -v -tags='integration timeseries'
+
+timeseries-test: lint
+	cd $(PROJDIR) && go test -v -tags=timeseries
 
 security-test: lint
 	cd $(PROJDIR) && go test -v -tags=security
@@ -62,6 +65,7 @@ help:
 	@echo ' test                 - Run unit & integration tests      '
 	@echo ' unit-test            - Run unit tests                    '
 	@echo ' integration-test     - Run integration tests             '
+	@echo ' timeseries-test      - Run timeseries tests              '
 	@echo ' security-test        - Run security tests                '
 	@echo '----------------------------------------------------------'
 	@echo ''

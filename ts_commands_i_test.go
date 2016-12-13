@@ -1,4 +1,4 @@
-// +build integration
+// +build timeseries
 
 package riak
 

@@ -299,7 +299,7 @@ func TestNewTsCells(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 
-	if got, want := cells[5].GetDataType(), "VARCHAR"; got != want {
+	if got, want := cells[5].GetDataType(), "BLOB"; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := cells[5].GetBlobValue(), bval; !bytes.Equal(got, want) {

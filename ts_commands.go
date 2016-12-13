@@ -12,7 +12,8 @@ import (
 
 // TsCell represents a cell value within a time series row
 type TsCell struct {
-	cell *riak_ts.TsCell
+	columnType riak_ts.TsColumnType
+	cell       *riak_ts.TsCell
 }
 
 // GetDataType returns the data type of the value stored within the cell
@@ -20,7 +21,14 @@ func (c *TsCell) GetDataType() string {
 	var dType string
 	switch {
 	case c.cell.VarcharValue != nil:
-		dType = riak_ts.TsColumnType_VARCHAR.String()
+		switch c.columnType {
+		case riak_ts.TsColumnType_VARCHAR:
+			dType = riak_ts.TsColumnType_VARCHAR.String()
+		case riak_ts.TsColumnType_BLOB:
+			dType = riak_ts.TsColumnType_BLOB.String()
+		default:
+			dType = riak_ts.TsColumnType_VARCHAR.String()
+		}
 	case c.cell.Sint64Value != nil:
 		dType = riak_ts.TsColumnType_SINT64.String()
 	case c.cell.TimestampValue != nil:
@@ -72,52 +80,60 @@ func (c *TsCell) GetTimestampValue() int64 {
 	return c.cell.GetTimestampValue()
 }
 
-func (c *TsCell) setCell(tsCell *riak_ts.TsCell) {
-	c.cell = tsCell
+func (c *TsCell) setCell(tsc *riak_ts.TsCell, tsct riak_ts.TsColumnType) {
+	c.cell = tsc
+	c.columnType = tsct
 }
 
 // NewStringTsCell creates a TsCell from a string
 func NewStringTsCell(v string) TsCell {
-	tsCell := riak_ts.TsCell{VarcharValue: []byte(v)}
-	return TsCell{cell: &tsCell}
+	tsc := riak_ts.TsCell{VarcharValue: []byte(v)}
+	tsct := riak_ts.TsColumnType_VARCHAR
+	return TsCell{columnType: tsct, cell: &tsc}
 }
 
 // NewBlobTsCell creates a TsCell from a []byte
 func NewBlobTsCell(v []byte) TsCell {
-	tsCell := riak_ts.TsCell{VarcharValue: v}
-	return TsCell{cell: &tsCell}
+	tsc := riak_ts.TsCell{VarcharValue: v}
+	tsct := riak_ts.TsColumnType_BLOB
+	return TsCell{columnType: tsct, cell: &tsc}
 }
 
 // NewBooleanTsCell creates a TsCell from a boolean
 func NewBooleanTsCell(v bool) TsCell {
-	tsCell := riak_ts.TsCell{BooleanValue: &v}
-	return TsCell{cell: &tsCell}
+	tsc := riak_ts.TsCell{BooleanValue: &v}
+	tsct := riak_ts.TsColumnType_BOOLEAN
+	return TsCell{columnType: tsct, cell: &tsc}
 }
 
 // NewDoubleTsCell creates a TsCell from an floating point number
 func NewDoubleTsCell(v float64) TsCell {
-	tsCell := riak_ts.TsCell{DoubleValue: &v}
-	return TsCell{cell: &tsCell}
+	tsc := riak_ts.TsCell{DoubleValue: &v}
+	tsct := riak_ts.TsColumnType_DOUBLE
+	return TsCell{columnType: tsct, cell: &tsc}
 }
 
 // NewSint64TsCell creates a TsCell from an integer
 func NewSint64TsCell(v int64) TsCell {
-	tsCell := riak_ts.TsCell{Sint64Value: &v}
-	return TsCell{cell: &tsCell}
+	tsc := riak_ts.TsCell{Sint64Value: &v}
+	tsct := riak_ts.TsColumnType_SINT64
+	return TsCell{columnType: tsct, cell: &tsc}
 }
 
 // NewTimestampTsCell creates a TsCell from a time.Time struct
 func NewTimestampTsCell(t time.Time) TsCell {
 	v := ToUnixMillis(t)
-	tsCell := riak_ts.TsCell{TimestampValue: &v}
-	return TsCell{cell: &tsCell}
+	tsc := riak_ts.TsCell{TimestampValue: &v}
+	tsct := riak_ts.TsColumnType_TIMESTAMP
+	return TsCell{columnType: tsct, cell: &tsc}
 }
 
 // NewTimestampTsCellFromInt64 creates a TsCell from an int64 value
 // that represents *milliseconds* since UTC epoch
 func NewTimestampTsCellFromInt64(v int64) TsCell {
-	tsCell := riak_ts.TsCell{TimestampValue: &v}
-	return TsCell{cell: &tsCell}
+	tsc := riak_ts.TsCell{TimestampValue: &v}
+	tsct := riak_ts.TsColumnType_TIMESTAMP
+	return TsCell{columnType: tsct, cell: &tsc}
 }
 
 // ToUnixMillis converts a time.Time to Unix milliseconds since UTC epoch
@@ -268,7 +284,7 @@ func (cmd *TsFetchRowCommand) onSuccess(msg proto.Message) error {
 				}
 
 				// grab only the first row if any
-				rows := convertFromPbTsRows(tsRows)
+				rows := convertFromPbTsRows(tsRows, tsCols)
 				if len(rows) > 0 {
 					cmd.Response.Row = rows[0]
 				} else {
@@ -524,7 +540,7 @@ func (cmd *TsQueryCommand) onSuccess(msg proto.Message) error {
 					response.Columns = append(response.Columns, col)
 				}
 
-				rows := convertFromPbTsRows(tsRows)
+				rows := convertFromPbTsRows(tsRows, tsCols)
 
 				if cmd.protobuf.GetStream() {
 					if cmd.callback == nil {
@@ -671,7 +687,7 @@ func (cmd *TsListKeysCommand) onSuccess(msg proto.Message) error {
 			response := cmd.Response
 
 			if keysResp.GetKeys() != nil && len(keysResp.GetKeys()) > 0 {
-				rows := convertFromPbTsRows(keysResp.GetKeys())
+				rows := convertFromPbTsRows(keysResp.GetKeys(), nil)
 				if cmd.streaming {
 					if cmd.callback == nil {
 						panic("[TsListKeysCommand] requires a callback when streaming.")
@@ -786,7 +802,7 @@ func (builder *TsListKeysCommandBuilder) Build() (Command, error) {
 }
 
 // Converts a slice of riak_ts.TsRow to a slice of .TsRows
-func convertFromPbTsRows(tsRows []*riak_ts.TsRow) [][]TsCell {
+func convertFromPbTsRows(tsRows []*riak_ts.TsRow, tsCols []*riak_ts.TsColumnDescription) [][]TsCell {
 	var rows [][]TsCell
 	var row []TsCell
 	var cell TsCell
@@ -794,8 +810,12 @@ func convertFromPbTsRows(tsRows []*riak_ts.TsRow) [][]TsCell {
 	for _, tsRow := range tsRows {
 		row = make([]TsCell, 0)
 
-		for _, tsCell := range tsRow.Cells {
-			cell.setCell(tsCell)
+		for i, tsCell := range tsRow.Cells {
+			tsColumnType := riak_ts.TsColumnType_VARCHAR
+			if tsCols != nil {
+				tsColumnType = tsCols[i].GetType()
+			}
+			cell.setCell(tsCell, tsColumnType)
 			row = append(row, cell)
 		}
 
