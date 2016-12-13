@@ -1,6 +1,7 @@
 package riak
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 	"time"
@@ -250,13 +251,15 @@ func TestNewTsCells(t *testing.T) {
 	s := int64(1234567890)
 	ms := time.Duration(103) * time.Millisecond
 	tval := time.Unix(s, ms.Nanoseconds())
+	bval := []byte{0, 1, 2, 3, 4, 5, 6, 7}
 
-	cells := make([]TsCell, 5)
+	cells := make([]TsCell, 6)
 	cells[0] = NewStringTsCell("Test Key Value")
 	cells[1] = NewSint64TsCell(1)
 	cells[2] = NewDoubleTsCell(0.1)
 	cells[3] = NewBooleanTsCell(true)
 	cells[4] = NewTimestampTsCell(tval)
+	cells[5] = NewBlobTsCell(bval)
 
 	if got, want := cells[0].GetDataType(), "VARCHAR"; got != want {
 		t.Errorf("got %v, want %v", got, want)
@@ -293,6 +296,13 @@ func TestNewTsCells(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 	if got, want := cells[4].GetTimestampValue(), int64(1234567890103); got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	if got, want := cells[5].GetDataType(), "BLOB"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := cells[5].GetBlobValue(), bval; !bytes.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }

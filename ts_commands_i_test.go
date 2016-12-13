@@ -1,4 +1,4 @@
-// +build integration
+// +build timeseries
 
 package riak
 
@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 )
+
+var runTimeseriesTests = true
 
 // NB: the following is 1443806900 seconds, 103ms after the epoch
 var tsMillis = 103 * time.Millisecond
@@ -23,11 +25,34 @@ const tsTableDefinition = `
 		temperature double,
 		uv_index sint64,
 		observed boolean not null,
+		binary blob not null,
 		PRIMARY KEY((region, state, quantum(time, 15, 'm')), region, state, time)
 	)`
 
+func init() {
+	cmd, err := NewFetchBucketTypePropsCommandBuilder().
+		WithBucketType(tsTable).
+		Build()
+	if err != nil {
+		runTimeseriesTests = false
+	}
+
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		cluster.Stop()
+	}()
+
+	if err = cluster.Execute(cmd); err != nil {
+		runTimeseriesTests = false
+	}
+}
+
 // TsFetchRow
 func TestTsFetchRowNotFound(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsFetchRowCommandBuilder()
@@ -49,8 +74,7 @@ func TestTsFetchRowNotFound(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsFetchRowCommand); ok {
 		rsp := scmd.Response
@@ -72,6 +96,10 @@ func TestTsFetchRowNotFound(t *testing.T) {
 
 // TsQuery
 func TestTsDescribeTable(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsQueryCommandBuilder()
@@ -88,8 +116,7 @@ func TestTsDescribeTable(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if scmd, ok := cmd.(*TsQueryCommand); ok {
@@ -109,6 +136,10 @@ func TestTsDescribeTable(t *testing.T) {
 
 // TsQuery
 func TestTsCreateTable(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsQueryCommandBuilder()
@@ -128,8 +159,7 @@ func TestTsCreateTable(t *testing.T) {
 	}
 	if err = cluster.Execute(cmd); err != nil {
 		t.Log(query)
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if scmd, ok := cmd.(*TsQueryCommand); ok {
@@ -149,6 +179,10 @@ func TestTsCreateTable(t *testing.T) {
 
 // TsStoreRows
 func TestTsStoreRow(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsStoreRowsCommandBuilder()
@@ -174,8 +208,7 @@ func TestTsStoreRow(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsStoreRowsCommand); ok {
 		if expected, actual := true, scmd.success; expected != actual {
@@ -192,6 +225,10 @@ func TestTsStoreRow(t *testing.T) {
 
 // TsStoreRows
 func TestTsStoreRows(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsStoreRowsCommandBuilder()
@@ -224,8 +261,7 @@ func TestTsStoreRows(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsStoreRowsCommand); ok {
 		if expected, actual := true, scmd.success; expected != actual {
@@ -242,6 +278,10 @@ func TestTsStoreRows(t *testing.T) {
 
 // TsFetchRow
 func TestTsFetchRow(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsFetchRowCommandBuilder()
@@ -263,8 +303,7 @@ func TestTsFetchRow(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsFetchRowCommand); ok {
 		rsp := scmd.Response
@@ -318,6 +357,10 @@ func TestTsFetchRow(t *testing.T) {
 
 // TsQuery
 func TestTsQuery(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsQueryCommandBuilder()
@@ -337,8 +380,7 @@ func TestTsQuery(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsQueryCommand); ok {
 		if expected, actual := true, scmd.success; expected != actual {
@@ -357,6 +399,10 @@ func TestTsQuery(t *testing.T) {
 
 // TsListKeys
 func TestTsListKeys(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsListKeysCommandBuilder()
@@ -373,8 +419,7 @@ func TestTsListKeys(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if scmd, ok := cmd.(*TsListKeysCommand); ok {
@@ -408,6 +453,10 @@ func TestTsListKeys(t *testing.T) {
 
 // TsDeleteRow
 func TestTsDeleteRow(t *testing.T) {
+	if !runTimeseriesTests {
+		t.SkipNow()
+	}
+
 	var err error
 	var cmd Command
 	sbuilder := NewTsDeleteRowCommandBuilder()
@@ -429,8 +478,7 @@ func TestTsDeleteRow(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		// TODO: remove Skip when TS is merged
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 	if scmd, ok := cmd.(*TsDeleteRowCommand); ok {
 		if expected, actual := true, scmd.success; expected != actual {
