@@ -78,6 +78,8 @@ func TestExecuteCommandOnClusterWithSecurity(t *testing.T) {
 	authOptions := &AuthOptions{
 		User:      "riakpass",
 		Password:  "Test1234",
+		Tls:       true,
+		StartTls:  true,
 		TlsConfig: tlsConfig,
 	}
 	nodeOptions := &NodeOptions{
@@ -114,6 +116,8 @@ func TestExecuteCommandOnClusterWithSecurityAndClientCertificate(t *testing.T) {
 	}
 	authOptions := &AuthOptions{
 		User:      "riakuser",
+		Tls:       true,
+		StartTls:  true,
 		TlsConfig: tlsConfig,
 	}
 	nodeOptions := &NodeOptions{

@@ -23,6 +23,8 @@ var (
 type AuthOptions struct {
 	User      string
 	Password  string
+	Tls       bool
+	StartTls  bool
 	TlsConfig *tls.Config
 }
 
@@ -99,7 +101,7 @@ func (c *connection) connect() (err error) {
 		c.close()
 	} else {
 		logDebug("[Connection]", "connected to: %s", c.addr)
-		if err = c.startTls(); err != nil {
+		if err = c.security(); err != nil {
 			c.close()
 			c.setState(connInactive)
 			return
@@ -109,30 +111,38 @@ func (c *connection) connect() (err error) {
 	return
 }
 
-func (c *connection) startTls() error {
+func (c *connection) security() error {
 	if c.authOptions == nil {
 		return nil
 	}
-	if c.authOptions.TlsConfig == nil {
-		return ErrAuthMissingConfig
+	if c.authOptions.Tls {
+		logDebugln("[Connection]", "using Tls")
+		if c.authOptions.TlsConfig == nil {
+			return ErrAuthMissingConfig
+		}
+		if c.authOptions.StartTls {
+			logDebugln("[Connection]", "starting Tls")
+			c.setState(connTlsStarting)
+			startTlsCmd := &startTlsCommand{}
+			if err := c.execute(startTlsCmd); err != nil {
+				return err
+			}
+		}
+		var tlsConn *tls.Conn
+		if tlsConn = tls.Client(c.conn, c.authOptions.TlsConfig); tlsConn == nil {
+			return ErrAuthTLSUpgradeFailed
+		}
+		if err := tlsConn.Handshake(); err != nil {
+			return err
+		}
+		logDebugln("[Connection]", "Tls handshake success")
+		c.conn = tlsConn
 	}
-	c.setState(connTlsStarting)
-	startTlsCmd := &startTlsCommand{}
-	if err := c.execute(startTlsCmd); err != nil {
-		return err
-	}
-	var tlsConn *tls.Conn
-	if tlsConn = tls.Client(c.conn, c.authOptions.TlsConfig); tlsConn == nil {
-		return ErrAuthTLSUpgradeFailed
-	}
-	if err := tlsConn.Handshake(); err != nil {
-		return err
-	}
-	c.conn = tlsConn
 	authCmd := &authCommand{
 		user:     c.authOptions.User,
 		password: c.authOptions.Password,
 	}
+	logDebug("[Connection]", "executing authCommand: %v", authCmd)
 	return c.execute(authCmd)
 }
 
@@ -242,6 +252,7 @@ func (c *connection) read(timeout time.Duration) ([]byte, error) {
 	try := uint16(0)
 
 	for {
+		logDebugln("[Connection]", "waiting to read...")
 		c.setReadDeadline(rt)
 		if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
 			messageLength = binary.BigEndian.Uint32(c.sizeBuf)
@@ -264,6 +275,8 @@ func (c *connection) read(timeout time.Duration) ([]byte, error) {
 
 		if err == nil && count != int(messageLength) {
 			err = newClientError(fmt.Sprintf("[Connection] message length: %d, only read: %d", messageLength, count), nil)
+		} else {
+			logDebug("[Connection]", "read %v bytes", count)
 		}
 
 		if err == nil {
@@ -291,6 +304,7 @@ func (c *connection) write(data []byte, timeout time.Duration) error {
 		c.setState(connInactive)
 		return err
 	}
+	logDebug("[Connection]", "wrote %d bytes", count)
 	if count != len(data) {
 		return newClientError(fmt.Sprintf("[Connection] data length: %d, only wrote: %d", len(data), count), nil)
 	}
