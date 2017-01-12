@@ -195,10 +195,10 @@ func TestUpdateAndFetchGSet(t *testing.T) {
 		WithAdditions(adds...).
 		Build()
 	if err != nil {
-		t.Skip(err.Error())
+		t.Fatal(err.Error())
 	}
 	if err = cluster.Execute(cmd); err != nil {
-		t.Fatal(err.Error())
+		t.Skip(err.Error())
 	}
 	key := "unknown"
 	if uc, ok := cmd.(*UpdateGSetCommand); ok {
