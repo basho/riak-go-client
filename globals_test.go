@@ -44,6 +44,10 @@ const testCounterBucketType = "counters"
 // riak-admin bucket-type activate sets
 const testSetBucketType = "sets"
 
+// riak_admin bucket-type create gsets '{"props":{"datatype":"gset"}}'
+// riak-admin bucket-type activate gsets
+const testGSetBucketType = "gsets"
+
 // riak_admin bucket-type create maps '{"props":{"datatype":"map"}}'
 // riak-admin bucket-type activate maps
 const testMapBucketType = "maps"

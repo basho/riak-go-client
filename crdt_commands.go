@@ -593,6 +593,188 @@ func (builder *UpdateSetCommandBuilder) Build() (Command, error) {
 	}, nil
 }
 
+// UpdateGSet
+// DtUpdateReq
+// DtUpdateResp
+
+// UpdateGSetCommand stores or updates a set CRDT in Riak
+type UpdateGSetCommand struct {
+	commandImpl
+	timeoutImpl
+	retryableCommandImpl
+	Response *UpdateGSetResponse
+	protobuf *rpbRiakDT.DtUpdateReq
+}
+
+// Name identifies this command
+func (cmd *UpdateGSetCommand) Name() string {
+	return cmd.getName("UpdateGSet")
+}
+
+func (cmd *UpdateGSetCommand) constructPbRequest() (proto.Message, error) {
+	return cmd.protobuf, nil
+}
+
+func (cmd *UpdateGSetCommand) onSuccess(msg proto.Message) error {
+	cmd.success = true
+	if msg != nil {
+		if rpbDtUpdateResp, ok := msg.(*rpbRiakDT.DtUpdateResp); ok {
+			response := &UpdateGSetResponse{
+				GeneratedKey: string(rpbDtUpdateResp.GetKey()),
+				Context:      rpbDtUpdateResp.GetContext(),
+				GSetValue:    rpbDtUpdateResp.GetGsetValue(),
+			}
+			cmd.Response = response
+		} else {
+			return fmt.Errorf("[UpdateGSetCommand] could not convert %v to DtUpdateResp", reflect.TypeOf(msg))
+		}
+	}
+	return nil
+}
+
+func (cmd *UpdateGSetCommand) getRequestCode() byte {
+	return rpbCode_DtUpdateReq
+}
+
+func (cmd *UpdateGSetCommand) getResponseCode() byte {
+	return rpbCode_DtUpdateResp
+}
+
+func (cmd *UpdateGSetCommand) getResponseProtobufMessage() proto.Message {
+	return &rpbRiakDT.DtUpdateResp{}
+}
+
+// UpdateGSetResponse contains the response data for a UpdateGSetCommand
+type UpdateGSetResponse struct {
+	GeneratedKey string
+	Context      []byte
+	GSetValue    [][]byte
+}
+
+// UpdateGSetCommandBuilder type is required for creating new instances of UpdateGSetCommand
+//
+//	adds := [][]byte{
+//		[]byte("a1"),
+//		[]byte("a2"),
+//		[]byte("a3"),
+//		[]byte("a4"),
+//	}
+//
+//	command := NewUpdateGSetCommandBuilder().
+//		WithBucketType("myBucketType").
+//		WithBucket("myBucket").
+//		WithKey("myKey").
+//		WithContext(setContext).
+//		WithAdditions(adds).
+//		Build()
+type UpdateGSetCommandBuilder struct {
+	timeout  time.Duration
+	protobuf *rpbRiakDT.DtUpdateReq
+}
+
+// NewUpdateGSetCommandBuilder is a factory function for generating the command builder struct
+func NewUpdateGSetCommandBuilder() *UpdateGSetCommandBuilder {
+	return &UpdateGSetCommandBuilder{
+		protobuf: &rpbRiakDT.DtUpdateReq{
+			Op: &rpbRiakDT.DtOp{
+				GsetOp: &rpbRiakDT.GSetOp{},
+			},
+		},
+	}
+}
+
+// WithBucketType sets the bucket-type to be used by the command. If omitted, 'default' is used
+func (builder *UpdateGSetCommandBuilder) WithBucketType(bucketType string) *UpdateGSetCommandBuilder {
+	builder.protobuf.Type = []byte(bucketType)
+	return builder
+}
+
+// WithBucket sets the bucket to be used by the command
+func (builder *UpdateGSetCommandBuilder) WithBucket(bucket string) *UpdateGSetCommandBuilder {
+	builder.protobuf.Bucket = []byte(bucket)
+	return builder
+}
+
+// WithKey sets the key to be used by the command to read / write values
+func (builder *UpdateGSetCommandBuilder) WithKey(key string) *UpdateGSetCommandBuilder {
+	builder.protobuf.Key = []byte(key)
+	return builder
+}
+
+// WithContext sets the causal context needed to identify the state of the set when removing elements
+func (builder *UpdateGSetCommandBuilder) WithContext(context []byte) *UpdateGSetCommandBuilder {
+	builder.protobuf.Context = context
+	return builder
+}
+
+// WithAdditions sets the set elements to be added to the CRDT set via this update operation
+func (builder *UpdateGSetCommandBuilder) WithAdditions(adds ...[]byte) *UpdateGSetCommandBuilder {
+	opAdds := builder.protobuf.Op.GsetOp.Adds
+	opAdds = append(opAdds, adds...)
+	builder.protobuf.Op.GsetOp.Adds = opAdds
+	return builder
+}
+
+// WithW sets the number of nodes that must report back a successful write in order for then
+// command operation to be considered a success by Riak. If ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *UpdateGSetCommandBuilder) WithW(w uint32) *UpdateGSetCommandBuilder {
+	builder.protobuf.W = &w
+	return builder
+}
+
+// WithPw sets the number of primary nodes (N) that must report back a successful write in order for
+// the command operation to be considered a success by Riak.  If ommitted, the bucket default is
+// used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *UpdateGSetCommandBuilder) WithPw(pw uint32) *UpdateGSetCommandBuilder {
+	builder.protobuf.Pw = &pw
+	return builder
+}
+
+// WithDw (durable writes) sets the number of nodes that must report back a successful write to
+// backend storage in order for the command operation to be considered a success by Riak. If
+// ommitted, the bucket default is used.
+//
+// See http://basho.com/posts/technical/riaks-config-behaviors-part-2/
+func (builder *UpdateGSetCommandBuilder) WithDw(dw uint32) *UpdateGSetCommandBuilder {
+	builder.protobuf.Dw = &dw
+	return builder
+}
+
+// WithReturnBody sets Riak to return the value within its response after completing the write
+// operation
+func (builder *UpdateGSetCommandBuilder) WithReturnBody(returnBody bool) *UpdateGSetCommandBuilder {
+	builder.protobuf.ReturnBody = &returnBody
+	return builder
+}
+
+// WithTimeout sets a timeout to be used for this command operation
+func (builder *UpdateGSetCommandBuilder) WithTimeout(timeout time.Duration) *UpdateGSetCommandBuilder {
+	timeoutMilliseconds := uint32(timeout / time.Millisecond)
+	builder.timeout = timeout
+	builder.protobuf.Timeout = &timeoutMilliseconds
+	return builder
+}
+
+// Build validates the configuration options provided then builds the command
+func (builder *UpdateGSetCommandBuilder) Build() (Command, error) {
+	if builder.protobuf == nil {
+		panic("builder.protobuf must not be nil")
+	}
+	if err := validateLocatable(builder.protobuf); err != nil {
+		return nil, err
+	}
+	return &UpdateGSetCommand{
+		timeoutImpl: timeoutImpl{
+			timeout: builder.timeout,
+		},
+		protobuf: builder.protobuf,
+	}, nil
+}
+
 // FetchSet
 // DtFetchReq
 // DtFetchResp
@@ -626,7 +808,13 @@ func (cmd *FetchSetCommand) onSuccess(msg proto.Message) error {
 			if rpbValue == nil {
 				response.IsNotFound = true
 			} else {
-				response.SetValue = rpbValue.GetSetValue()
+				rpbType := rpbDtFetchResp.GetType()
+				switch rpbType {
+				case rpbRiakDT.DtFetchResp_SET:
+					response.SetValue = rpbValue.GetSetValue()
+				case rpbRiakDT.DtFetchResp_GSET:
+					response.SetValue = rpbValue.GetGsetValue()
+				}
 			}
 			cmd.Response = response
 		} else {
