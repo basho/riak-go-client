@@ -381,6 +381,7 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 			origNodeSetStateFunc(&node.stateData, st)
 			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "sending state '%v' down stateChan", st)
 			stateChan <- st
+			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "sent state '%v' down stateChan", st)
 		}
 		nodes := []*Node{node}
 		clusterOpts := &ClusterOptions{
@@ -422,6 +423,7 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 
 	listenerStarted := false
 	for {
+		logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "waiting for state on stateChan")
 		if nodeState, ok := <-stateChan; ok {
 			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "got nodeState: '%v'", nodeState)
 			if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
