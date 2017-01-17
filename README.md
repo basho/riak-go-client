@@ -123,3 +123,4 @@ Thank you to all of our contributors!
 * [Paul Guelpa](https://github.com/pguelpa)
 * [Xabier Larrakoetxea Gallego](https://github.com/slok)
 * [Paul Maseberg](https://github.com/pmaseberg)
+* [Weerasak Chongnguluam](https://github.com/iporsut)
