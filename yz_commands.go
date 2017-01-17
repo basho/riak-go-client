@@ -79,7 +79,7 @@ func (cmd *StoreIndexCommand) getResponseProtobufMessage() proto.Message {
 
 // StoreIndexCommandBuilder type is required for creating new instances of StoreIndexCommand
 //
-//	command := NewStoreIndexCommandBuilder().
+//	command, err := NewStoreIndexCommandBuilder().
 //		WithIndexName("myIndexName").
 //		WithSchemaName("mySchemaName").
 //		Build()
@@ -197,7 +197,7 @@ func (cmd *FetchIndexCommand) getResponseProtobufMessage() proto.Message {
 
 // FetchIndexCommandBuilder type is required for creating new instances of FetchIndexCommand
 //
-//	command := NewFetchIndexCommandBuilder().
+//	command, err := NewFetchIndexCommandBuilder().
 //		WithIndexName("myIndexName").
 //		Build()
 type FetchIndexCommandBuilder struct {
@@ -265,7 +265,7 @@ func (cmd *DeleteIndexCommand) getResponseProtobufMessage() proto.Message {
 
 // DeleteIndexCommandBuilder type is required for creating new instances of DeleteIndexCommand
 //
-//	command := NewDeleteIndexCommandBuilder().
+//	command, err := NewDeleteIndexCommandBuilder().
 //		WithIndexName("myIndexName").
 //		Build()
 type DeleteIndexCommandBuilder struct {
@@ -333,7 +333,7 @@ func (cmd *StoreSchemaCommand) getResponseProtobufMessage() proto.Message {
 
 // StoreSchemaCommandBuilder type is required for creating new instances of StoreSchemaCommand
 //
-//	command := NewStoreSchemaCommandBuilder().
+//	command, err := NewStoreSchemaCommandBuilder().
 //		WithSchemaName("mySchemaName").
 //		WithSchema("mySchemaXML").
 //		Build()
@@ -423,7 +423,7 @@ func (cmd *FetchSchemaCommand) getResponseProtobufMessage() proto.Message {
 
 // FetchSchemaCommandBuilder type is required for creating new instances of FetchSchemaCommand
 //
-//	command := NewFetchSchemaCommandBuilder().
+//	command, err := NewFetchSchemaCommandBuilder().
 //		WithSchemaName("mySchemaName").
 //		Build()
 type FetchSchemaCommandBuilder struct {
@@ -560,7 +560,7 @@ type SearchResponse struct {
 
 // SearchCommandBuilder type is required for creating new instances of SearchCommand
 //
-//	command := NewSearchCommandBuilder().
+//	command, err := NewSearchCommandBuilder().
 //		WithIndexName("myIndexName").
 //		WithQuery("mySolrQuery").
 //		WithNumRows(100).

@@ -322,7 +322,7 @@ func (cmd *FetchBucketTypePropsCommand) getResponseProtobufMessage() proto.Messa
 
 // FetchBucketTypePropsCommandBuilder type is required for creating new instances of FetchBucketTypePropsCommand
 //
-//	command := NewFetchBucketTypePropsCommandBuilder().
+//	command, err := NewFetchBucketTypePropsCommandBuilder().
 //		WithBucketType("myBucketType").
 //		Build()
 type FetchBucketTypePropsCommandBuilder struct {
@@ -396,7 +396,7 @@ func (cmd *FetchBucketPropsCommand) getResponseProtobufMessage() proto.Message {
 
 // FetchBucketPropsCommandBuilder type is required for creating new instances of FetchBucketPropsCommand
 //
-//	command := NewFetchBucketPropsCommandBuilder().
+//	command, err := NewFetchBucketPropsCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		Build()
@@ -501,7 +501,7 @@ func (cmd *StoreBucketPropsCommand) getResponseProtobufMessage() proto.Message {
 
 // StoreBucketTypePropsCommandBuilder type is required for creating new instances of StoreBucketTypePropsCommand
 //
-//	command := NewStoreBucketTypePropsCommandBuilder().
+//	command, err := NewStoreBucketTypePropsCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithAllowMult(true).
 //		Build()

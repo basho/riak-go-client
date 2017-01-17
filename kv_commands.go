@@ -124,7 +124,7 @@ type FetchValueResponse struct {
 
 // FetchValueCommandBuilder type is required for creating new instances of FetchValueCommand
 //
-//	command := NewFetchValueCommandBuilder().
+//	command, err := NewFetchValueCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
@@ -383,7 +383,7 @@ type StoreValueResponse struct {
 
 // StoreValueCommandBuilder type is required for creating new instances of StoreValueCommand
 //
-//	command := NewStoreValueCommandBuilder().
+//	command, err := NewStoreValueCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		Build()
@@ -805,7 +805,7 @@ type ListBucketsResponse struct {
 //		// Do something with the result
 //		return nil
 //	}
-//	cmd := NewListBucketsCommandBuilder().
+//	cmd, err := NewListBucketsCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithStreaming(true).
 //		WithCallback(cb).
@@ -957,7 +957,7 @@ type ListKeysResponse struct {
 //		// Do something with the result
 //		return nil
 //	}
-//	cmd := NewListKeysCommandBuilder().
+//	cmd, err := NewListKeysCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithStreaming(true).
@@ -1106,7 +1106,7 @@ type FetchPreflistResponse struct {
 
 // FetchPreflistCommandBuilder type is required for creating new instances of FetchPreflistCommand
 //
-//	preflist := NewFetchPreflistCommandBuilder().
+//	preflist, err := NewFetchPreflistCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
@@ -1277,7 +1277,7 @@ type SecondaryIndexQueryResponse struct {
 
 // SecondaryIndexQueryCommandBuilder type is required for creating new instances of SecondaryIndexQueryCommand
 //
-//	command := NewSecondaryIndexQueryCommandBuilder().
+//	command, err := NewSecondaryIndexQueryCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithIndexName("myIndexName").
@@ -1492,7 +1492,7 @@ func (cmd *MapReduceCommand) getResponseProtobufMessage() proto.Message {
 
 // MapReduceCommandBuilder type is required for creating new instances of MapReduceCommand
 //
-//	command := NewMapReduceCommandBuilder().
+//	command, err := NewMapReduceCommandBuilder().
 //		WithQuery("myMapReduceQuery").
 //		Build()
 type MapReduceCommandBuilder struct {
