@@ -349,24 +349,17 @@ func TestAsyncExecuteCommandOnCluster(t *testing.T) {
 }
 
 func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
-	o := &testListenerOpts{
-		test: t,
-		host: "127.0.0.1",
-		port: 13339,
-	}
-	tl := newTestListener(o)
-	defer tl.stop()
-
 	pingCommandCount := uint16(8)
 	stateChan := make(chan state)
-
+	doneChan := make(chan bool)
 	var node *Node
-	pingCommands := make([]*PingCommand, pingCommandCount)
 
 	go func() {
+		pingCommands := make([]*PingCommand, pingCommandCount)
+
 		var err error
 		nodeOpts := &NodeOptions{
-			RemoteAddress:  tl.addr.String(),
+			RemoteAddress: "127.0.0.1:13339",
 			MinConnections: 0,
 		}
 		node, err = NewNode(nodeOpts)
@@ -419,24 +412,40 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
 		}
+
+		doneChan <- true
 	}()
 
-	listenerStarted := false
-	for {
-		logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "waiting for state on stateChan")
-		if nodeState, ok := <-stateChan; ok {
-			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "got nodeState: '%v'", nodeState)
-			if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
-				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "starting listener")
-				listenerStarted = true
-				tl.start()
-				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "listener is started")
-			}
-		} else {
-			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "stateChan CLOSED")
-			break
+	go func() {
+		o := &testListenerOpts{
+			test: t,
+			host: "127.0.0.1",
+			port: 13339,
 		}
-	}
+		tl := newTestListener(o)
+		defer tl.stop()
+
+		listenerStarted := false
+		for {
+			logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "waiting for state on stateChan")
+			if nodeState, ok := <-stateChan; ok {
+				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "got nodeState: '%v'", nodeState)
+				if !listenerStarted && node.isCurrentState(nodeHealthChecking) {
+					logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "starting listener")
+					listenerStarted = true
+					tl.start()
+					logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "listener is started")
+				}
+			} else {
+				logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "stateChan CLOSED")
+				break
+			}
+		}
+	}()
+
+	logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "WAITING")
+	done := <-doneChan
+	logDebug("[TestEnqueueCommandsAndRetryFromQueue]", "DONE: %v", done)
 }
 
 func TestRecoverFromReadTimeout(t *testing.T) {
