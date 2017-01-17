@@ -96,7 +96,7 @@ type UpdateCounterResponse struct {
 
 // UpdateCounterCommandBuilder type is required for creating new instances of UpdateCounterCommand
 //
-//	command := NewUpdateCounterCommandBuilder().
+//	command, err := NewUpdateCounterCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
@@ -310,7 +310,7 @@ type FetchCounterResponse struct {
 
 // FetchCounterCommandBuilder type is required for creating new instances of FetchCounterCommand
 //
-//	command := NewFetchCounterCommandBuilder().
+//	command, err := NewFetchCounterCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
@@ -470,13 +470,13 @@ type UpdateSetResponse struct {
 //		[]byte("a4"),
 //	}
 //
-//	command := NewUpdateSetCommandBuilder().
+//	command, err := NewUpdateSetCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
 //		WithContext(setContext).
 //		WithAdditions(adds).
-//		 Build()
+//		Build()
 type UpdateSetCommandBuilder struct {
 	timeout  time.Duration
 	protobuf *rpbRiakDT.DtUpdateReq
@@ -657,7 +657,7 @@ type FetchSetResponse struct {
 
 // FetchSetCommandBuilder type is required for creating new instances of FetchSetCommand
 //
-//	command := NewFetchSetCommandBuilder().
+//	command, err := NewFetchSetCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
@@ -1189,7 +1189,7 @@ type UpdateMapResponse struct {
 //	mapOp := &MapOperation{}
 //	mapOp.SetRegister("register_1", []byte("register_value_1"))
 //
-//	command := NewUpdateMapCommandBuilder().
+//	command, err := NewUpdateMapCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
@@ -1372,7 +1372,7 @@ type FetchMapResponse struct {
 
 // FetchMapCommandBuilder type is required for creating new instances of FetchMapCommand
 //
-//	command := NewFetchMapCommandBuilder().
+//	command, err := NewFetchMapCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
@@ -1530,12 +1530,12 @@ type UpdateHllResponse struct {
 //		[]byte("a4"),
 //	}
 //
-//	command := NewUpdateHllCommandBuilder().
+//	command, err := NewUpdateHllCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
 //		WithAdditions(adds).
-//		 Build()
+//		Build()
 type UpdateHllCommandBuilder struct {
 	timeout  time.Duration
 	protobuf *rpbRiakDT.DtUpdateReq
@@ -1699,7 +1699,7 @@ type FetchHllResponse struct {
 
 // FetchHllCommandBuilder type is required for creating new instances of FetchHllCommand
 //
-//	command := NewFetchHllCommandBuilder().
+//	command, err := NewFetchHllCommandBuilder().
 //		WithBucketType("myBucketType").
 //		WithBucket("myBucket").
 //		WithKey("myKey").
