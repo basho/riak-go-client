@@ -1,6 +1,10 @@
 sudo: required
 dist: trusty
 language: go
+go:
+  - 1.6.x
+  - 1.7.x
+  - master
 env:
   global:
     - RIAK_HOST=localhost
