@@ -62,6 +62,7 @@ var (
 	ErrZeroLength           = newClientError("[Command] 0 byte data response", nil)
 	ErrTableRequired        = newClientError("Table is required", nil)
 	ErrQueryRequired        = newClientError("Query is required", nil)
+	ErrListingDisabled      = newClientError("Listing keys or buckets is expensive and should not be used in production.", nil)
 )
 
 type ClientError struct {

@@ -719,6 +719,7 @@ func (builder *DeleteValueCommandBuilder) Build() (Command, error) {
 // ListBucketsCommand is used to list buckets in a bucket type
 type ListBucketsCommand struct {
 	commandImpl
+	listingImpl
 	Response *ListBucketsResponse
 	protobuf *rpbRiakKV.RpbListBucketsReq
 	callback func(buckets []string) error
@@ -811,13 +812,20 @@ type ListBucketsResponse struct {
 //		WithCallback(cb).
 //		Build()
 type ListBucketsCommandBuilder struct {
-	callback func(buckets []string) error
-	protobuf *rpbRiakKV.RpbListBucketsReq
+	allowListing bool
+	callback     func(buckets []string) error
+	protobuf     *rpbRiakKV.RpbListBucketsReq
 }
 
 // NewListBucketsCommandBuilder is a factory function for generating the command builder struct
 func NewListBucketsCommandBuilder() *ListBucketsCommandBuilder {
 	builder := &ListBucketsCommandBuilder{protobuf: &rpbRiakKV.RpbListBucketsReq{}}
+	return builder
+}
+
+// WithAllowListing will allow this command to be built and execute
+func (builder *ListBucketsCommandBuilder) WithAllowListing() *ListBucketsCommandBuilder {
+	builder.allowListing = true
 	return builder
 }
 
@@ -861,7 +869,15 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 	if builder.protobuf.GetStream() && builder.callback == nil {
 		return nil, newClientError("ListBucketsCommand requires a callback when streaming.", nil)
 	}
-	return &ListBucketsCommand{protobuf: builder.protobuf, callback: builder.callback}, nil
+	if !builder.allowListing {
+		return nil, ErrListingDisabled
+	}
+	return &ListBucketsCommand{
+		listingImpl: listingImpl{
+			allowListing: builder.allowListing,
+		},
+		protobuf: builder.protobuf,
+		callback: builder.callback}, nil
 }
 
 // ListKeys
@@ -872,6 +888,7 @@ func (builder *ListBucketsCommandBuilder) Build() (Command, error) {
 type ListKeysCommand struct {
 	commandImpl
 	timeoutImpl
+	listingImpl
 	Response  *ListKeysResponse
 	protobuf  *rpbRiakKV.RpbListKeysReq
 	streaming bool
@@ -964,15 +981,22 @@ type ListKeysResponse struct {
 //		WithCallback(cb).
 //		Build()
 type ListKeysCommandBuilder struct {
-	timeout   time.Duration
-	protobuf  *rpbRiakKV.RpbListKeysReq
-	streaming bool
-	callback  func(buckets []string) error
+	allowListing bool
+	timeout      time.Duration
+	protobuf     *rpbRiakKV.RpbListKeysReq
+	streaming    bool
+	callback     func(buckets []string) error
 }
 
 // NewListKeysCommandBuilder is a factory function for generating the command builder struct
 func NewListKeysCommandBuilder() *ListKeysCommandBuilder {
 	builder := &ListKeysCommandBuilder{protobuf: &rpbRiakKV.RpbListKeysReq{}}
+	return builder
+}
+
+// WithAllowListing will allow this command to be built and execute
+func (builder *ListKeysCommandBuilder) WithAllowListing() *ListKeysCommandBuilder {
+	builder.allowListing = true
 	return builder
 }
 
@@ -1023,7 +1047,13 @@ func (builder *ListKeysCommandBuilder) Build() (Command, error) {
 	if builder.streaming && builder.callback == nil {
 		return nil, newClientError("ListKeysCommand requires a callback when streaming.", nil)
 	}
+	if !builder.allowListing {
+		return nil, ErrListingDisabled
+	}
 	return &ListKeysCommand{
+		listingImpl: listingImpl{
+			allowListing: builder.allowListing,
+		},
 		timeoutImpl: timeoutImpl{
 			timeout: builder.timeout,
 		},

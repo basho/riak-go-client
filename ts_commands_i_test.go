@@ -420,6 +420,7 @@ func TestTsListKeys(t *testing.T) {
 	var err error
 	var cmd Command
 	sbuilder := NewTsListKeysCommandBuilder()
+	sbuilder.WithAllowListing()
 
 	cluster := integrationTestsBuildCluster()
 	defer func() {

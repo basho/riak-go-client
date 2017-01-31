@@ -91,6 +91,7 @@ type streamingCommand interface {
 	isDone() bool
 }
 
+// Interface implemented by Command types that have a timeout
 type timeoutCommand interface {
 	getTimeout() time.Duration
 }
@@ -101,6 +102,19 @@ type timeoutImpl struct {
 
 func (cmd *timeoutImpl) getTimeout() time.Duration {
 	return cmd.timeout
+}
+
+// Interface implemented by Commands that list data from Riak
+type listingCommand interface {
+	getAllowListing() bool
+}
+
+type listingImpl struct {
+	allowListing bool
+}
+
+func (cmd *listingImpl) getAllowListing() bool {
+	return cmd.allowListing
 }
 
 // CommandBuilder interface requires Build() method for generating the Command

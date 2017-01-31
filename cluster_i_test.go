@@ -359,7 +359,7 @@ func TestEnqueueCommandsAndRetryFromQueue(t *testing.T) {
 
 		var err error
 		nodeOpts := &NodeOptions{
-			RemoteAddress: "127.0.0.1:13339",
+			RemoteAddress:  "127.0.0.1:13339",
 			MinConnections: 0,
 		}
 		node, err = NewNode(nodeOpts)

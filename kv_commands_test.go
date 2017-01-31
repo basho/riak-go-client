@@ -941,10 +941,23 @@ func TestValidationOfRpbDelReqViaBuilder(t *testing.T) {
 }
 
 // ListBuckets
+func TestListBucketsErrorsViaBuilder(t *testing.T) {
+	var streamingCallback = func(buckets []string) error { return nil }
+	builder := NewListBucketsCommandBuilder().
+		WithBucketType("bucket_type").
+		WithStreaming(true).
+		WithCallback(streamingCallback).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err == nil {
+		t.Errorf("expected cmd %s to error when building if WithAllowListing not called!", reflect.TypeOf(cmd))
+	}
+}
 
 func TestBuildRpbListBucketsReqCorrectlyViaBuilder(t *testing.T) {
 	var streamingCallback = func(buckets []string) error { return nil }
 	builder := NewListBucketsCommandBuilder().
+		WithAllowListing().
 		WithBucketType("bucket_type").
 		WithStreaming(true).
 		WithCallback(streamingCallback).
@@ -978,6 +991,7 @@ func TestBuildRpbListBucketsReqCorrectlyViaBuilder(t *testing.T) {
 
 func TestMultipleRpbListBucketsRespValuesNonStreaming(t *testing.T) {
 	builder := NewListBucketsCommandBuilder().
+		WithAllowListing().
 		WithBucketType("bucket_type").
 		WithStreaming(false)
 
@@ -1021,6 +1035,7 @@ func TestMultipleRpbListBucketsRespValuesWithStreaming(t *testing.T) {
 	}
 
 	builder := NewListBucketsCommandBuilder().
+		WithAllowListing().
 		WithBucketType("bucket_type").
 		WithStreaming(true).
 		WithCallback(streamingCallback)
@@ -1054,7 +1069,8 @@ func TestMultipleRpbListBucketsRespValuesWithStreaming(t *testing.T) {
 }
 
 func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
-	builder := NewListBucketsCommandBuilder()
+	builder := NewListBucketsCommandBuilder().
+		WithAllowListing()
 	// validate that Bucket and Key are NOT required
 	// and that type is "default"
 	var err error
@@ -1079,10 +1095,24 @@ func TestValidationOfRpbListBucketsReqViaBuilder(t *testing.T) {
 }
 
 // ListKeys
+func TestListKeysErrorsViaBuilder(t *testing.T) {
+	var streamingCallback = func(buckets []string) error { return nil }
+	builder := NewListKeysCommandBuilder().
+		WithBucketType("bucket_type").
+		WithBucket("bucket").
+		WithStreaming(true).
+		WithCallback(streamingCallback).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err == nil {
+		t.Errorf("expected cmd %s to error when building if WithAllowListing not called!", reflect.TypeOf(cmd))
+	}
+}
 
 func TestBuildRpbListKeysReqCorrectlyViaBuilder(t *testing.T) {
 	var streamingCallback = func(buckets []string) error { return nil }
 	builder := NewListKeysCommandBuilder().
+		WithAllowListing().
 		WithBucketType("bucket_type").
 		WithBucket("bucket").
 		WithStreaming(true).
@@ -1117,6 +1147,7 @@ func TestBuildRpbListKeysReqCorrectlyViaBuilder(t *testing.T) {
 
 func TestMultipleRpbListKeysRespValuesNonStreaming(t *testing.T) {
 	builder := NewListKeysCommandBuilder().
+		WithAllowListing().
 		WithBucketType("bucket_type").
 		WithBucket("bucket").
 		WithStreaming(false)
@@ -1161,6 +1192,7 @@ func TestMultipleRpbListKeysRespValuesWithStreaming(t *testing.T) {
 	}
 
 	builder := NewListKeysCommandBuilder().
+		WithAllowListing().
 		WithBucketType("bucket_type").
 		WithBucket("bucket").
 		WithStreaming(true).
@@ -1195,7 +1227,9 @@ func TestMultipleRpbListKeysRespValuesWithStreaming(t *testing.T) {
 }
 
 func TestValidationOfRpbListKeysReqViaBuilder(t *testing.T) {
-	builder := NewListKeysCommandBuilder().WithBucket("bucket")
+	builder := NewListKeysCommandBuilder().
+		WithAllowListing().
+		WithBucket("bucket")
 	// validate that Key is NOT required
 	// and that type is "default"
 	var err error

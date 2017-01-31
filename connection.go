@@ -173,6 +173,15 @@ func (c *connection) execute(cmd Command) (err error) {
 		return
 	}
 
+	if lc, ok := cmd.(listingCommand); ok {
+		allowListing := lc.getAllowListing()
+		if !allowListing {
+			err = ErrListingDisabled
+			cmd.onError(err)
+			return
+		}
+	}
+
 	c.setInFlight(true)
 	defer c.setInFlight(false)
 	c.lastUsed = time.Now()
