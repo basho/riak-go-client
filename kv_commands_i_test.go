@@ -635,16 +635,7 @@ func TestSetContinuationOnPaginatedQuery(t *testing.T) {
 	}
 }
 
-// MapReduceCommand
-func TestMapReduceCommand(t *testing.T) {
-	cluster := integrationTestsBuildCluster()
-	defer func() {
-		if err := cluster.Stop(); err != nil {
-			t.Error(err.Error())
-		}
-	}()
-
-	bucket := fmt.Sprintf("%s_mr", testBucketName)
+func storeData(t *testing.T, c *Cluster, b string) {
 	stuffToStore := [...]string{
 		"Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice 'without pictures or conversation?",
 		"So she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.",
@@ -654,25 +645,71 @@ func TestMapReduceCommand(t *testing.T) {
 	var cmd Command
 	var err error
 	for i, s := range stuffToStore {
-		key := fmt.Sprintf("p%d", i)
-		b := NewStoreValueCommandBuilder()
+		k := fmt.Sprintf("p%d", i)
+		bld := NewStoreValueCommandBuilder()
 		obj := &Object{
 			Charset:         "utf-8",
 			ContentEncoding: "utf-8",
 			ContentType:     "text/plain",
 			Value:           []byte(s),
 		}
-		cmd, err = b.WithBucket(bucket).WithKey(key).WithContent(obj).Build()
+		cmd, err = bld.WithBucket(b).WithKey(k).WithContent(obj).Build()
 		if err != nil {
 			t.Fatal(err.Error())
 		}
-		if err = cluster.Execute(cmd); err != nil {
+		if err = c.Execute(cmd); err != nil {
 			t.Fatal(err.Error())
 		}
 	}
+}
+
+// MapReduceCommand
+func TestMapReduceErlangCommand(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	bucket := fmt.Sprintf("%s_erlang_mr", testBucketName)
+	storeData(t, cluster, bucket)
+
+	queryFmt := "{\"inputs\":[[\"%s\",\"p0\"],[\"%s\",\"p1\"],[\"%s\",\"p2\"]],\"query\":[{\"map\":{\"language\":\"erlang\",\"module\":\"riak_kv_mapreduce\",\"function\":\"map_object_value\"}},{\"reduce\":{\"language\":\"erlang\",\"module\":\"riak_kv_mapreduce\",\"function\":\"reduce_count_inputs\"}}]}"
+	query := fmt.Sprintf(queryFmt, bucket, bucket, bucket)
+
+	if cmd, err := NewMapReduceCommandBuilder().WithQuery(query).Build(); err == nil {
+		if err = cluster.Execute(cmd); err != nil {
+			t.Fatal(err.Error())
+		}
+		if cerr := cmd.Error(); cerr != nil {
+			t.Fatal(cerr)
+		}
+		if mr, ok := cmd.(*MapReduceCommand); ok {
+			if mr.Response == nil || len(mr.Response) == 0 {
+				t.Error("expected non-nil and non-empty response")
+			}
+		} else {
+			t.Errorf("Could not convert %v to *MapReduceQueryCommand", ok, reflect.TypeOf(cmd))
+		}
+	} else {
+		t.Fatal(err.Error())
+	}
+}
+
+func TestMapReduceCommand(t *testing.T) {
+	cluster := integrationTestsBuildCluster()
+	defer func() {
+		if err := cluster.Stop(); err != nil {
+			t.Error(err.Error())
+		}
+	}()
+
+	bucket := fmt.Sprintf("%s_mr", testBucketName)
+	storeData(t, cluster, bucket)
 
 	queryFmt := "{\"inputs\":[[\"%s\",\"p0\"],[\"%s\",\"p1\"],[\"%s\",\"p2\"]],\"query\":[{\"map\":{\"language\":\"javascript\",\"source\":\"function(v) { var m = v.values[0].data.toLowerCase().match(/\\w*/g); var r = []; for(var i in m) { if (m[i] != '') { var o = {}; o[m[i]]=1; r.push(o); } } return r; }\"}},{\"reduce\":{\"language\":\"javascript\",\"source\":\"function(v) { var r = {}; for(var i in v) { for(var w in v[i]) { if (w in r) { r[w] += v[i][w]; } else { r[w] = v[i][w]; } } } return [r]; }\"}}]}"
-	query := fmt.Sprintf(queryFmt, bucket)
+	query := fmt.Sprintf(queryFmt, bucket, bucket, bucket)
 
 	if cmd, err := NewMapReduceCommandBuilder().WithQuery(query).Build(); err == nil {
 		if err = cluster.Execute(cmd); err != nil {
