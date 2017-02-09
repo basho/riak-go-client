@@ -558,6 +558,151 @@ func TestValidationOfUpdateSetViaBuilder(t *testing.T) {
 	}
 }
 
+// UpdateGSet
+// DtUpdateReq
+// DtUpdateResp
+
+func TestBuildDtUpdateReqCorrectlyViaUpdateGSetCommandBuilder(t *testing.T) {
+	builder := NewUpdateGSetCommandBuilder().
+		WithBucketType("gsets").
+		WithBucket("bucket").
+		WithKey("key").
+		WithContext(crdtContextBytes).
+		WithAdditions([]byte("a1"), []byte("a2")).
+		WithAdditions([]byte("a3"), []byte("a4")).
+		WithW(1).
+		WithDw(2).
+		WithPw(3).
+		WithReturnBody(true).
+		WithTimeout(time.Second * 20)
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if _, ok := cmd.(retryableCommand); !ok {
+		t.Errorf("got %v, want cmd %s to implement retryableCommand", ok, reflect.TypeOf(cmd))
+	}
+
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+	if req, ok := protobuf.(*rpbRiakDT.DtUpdateReq); ok {
+		if expected, actual := "gsets", string(req.GetType()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "bucket", string(req.GetBucket()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := "key", string(req.GetKey()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := 0, bytes.Compare(crdtContextBytes, req.GetContext()); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(1), req.GetW(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(2), req.GetDw(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		if expected, actual := uint32(3), req.GetPw(); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+
+		validateTimeout(t, time.Second*20, req.GetTimeout())
+
+		op := req.Op.GsetOp
+
+		for i := 1; i <= 4; i++ {
+			aitem := fmt.Sprintf("a%d", i)
+			if expected, actual := true, sliceIncludes(op.Adds, []byte(aitem)); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *rpbRiakDT.DtUpdateReq", ok, reflect.TypeOf(protobuf))
+	}
+}
+
+func TestUpdateGSetParsesDtUpdateRespCorrectly(t *testing.T) {
+	gsetValue := [][]byte{
+		[]byte("v1"),
+		[]byte("v2"),
+		[]byte("v3"),
+		[]byte("v4"),
+	}
+	generatedKey := "generated_key"
+	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
+		GsetValue: gsetValue,
+		Key:      []byte(generatedKey),
+		Context:  crdtContextBytes,
+	}
+
+	builder := NewUpdateGSetCommandBuilder().
+		WithBucketType("gsets").
+		WithBucket("bucket").
+		WithKey("key")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+
+	err = cmd.onSuccess(dtUpdateResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if uc, ok := cmd.(*UpdateGSetCommand); ok {
+		rsp := uc.Response
+		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		for i := 1; i <= 4; i++ {
+			sitem := fmt.Sprintf("v%d", i)
+			if expected, actual := true, sliceIncludes(rsp.GSetValue, []byte(sitem)); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		}
+		if expected, actual := "generated_key", rsp.GeneratedKey; expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *UpdateGSetCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestValidationOfUpdateGSetViaBuilder(t *testing.T) {
+	// validate that Bucket is required
+	builder := NewUpdateGSetCommandBuilder()
+	_, err := builder.Build()
+	if err == nil {
+		t.Fatal("expected non-nil err")
+	}
+	if expected, actual := ErrBucketRequired.Error(), err.Error(); expected != actual {
+		t.Errorf("expected %v, actual %v", expected, actual)
+	}
+
+	// validate that Key is NOT required
+	builder = NewUpdateGSetCommandBuilder()
+	builder.WithBucket("bucket_name")
+	_, err = builder.Build()
+	if err != nil {
+		t.Fatal("expected nil err")
+	}
+}
+
 // FetchSet
 // DtFetchReq
 // DtFetchResp
@@ -632,6 +777,57 @@ func TestFetchSetParsesDtFetchRespCorrectly(t *testing.T) {
 	}
 	builder := NewFetchSetCommandBuilder().
 		WithBucketType("sets").
+		WithBucket("bucket").
+		WithKey("key")
+	cmd, err := builder.Build()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	protobuf, err := cmd.constructPbRequest()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if protobuf == nil {
+		t.Fatal("protobuf is nil")
+	}
+
+	err = cmd.onSuccess(dtFetchResp)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if fc, ok := cmd.(*FetchSetCommand); ok {
+		rsp := fc.Response
+		if expected, actual := 0, bytes.Compare(crdtContextBytes, rsp.Context); expected != actual {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+		for i := 1; i <= 4; i++ {
+			sitem := fmt.Sprintf("v%d", i)
+			if expected, actual := true, sliceIncludes(rsp.SetValue, []byte(sitem)); expected != actual {
+				t.Errorf("expected %v, got %v", expected, actual)
+			}
+		}
+	} else {
+		t.Errorf("ok: %v - could not convert %v to *FetchSetCommand", ok, reflect.TypeOf(cmd))
+	}
+}
+
+func TestFetchSetParsesDtFetchRespCorrectlyForGSet(t *testing.T) {
+	dtValue := &rpbRiakDT.DtValue{
+		GsetValue: [][]byte{
+			[]byte("v1"),
+			[]byte("v2"),
+			[]byte("v3"),
+			[]byte("v4"),
+		},
+	}
+	dtFetchResp := &rpbRiakDT.DtFetchResp{
+		Type:    rpbRiakDT.DtFetchResp_GSET.Enum(),
+		Value:   dtValue,
+		Context: crdtContextBytes,
+	}
+	builder := NewFetchSetCommandBuilder().
+		WithBucketType("gsets").
 		WithBucket("bucket").
 		WithKey("key")
 	cmd, err := builder.Build()
