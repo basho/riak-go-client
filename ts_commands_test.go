@@ -209,8 +209,24 @@ func TestBuildTsQueryReqCorrectlyViaBuilder(t *testing.T) {
 	}
 }
 
+// ListKeys
+func TestTsListKeysErrorsViaBuilder(t *testing.T) {
+	cb := func(keys [][]TsCell) error {
+		return nil
+	}
+	builder := NewTsListKeysCommandBuilder().
+		WithTable("table_name").
+		WithStreaming(true).
+		WithCallback(cb)
+	cmd, err := builder.Build()
+	if err == nil {
+		t.Errorf("expected cmd %s to error when building if WithAllowListing not called!", reflect.TypeOf(cmd))
+	}
+}
+
 func TestBuildTsListKeysReqCorrectlyViaBuilder(t *testing.T) {
 	builder := NewTsListKeysCommandBuilder().
+		WithAllowListing().
 		WithTable("table_name")
 
 	if expected, actual := false, builder.streaming; expected != actual {

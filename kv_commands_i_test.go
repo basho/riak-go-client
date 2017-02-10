@@ -202,6 +202,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 
 	// non-streaming
 	builder := NewListBucketsCommandBuilder()
+	builder.WithAllowListing()
 	if cmd, err = builder.WithBucketType(defaultBucketType).WithStreaming(false).Build(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -228,6 +229,7 @@ func TestListBucketsInDefaultBucketType(t *testing.T) {
 
 	// streaming
 	builder = NewListBucketsCommandBuilder()
+	builder.WithAllowListing()
 	count := 0
 	cb := func(buckets []string) error {
 		for _, b := range buckets {
@@ -286,6 +288,7 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 	var cmd Command
 	// non-streaming
 	builder := NewListKeysCommandBuilder()
+	builder.WithAllowListing()
 	if cmd, err = builder.WithBucketType(defaultBucketType).WithBucket(testBucketName).WithStreaming(false).Build(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -312,6 +315,7 @@ func TestListKeysInDefaultBucketType(t *testing.T) {
 
 	// streaming
 	builder = NewListKeysCommandBuilder()
+	builder.WithAllowListing()
 	count := 0
 	cb := func(keys []string) error {
 		for _, k := range keys {

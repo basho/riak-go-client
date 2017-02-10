@@ -663,6 +663,7 @@ func (builder *TsQueryCommandBuilder) Build() (Command, error) {
 type TsListKeysCommand struct {
 	commandImpl
 	timeoutImpl
+	listingImpl
 	Response  *TsListKeysResponse
 	protobuf  *riak_ts.TsListKeysReq
 	streaming bool
@@ -749,15 +750,22 @@ type TsListKeysResponse struct {
 //		WithCallback(cb).
 //		Build()
 type TsListKeysCommandBuilder struct {
-	timeout   time.Duration
-	protobuf  *riak_ts.TsListKeysReq
-	streaming bool
-	callback  func(keys [][]TsCell) error
+	allowListing bool
+	timeout      time.Duration
+	protobuf     *riak_ts.TsListKeysReq
+	streaming    bool
+	callback     func(keys [][]TsCell) error
 }
 
 // NewTsListKeysCommandBuilder is a factory function for generating the command builder struct
 func NewTsListKeysCommandBuilder() *TsListKeysCommandBuilder {
 	builder := &TsListKeysCommandBuilder{protobuf: &riak_ts.TsListKeysReq{}}
+	return builder
+}
+
+// WithAllowListing will allow this command to be built and execute
+func (builder *TsListKeysCommandBuilder) WithAllowListing() *TsListKeysCommandBuilder {
+	builder.allowListing = true
 	return builder
 }
 
@@ -796,15 +804,15 @@ func (builder *TsListKeysCommandBuilder) Build() (Command, error) {
 	if builder.protobuf == nil {
 		panic("builder.protobuf must not be nil")
 	}
-
 	if len(builder.protobuf.GetTable()) == 0 {
 		return nil, ErrTableRequired
 	}
-
 	if builder.streaming && builder.callback == nil {
 		return nil, newClientError("ListKeysCommand requires a callback when streaming.", nil)
 	}
-
+	if !builder.allowListing {
+		return nil, ErrListingDisabled
+	}
 	return &TsListKeysCommand{
 		timeoutImpl: timeoutImpl{
 			timeout: builder.timeout,
