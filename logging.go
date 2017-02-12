@@ -18,7 +18,6 @@ package riak
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 )
@@ -27,7 +26,7 @@ import (
 var EnableDebugLogging = false
 
 var errLogger = log.New(os.Stderr, "", log.LstdFlags)
-var logger = log.New(os.Stderr, "", log.LstdFlags)
+var stdLogger = log.New(os.Stderr, "", log.LstdFlags)
 
 func init() {
 	if debugEnvVar := os.Getenv("RIAK_GO_CLIENT_DEBUG"); debugEnvVar != "" {
@@ -35,33 +34,39 @@ func init() {
 	}
 }
 
-// setLogWriter replaces the default log writer, which uses Stderr
-func setLogWriter(out io.Writer) {
-	logger = log.New(out, "", log.LstdFlags)
+// SetLogger sets the standard logger used for
+// WARN and DEBUG (if enabled)
+func SetLogger(logger *log.Logger) {
+	stdLogger = logger
+}
+
+// SetErrorLogger sets the logger used for errors
+func SetErrorLogger(logger *log.Logger) {
+	errLogger = logger
 }
 
 // logDebug writes formatted string debug messages using Printf only if debug logging is enabled
 func logDebug(source, format string, v ...interface{}) {
 	if EnableDebugLogging {
-		logger.Printf(fmt.Sprintf("[DEBUG] %s %s", source, format), v...)
+		stdLogger.Printf(fmt.Sprintf("[DEBUG] %s %s", source, format), v...)
 	}
 }
 
 // logDebugln writes string debug messages using Println
 func logDebugln(source string, v ...interface{}) {
 	if EnableDebugLogging {
-		logger.Println("[DEBUG]", source, v)
+		stdLogger.Println("[DEBUG]", source, v)
 	}
 }
 
 // logWarn writes formatted string warning messages using Printf
 func logWarn(source, format string, v ...interface{}) {
-	logger.Printf(fmt.Sprintf("[WARNING] %s %s", source, format), v...)
+	stdLogger.Printf(fmt.Sprintf("[WARNING] %s %s", source, format), v...)
 }
 
 // logWarnln writes string warning messages using Println
 func logWarnln(source string, v ...interface{}) {
-	logger.Println("[WARNING]", source, v)
+	stdLogger.Println("[WARNING]", source, v)
 }
 
 // logError writes formatted string error messages using Printf
