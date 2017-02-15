@@ -124,3 +124,4 @@ Thank you to all of our contributors!
 * [Xabier Larrakoetxea Gallego](https://github.com/slok)
 * [Paul Maseberg](https://github.com/pmaseberg)
 * [Weerasak Chongnguluam](https://github.com/iporsut)
+* [Hawk Newton](https://github.com/hawknewton)
