@@ -125,3 +125,4 @@ Thank you to all of our contributors!
 * [Paul Maseberg](https://github.com/pmaseberg)
 * [Weerasak Chongnguluam](https://github.com/iporsut)
 * [Hawk Newton](https://github.com/hawknewton)
+* [Beau Brewer](https://github.com/beaubrewer)
