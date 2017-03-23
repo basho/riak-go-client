@@ -151,9 +151,9 @@ func fromRpbContent(rpbContent *rpbRiakKV.RpbContent) (ro *Object, err error) {
 func toRpbContent(ro *Object) (*rpbRiakKV.RpbContent, error) {
 	rpbContent := &rpbRiakKV.RpbContent{
 		Value:           ro.Value,
-		ContentType:     []byte(ro.ContentType),
-		Charset:         []byte(ro.Charset),
-		ContentEncoding: []byte(ro.ContentEncoding),
+		ContentType:     byteString(ro.ContentType),
+		Charset:         byteString(ro.Charset),
+		ContentEncoding: byteString(ro.ContentEncoding),
 	}
 
 	if ro.HasIndexes() {
@@ -201,4 +201,11 @@ func toRpbContent(ro *Object) (*rpbRiakKV.RpbContent, error) {
 	}
 
 	return rpbContent, nil
+}
+
+func byteString(s string) []byte {
+	if s == "" {
+		return nil
+	}
+	return []byte(s)
 }
