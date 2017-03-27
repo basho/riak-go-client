@@ -15,30 +15,28 @@
 package riak
 
 import (
-	"fmt"
+	"testing"
 )
 
-func rpbValidateResp(data []byte, expected byte) (err error) {
-	if len(data) == 0 {
-		err = ErrZeroLength
-		return
+func TestConvertObjectToRpbNilFields_GH92(t *testing.T) {
+	v := "this is a value"
+	ro := &Object{
+		Value: []byte(v),
 	}
-	if err = rpbEnsureCode(expected, data[0]); err != nil {
-		return
+	if rpb, err := toRpbContent(ro); err != nil {
+		t.Fatalf("error converting to rpb: %v", err)
+	} else {
+		if rpb == nil {
+			t.Fatal("protobuf is nil")
+		}
+		if nil != rpb.GetContentType() {
+			t.Errorf("expected nil ContentType")
+		}
+		if nil != rpb.GetCharset() {
+			t.Errorf("expected nil Charset")
+		}
+		if nil != rpb.GetContentEncoding() {
+			t.Errorf("expected nil ContentEncoding")
+		}
 	}
-	return
-}
-
-func rpbEnsureCode(expected byte, actual byte) (err error) {
-	if expected != actual {
-		err = newClientError(fmt.Sprintf("expected response code %d, got: %d", expected, actual), nil)
-	}
-	return
-}
-
-func rpbBytes(s string) []byte {
-	if s == "" {
-		return nil
-	}
-	return []byte(s)
 }

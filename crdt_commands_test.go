@@ -639,8 +639,8 @@ func TestUpdateGSetParsesDtUpdateRespCorrectly(t *testing.T) {
 	generatedKey := "generated_key"
 	dtUpdateResp := &rpbRiakDT.DtUpdateResp{
 		GsetValue: gsetValue,
-		Key:      []byte(generatedKey),
-		Context:  crdtContextBytes,
+		Key:       []byte(generatedKey),
+		Context:   crdtContextBytes,
 	}
 
 	builder := NewUpdateGSetCommandBuilder().
