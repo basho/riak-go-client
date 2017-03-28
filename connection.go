@@ -37,6 +37,8 @@ var (
 type AuthOptions struct {
 	User      string
 	Password  string
+	Tls       bool
+	StartTls  bool
 	TlsConfig *tls.Config
 }
 
@@ -113,7 +115,7 @@ func (c *connection) connect() (err error) {
 		c.close()
 	} else {
 		logDebug("[Connection]", "connected to: %s", c.addr)
-		if err = c.startTls(); err != nil {
+		if err = c.security(); err != nil {
 			c.close()
 			c.setState(connInactive)
 			return
@@ -123,26 +125,30 @@ func (c *connection) connect() (err error) {
 	return
 }
 
-func (c *connection) startTls() error {
+func (c *connection) security() error {
 	if c.authOptions == nil {
 		return nil
 	}
-	if c.authOptions.TlsConfig == nil {
-		return ErrAuthMissingConfig
+	if c.authOptions.Tls {
+		if c.authOptions.TlsConfig == nil {
+			return ErrAuthMissingConfig
+		}
+		if c.authOptions.StartTls {
+			c.setState(connTlsStarting)
+			startTlsCmd := &startTlsCommand{}
+			if err := c.execute(startTlsCmd); err != nil {
+				return err
+			}
+		}
+		var tlsConn *tls.Conn
+		if tlsConn = tls.Client(c.conn, c.authOptions.TlsConfig); tlsConn == nil {
+			return ErrAuthTLSUpgradeFailed
+		}
+		if err := tlsConn.Handshake(); err != nil {
+			return err
+		}
+		c.conn = tlsConn
 	}
-	c.setState(connTlsStarting)
-	startTlsCmd := &startTlsCommand{}
-	if err := c.execute(startTlsCmd); err != nil {
-		return err
-	}
-	var tlsConn *tls.Conn
-	if tlsConn = tls.Client(c.conn, c.authOptions.TlsConfig); tlsConn == nil {
-		return ErrAuthTLSUpgradeFailed
-	}
-	if err := tlsConn.Handshake(); err != nil {
-		return err
-	}
-	c.conn = tlsConn
 	authCmd := &authCommand{
 		user:     c.authOptions.User,
 		password: c.authOptions.Password,

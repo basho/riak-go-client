@@ -1,6 +1,6 @@
 .PHONY: all install-deps
 .PHONY: unit-test integration-test security-test test fmt help
-.PHONY: fmt lint protogen release
+.PHONY: clean fmt lint protogen release
 
 PROJDIR = $(realpath $(CURDIR))
 PROTOC_VERSION := $(shell protoc --version)
@@ -30,6 +30,9 @@ security-test: lint
 	cd $(PROJDIR) && go test -v -tags=security
 
 test: integration-test
+
+clean:
+	cd $(PROJDIR) && go clean
 
 fmt:
 	cd $(PROJDIR) && gofmt -s -w .
