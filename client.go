@@ -132,3 +132,79 @@ func newClientUsingAddresses(port uint16, remoteAddresses []string) (*Client, er
 		return newClientUsingCluster(cluster)
 	}
 }
+
+// Fetch is a simple invocation of the NewFetchValueCommand
+func (c *Client) Fetch(bucketType, bucket, key string) ([]*Object, error) {
+	cmd, err := NewFetchValueCommandBuilder().
+		WithBucketType(bucketType).
+		WithBucket(bucket).
+		WithKey(key).
+		Build()
+
+	if err != nil {
+		return nil, err
+	}
+	if err = c.cluster.Execute(cmd); err != nil {
+		return nil, err
+	}
+
+	res := cmd.(*FetchValueCommand)
+	if res.Error() != nil || res.Response.IsNotFound {
+		return nil, res.Error()
+	}
+
+	return res.Response.Values, nil
+}
+
+// Store is a simple invocation of the StorehValueCommand
+func (c *Client) Store(bucketType, bucket, key string, obj *Object) ([]*Object, error) {
+	cmd, err := NewStoreValueCommandBuilder().
+		WithBucketType(bucketType).
+		WithBucket(bucket).
+		WithKey(key).
+		WithContent(obj).
+		WithReturnBody(true).
+		Build()
+
+	if err != nil {
+		return nil, err
+	}
+	if err = c.cluster.Execute(cmd); err != nil {
+		return nil, err
+	}
+
+	res := cmd.(*StoreValueCommand)
+	if res.Error() != nil {
+		return nil, res.Error()
+	}
+
+	return res.Response.Values, nil
+}
+
+// Delete is a simple invocation of the NewFetchValueCommand
+func (c *Client) Delete(bucketType, bucket, key string, vclock []byte) error {
+	builder := NewDeleteValueCommandBuilder().
+		WithBucketType(bucketType).
+		WithBucket(bucket).
+		WithKey(key)
+
+	if vclock != nil && len(vclock) > 0 {
+		builder = builder.WithVClock(vclock)
+	}
+
+	cmd, err := builder.Build()
+
+	if err != nil {
+		return err
+	}
+	if err = c.cluster.Execute(cmd); err != nil {
+		return err
+	}
+
+	res := cmd.(*DeleteValueCommand)
+	if res.Error() != nil {
+		return res.Error()
+	}
+
+	return nil
+}
