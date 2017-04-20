@@ -566,7 +566,7 @@ func (cmd *TsQueryCommand) onSuccess(msg proto.Message) error {
 						}
 					}
 				} else {
-					response.Rows = append(response.Rows, rows...)
+					cmd.Response.Rows = append(cmd.Response.Rows, rows...)
 				}
 			}
 		} else {
