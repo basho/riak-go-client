@@ -67,6 +67,10 @@ func (nm *defaultNodeManager) ExecuteOnNode(nodes []*Node, command Command, prev
 			break
 		}
 
+    if err != nil {
+	    return executed, err
+    }
+
 		nm.RLock()
 		if startingIndex == nm.nodeIndex {
 			nm.RUnlock()
