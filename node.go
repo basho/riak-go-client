@@ -15,6 +15,7 @@
 package riak
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -180,7 +181,7 @@ func (n *Node) stop() error {
 
 // Execute retrieves an available connection from the pool and executes the Command operation against
 // Riak
-func (n *Node) execute(cmd Command) (bool, error) {
+func (n *Node) execute(ctx context.Context, cmd Command) (bool, error) {
 	if err := n.stateCheck(nodeRunning, nodeHealthChecking); err != nil {
 		return false, err
 	}
@@ -202,7 +203,7 @@ func (n *Node) execute(cmd Command) (bool, error) {
 		}
 
 		logDebug("[Node]", "(%v) - executing command '%v'", n, cmd.Name())
-		err = conn.execute(cmd)
+		err = conn.execute(ctx, cmd)
 		if err == nil {
 			// NB: basically the success path of _responseReceived in Node.js client
 			if cmErr := n.cm.put(conn); cmErr != nil {
@@ -305,7 +306,7 @@ func (n *Node) healthCheck() {
 				}
 				hcmd := n.getHealthCheckCommand()
 				logDebug("[Node]", "(%v) healthcheck executing %v", n, hcmd.Name())
-				if hcerr := conn.execute(hcmd); hcerr != nil || !hcmd.Success() {
+				if hcerr := conn.execute(context.Background(), hcmd); hcerr != nil || !hcmd.Success() {
 					conn.close()
 					logError("[Node]", "(%v) failed healthcheck, err: %v", n, hcerr)
 				} else {

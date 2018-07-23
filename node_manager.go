@@ -15,12 +15,14 @@
 package riak
 
 import (
+	"context"
 	"sync"
 )
 
 // NodeManager enforces the structure needed to if going to implement your own NodeManager
 type NodeManager interface {
 	ExecuteOnNode(nodes []*Node, command Command, previousNode *Node) (bool, error)
+	ExecuteOnNodeContext(ctx context.Context, nodes []*Node, command Command, previousNode *Node) (bool, error)
 }
 
 var ErrDefaultNodeManagerRequiresNode = newClientError("Must pass at least one node to default node manager", nil)
@@ -33,6 +35,12 @@ type defaultNodeManager struct {
 // ExecuteOnNode selects a Node from the pool and executes the provided Command on that Node. The
 // defaultNodeManager uses a simple round robin approach to distributing load
 func (nm *defaultNodeManager) ExecuteOnNode(nodes []*Node, command Command, previous *Node) (bool, error) {
+	return nm.ExecuteOnNodeContext(context.Background(), nodes, command, previous)
+}
+
+// ExecuteOnNodeContext selects a Node from the pool and executes the provided Command on that Node. The
+// defaultNodeManager uses a simple round robin approach to distributing load
+func (nm *defaultNodeManager) ExecuteOnNodeContext(ctx context.Context, nodes []*Node, command Command, previous *Node) (bool, error) {
 	if nodes == nil {
 		panic("[defaultNodeManager] nil nodes argument")
 	}
@@ -61,7 +69,7 @@ func (nm *defaultNodeManager) ExecuteOnNode(nodes []*Node, command Command, prev
 			continue
 		}
 
-		executed, err = node.execute(command)
+		executed, err = node.execute(ctx, command)
 		if executed == true {
 			logDebug("[DefaultNodeManager]", "executed '%s' on node '%s', err '%v'", command.Name(), node, err)
 			break
