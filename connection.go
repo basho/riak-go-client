@@ -203,23 +203,17 @@ func (c *connection) execute(ctx context.Context, cmd Command) (err error) {
 		}
 	}
 
-	// If the context deadline is set, and its less than the existing timeouts
-	// update the timeout to match
-	if deadline, ok := ctx.Deadline(); ok {
-		ctxtimeout := deadline.Sub(time.Now())
-		if ctxtimeout < timeout {
-			timeout = ctxtimeout
-		}
-	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
-	if err = c.write(ctx, message, timeout); err != nil {
+	if err = c.write(ctx, message); err != nil {
 		return
 	}
 
 	var response []byte
 	var decoded proto.Message
 	for {
-		response, err = c.read(ctx, timeout) // NB: response *will* have entire pb message
+		response, err = c.read(ctx) // NB: response *will* have entire pb message
 		if err != nil {
 			cmd.onError(err)
 			return
@@ -259,7 +253,7 @@ func (c *connection) setReadDeadline(t time.Duration) {
 }
 
 // NB: This will read one full pb message from Riak, or error in doing so
-func (c *connection) read(ctx context.Context, timeout time.Duration) ([]byte, error) {
+func (c *connection) read(ctx context.Context) ([]byte, error) {
 	if !c.available() {
 		return nil, ErrCannotRead
 	}
@@ -267,7 +261,10 @@ func (c *connection) read(ctx context.Context, timeout time.Duration) ([]byte, e
 	var err error
 	var count int
 	var messageLength uint32
-	var rt time.Duration = timeout // rt = 'read timeout'
+	var rt time.Duration
+	if deadline, ok := ctx.Deadline(); ok {
+		rt = deadline.Sub(time.Now())
+	}
 	b := &backoff.Backoff{
 		Min:    rt,
 		Jitter: true,
@@ -320,7 +317,7 @@ func (c *connection) read(ctx context.Context, timeout time.Duration) ([]byte, e
 	}
 }
 
-func (c *connection) write(ctx context.Context, data []byte, timeout time.Duration) error {
+func (c *connection) write(ctx context.Context, data []byte) error {
 	if !c.available() {
 		return ErrCannotWrite
 	}
@@ -331,7 +328,9 @@ func (c *connection) write(ctx context.Context, data []byte, timeout time.Durati
 	default:
 	}
 
-	c.conn.SetWriteDeadline(time.Now().Add(timeout))
+	if deadline, ok := ctx.Deadline(); ok {
+		c.conn.SetWriteDeadline(deadline)
+	}
 	count, err := c.conn.Write(data)
 	if err != nil {
 		c.setState(connInactive)
