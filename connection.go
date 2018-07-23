@@ -15,6 +15,7 @@
 package riak
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/binary"
 	"errors"
@@ -132,7 +133,7 @@ func (c *connection) startTls() error {
 	}
 	c.setState(connTlsStarting)
 	startTlsCmd := &startTlsCommand{}
-	if err := c.execute(startTlsCmd); err != nil {
+	if err := c.execute(context.Background(), startTlsCmd); err != nil {
 		return err
 	}
 	var tlsConn *tls.Conn
@@ -147,7 +148,7 @@ func (c *connection) startTls() error {
 		user:     c.authOptions.User,
 		password: c.authOptions.Password,
 	}
-	return c.execute(authCmd)
+	return c.execute(context.Background(), authCmd)
 }
 
 func (c *connection) available() bool {
@@ -167,7 +168,7 @@ func (c *connection) setInFlight(inFlightVal bool) {
 	c.inFlight = inFlightVal
 }
 
-func (c *connection) execute(cmd Command) (err error) {
+func (c *connection) execute(ctx context.Context, cmd Command) (err error) {
 	if c.inFlight == true {
 		err = fmt.Errorf("[Connection] attempted to run '%s' command on in-use connection", cmd.Name())
 		return
@@ -202,14 +203,23 @@ func (c *connection) execute(cmd Command) (err error) {
 		}
 	}
 
-	if err = c.write(message, timeout); err != nil {
+	// If the context deadline is set, and its less than the existing timeouts
+	// update the timeout to match
+	if deadline, ok := ctx.Deadline(); ok {
+		ctxtimeout := deadline.Sub(time.Now())
+		if ctxtimeout < timeout {
+			timeout = ctxtimeout
+		}
+	}
+
+	if err = c.write(ctx, message, timeout); err != nil {
 		return
 	}
 
 	var response []byte
 	var decoded proto.Message
 	for {
-		response, err = c.read(timeout) // NB: response *will* have entire pb message
+		response, err = c.read(ctx, timeout) // NB: response *will* have entire pb message
 		if err != nil {
 			cmd.onError(err)
 			return
@@ -249,7 +259,7 @@ func (c *connection) setReadDeadline(t time.Duration) {
 }
 
 // NB: This will read one full pb message from Riak, or error in doing so
-func (c *connection) read(timeout time.Duration) ([]byte, error) {
+func (c *connection) read(ctx context.Context, timeout time.Duration) ([]byte, error) {
 	if !c.available() {
 		return nil, ErrCannotRead
 	}
@@ -265,6 +275,12 @@ func (c *connection) read(timeout time.Duration) ([]byte, error) {
 	try := uint16(0)
 
 	for {
+		select {
+		case <-ctx.Done():
+			return nil, context.Canceled
+		default:
+		}
+
 		c.setReadDeadline(rt)
 		if count, err = io.ReadFull(c.conn, c.sizeBuf); err == nil && count == 4 {
 			messageLength = binary.BigEndian.Uint32(c.sizeBuf)
@@ -304,10 +320,17 @@ func (c *connection) read(timeout time.Duration) ([]byte, error) {
 	}
 }
 
-func (c *connection) write(data []byte, timeout time.Duration) error {
+func (c *connection) write(ctx context.Context, data []byte, timeout time.Duration) error {
 	if !c.available() {
 		return ErrCannotWrite
 	}
+
+	select {
+	case <-ctx.Done():
+		return context.Canceled
+	default:
+	}
+
 	c.conn.SetWriteDeadline(time.Now().Add(timeout))
 	count, err := c.conn.Write(data)
 	if err != nil {

@@ -15,6 +15,7 @@
 package riak
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 
 // Async object is used to pass required arguments to execute a Command asynchronously
 type Async struct {
+	Context    context.Context
 	Command    Command
 	Done       chan Command
 	Wait       *sync.WaitGroup

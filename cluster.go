@@ -15,6 +15,7 @@
 package riak
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -264,7 +265,7 @@ func (c *Cluster) RemoveNode(n *Node) error {
 	return nil
 }
 
-// Execute (asynchronously) the provided Command against the active pooled Nodes using the NodeManager
+// ExecuteAsync (asynchronously) the provided Command against the active pooled Nodes using the NodeManager
 func (c *Cluster) ExecuteAsync(async *Async) error {
 	if async.Command == nil {
 		return ErrClusterCommandRequired
@@ -281,11 +282,17 @@ func (c *Cluster) ExecuteAsync(async *Async) error {
 
 // Execute (synchronously) the provided Command against the active pooled Nodes using the NodeManager
 func (c *Cluster) Execute(command Command) error {
+	return c.ExecuteContext(context.Background(), command)
+}
+
+// ExecuteContext (synchronously) with a context the provided Command against the active pooled Nodes using the NodeManager
+func (c *Cluster) ExecuteContext(ctx context.Context, command Command) error {
 	if command == nil {
 		return ErrClusterCommandRequired
 	}
 	async := &Async{
 		Command: command,
+		Context: ctx,
 	}
 	c.execute(async)
 	if async.Error != nil {
@@ -322,7 +329,7 @@ func (c *Cluster) execute(async *Async) {
 		if err = c.stateCheck(clusterRunning); err != nil {
 			break
 		}
-		executed, err = c.nodeManager.ExecuteOnNode(c.nodes, cmd, lastExeNode)
+		executed, err = c.nodeManager.ExecuteOnNodeContext(async.Context, c.nodes, cmd, lastExeNode)
 		// NB: do *not* call cmd.onError here as it will have been called in connection
 		if executed {
 			// NB: "executed" means that a node sent the data to Riak and received a response

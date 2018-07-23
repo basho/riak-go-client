@@ -15,6 +15,7 @@
 package riak
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -60,6 +61,11 @@ func (c *Client) Cluster() *Cluster {
 // Execute (synchronously) the provided Command against the cluster
 func (c *Client) Execute(cmd Command) error {
 	return c.cluster.Execute(cmd)
+}
+
+// ExecuteContext (synchronously) the provided Command against the cluster
+func (c *Client) ExecuteContext(ctx context.Context, cmd Command) error {
+	return c.cluster.ExecuteContext(ctx, cmd)
 }
 
 // Execute (asynchronously) the provided Command against the cluster
